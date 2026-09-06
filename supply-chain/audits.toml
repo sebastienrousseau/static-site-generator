@@ -139,6 +139,13 @@ user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
 start = "2023-02-05"
 end = "2027-07-26"
 
+[[trusted.frontmatter-gen]]
+criteria = "safe-to-deploy"
+user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
+start = "2024-10-03"
+end = "2027-07-26"
+notes = "Same-author crate, published by the owner's user id; same trust window as noyalib and staticdatagen."
+
 [[trusted.html-generator]]
 criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
@@ -180,6 +187,13 @@ criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
 start = "2024-10-27"
 end = "2027-07-26"
+
+[[trusted.staticdatagen]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:sebastienrousseau/staticdatagen"
+start = "2026-09-06"
+end = "2027-07-26"
+notes = "Same-author crate. From 0.0.18 the crate is published by its own GitHub release workflow through crates.io Trusted Publishing, so the publisher record is the repository rather than the user-id trusted above; both are the owner's."
 
 [[trusted.staticweaver]]
 criteria = "safe-to-deploy"

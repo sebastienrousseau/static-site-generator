@@ -1412,15 +1412,15 @@ dependencies = [
 
 [[package]]
 name = "frontmatter-gen"
-version = "0.0.6"
+version = "0.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05ce7e5bf87bc3550840886b912ccefd0ef5188e69e750b121e19168192445c8"
+checksum = "342db3417c7c9f8054f7f5c45acb089dd6dbce7b0312d81eda42637c743b4334"
 dependencies = [
  "anyhow",
  "env_logger",
  "euxis-commons",
  "log",
- "noyalib 0.0.8",
+ "noyalib 0.0.26",
  "serde",
  "serde_json",
  "simple_logger",
@@ -2587,19 +2587,6 @@ dependencies = [
 
 [[package]]
 name = "noyalib"
-version = "0.0.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14057395c16a4230575c6f86bfa074db87e8458626d3e56b20c2454334a7e50c"
-dependencies = [
- "indexmap",
- "memchr",
- "rustc-hash",
- "serde",
- "smallvec",
-]
-
-[[package]]
-name = "noyalib"
 version = "0.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9014fb34654ac4f54a4ff52d5207b1e4a764604fced568c3a1d71ee99d1fc300"
@@ -2625,6 +2612,22 @@ dependencies = [
  "serde",
  "serde_core",
  "serde_ignored",
+ "smallvec",
+]
+
+[[package]]
+name = "noyalib"
+version = "0.0.26"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eaf7471054ff3fcc857fe8c5c674df7d107d2cb3072ac664a244f20b6d8dae01"
+dependencies = [
+ "hashbrown 0.17.1",
+ "indexmap",
+ "libm",
+ "memchr",
+ "rustc-hash",
+ "serde",
+ "serde_core",
  "smallvec",
 ]
 
@@ -4973,9 +4976,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.17"
+version = "0.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97dab9eeefe34cbe46487f63f1e1eb1e5a4f05ed6a2548b8b0a2ab3f23ee1ec4"
+checksum = "baf8adcd4b08dea7df74ca87b3b0ed7845abada5451a3dde3feec4c155e763ce"
 dependencies = [
  "anyhow",
  "comrak 0.54.0",

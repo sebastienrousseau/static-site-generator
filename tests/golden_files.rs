@@ -698,39 +698,20 @@ const EXAMPLE_ARTEFACTS: &[&str] = &[
     "rss.xml",
     "atom.xml",
     "humans.txt",
+    "search-index.json",
 ];
 
-// `search-index.json` is deliberately absent, and this is a gap rather
-// than a decision I am happy with.
+// `search-index.json` was absent from this list until staticdatagen 0.0.18.
 //
 // It embeds the extracted text of every page, including `/tags/index.html`,
-// whose listing order is not deterministic across filesystems: a
-// macOS-seeded golden does not hold on Linux.
-//
-// Three ordering bugs in this repository were found and fixed while
-// chasing it -- taxonomy members, related-post selection and paginated
-// listings all lacked a final tiebreak, so ties fell through to
-// directory-enumeration order. The remaining source is upstream and
-// cannot be fixed here:
-//
-//   staticdatagen 0.0.17, src/utilities/file.rs
-//       pub fn add(path: &Path) -> io::Result<Vec<FileData>> {
-//           for entry in WalkDir::new(path).into_iter()  // never sorted
-//
-// `WalkDir` yields entries in filesystem order -- APFS and ext4 differ --
-// and that Vec is what the tag-page generator lists from, so the pages
-// under each tag come out in a different order per platform. The tag
-// *keys* are sorted upstream; the pages within a tag are not.
-//
-// `determinism.yml` cannot see any of this: it compares two builds on one
-// runner, and two builds on one filesystem agree.
-//
-// The index is still covered structurally by
-// `search_index_entry_urls_stay_stable` below, which pins the entry set
-// and its order without pinning page text. Restoring full coverage
-// depends on the generator being cross-platform deterministic, which is
-// tracked separately -- it is not something this release can honestly
-// claim to have finished.
+// whose listing order followed directory enumeration: staticdatagen 0.0.17
+// walked content with an unsorted `WalkDir`, APFS and ext4 enumerate in
+// different orders, and so a macOS-seeded golden did not hold on Linux.
+// Three tiebreak bugs in this repository (taxonomy members, related posts,
+// paginated listings) were fixed while chasing it; the last source was
+// upstream. 0.0.18 sorts the walk by file name, and with that the full
+// index is portable and pinned here. `search_index_entry_urls_stay_stable`
+// below keeps the entry-set view as a readable diff when the text changes.
 
 /// Artefacts a given example is known not to emit, with the reason.
 ///
@@ -916,12 +897,12 @@ fn normalise_handles_multibyte_text() {
 
 /// Pins the search index's entry set and order, without its page text.
 ///
-/// Full-content goldens for `search-index.json` are not portable yet (see
-/// the note beside `EXAMPLE_ARTEFACTS`), but the part that matters most
-/// is: which pages are indexed, and in what order. Both are deterministic
-/// -- `search.rs` sorts by URL for exactly this reason -- so a page
-/// silently dropping out of search, or the ordering guarantee regressing,
-/// is still caught.
+/// The full-content golden in `EXAMPLE_ARTEFACTS` also catches these, but
+/// a diff of extracted page text is hard to read. This view answers the
+/// two questions that matter first when it fails: which pages are indexed,
+/// and in what order. Both are deterministic -- `search.rs` sorts by URL
+/// for exactly this reason -- so a page silently dropping out of search,
+/// or the ordering guarantee regressing, is named directly.
 #[test]
 fn search_index_entry_urls_stay_stable() {
     let mut report = String::new();

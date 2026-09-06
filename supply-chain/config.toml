@@ -1563,10 +1563,6 @@ criteria = "safe-to-deploy"
 version = "0.1.0"
 criteria = "safe-to-deploy"
 
-[[exemptions.simdutf8]]
-version = "0.1.5"
-criteria = "safe-to-deploy"
-
 [[exemptions.simple_logger]]
 version = "5.2.0"
 criteria = "safe-to-deploy"

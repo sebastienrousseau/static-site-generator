@@ -162,11 +162,21 @@ what it measured.
 | Location | Contains |
 |---|---|
 | `src/**` `#[cfg(test)]` | Unit tests, next to the code they cover |
-| `tests/*.rs` | Integration and gate suites (55 files) |
+| `tests/*.rs` | Integration and gate suites (58 files) |
 | `tests/golden/` | Golden-file fixtures |
 | `benches/bench.rs` | Criterion umbrella harness (`make bench`) |
 | `fuzz/fuzz_targets/` | libFuzzer targets, replayed per push by ClusterFuzzLite |
 | `crates/*/` | Workspace members, each with their own tests |
+
+The goldens under `tests/golden/` are byte-for-byte snapshots compared by
+`tests/golden_files.rs`. To reseed them after an intentional output change,
+run the suite with `UPDATE_GOLDEN=1` in the environment, once per feature
+set (`--features minify` writes the `.minify` variants); libtest rejects
+unknown flags, so there is no `--update-golden` switch. Seed on one platform
+and re-run the suite on the other before committing — the suite has caught
+ordering that differed between APFS and ext4 — for example inside
+`docker run --rm -v "$PWD":/work -w /work rust:1.90` on macOS. A run that
+modifies no golden is the proof the snapshots are portable.
 
 Beyond the usual unit and integration suites, several files exist purely
 to stop documentation and inventory drifting from code. They are worth

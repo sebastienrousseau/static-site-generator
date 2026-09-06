@@ -7,6 +7,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **`staticdatagen` 0.0.17 → 0.0.18.** The upstream file walker now sorts
+  directory entries by name, so tag pages list their members in the same
+  order on APFS and ext4. This was the last cross-platform ordering source
+  the golden suite had found, and it was outside this repository.
+- **`frontmatter-gen` 0.0.6 → 0.0.10.** The four versions between them were
+  tagged and published today (they had been bumped on that crate's `main`
+  without a release). 0.0.10 moves YAML scalars into `Value` instead of
+  copying them; the sidecar goldens and the `emit_sidecars` heap gate are
+  unchanged by it. It pulls `noyalib` 0.0.26, a third incompatible 0.0.x
+  copy beside 0.0.15 and 0.0.19; collapsing those is a separate bump.
+- **cargo-vet trusts `frontmatter-gen`'s publisher**, the owner's user id,
+  with the same window as `noyalib` and `staticdatagen`.
+- **cargo-vet trusts staticdatagen's release workflow.** From 0.0.18 the
+  crate is published through crates.io Trusted Publishing, so its publisher
+  record is `github:sebastienrousseau/staticdatagen` rather than the owner's
+  user id. `supply-chain/audits.toml` gains a `trusted-publisher` entry with
+  the same criteria and end date as the user-id entry; the exemption count
+  moves 506 → 505 (one Mozilla import replaced an exemption on refresh).
+
+### Testing
+
+- **`search-index.json` is back in the per-example golden list**, full
+  content, for all eight examples and both feature sets. It had been
+  scoped down to an entry-set view (`search_index_entry_urls.golden`) while
+  the upstream ordering made a macOS-seeded golden fail on Linux; that view
+  stays as the readable first diff, and the full snapshot is pinned again.
+  The goldens are seeded and verified under Docker `rust:1.90` on Linux.
+
 ## [0.0.59] - 2026-09-04
 
 A patch release for a regression that 0.0.58 shipped, plus the golden
