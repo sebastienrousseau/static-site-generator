@@ -1,6 +1,6 @@
 # Maintainer: Sebastien Rousseau <contact@sebastienrousseau.com>
 pkgname=ssg
-pkgver=0.0.59
+pkgver=0.0.60
 pkgrel=1
 pkgdesc='Fast, SEO-optimised static site generator built in Rust'
 arch=('x86_64' 'aarch64')

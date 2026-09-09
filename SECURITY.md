@@ -23,8 +23,8 @@ the advisory unless you prefer otherwise.
 
 | Version | Supported |
 |---|---|
-| 0.0.59 (latest) | ✅ Security fixes |
-| < 0.0.59 | ❌ Upgrade required |
+| 0.0.60 (latest) | ✅ Security fixes |
+| < 0.0.60 | ❌ Upgrade required |
 
 `0.0.x` is pre-1.0; only the latest release receives security patches,
 so the table above names the current version rather than a fixed floor.

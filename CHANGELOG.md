@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.60] - 2026-09-09
+
+The first release since 0.0.56. Tags `v0.0.57`, `v0.0.58` and `v0.0.59`
+were cut in the repository but never reached crates.io, so a consumer
+upgrading from the registry moves 0.0.56 → 0.0.60 and picks up
+everything documented under those three headings below as well as what
+follows here.
+
 ### Changed
 
 - **One copy of `noyalib` instead of three.** The dependency tree
@@ -32,14 +40,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   directory entries by name, so tag pages list their members in the same
   order on APFS and ext4. This was the last cross-platform ordering source
   the golden suite had found, and it was outside this repository.
+
 - **`frontmatter-gen` 0.0.6 → 0.0.10.** The four versions between them were
   tagged and published today (they had been bumped on that crate's `main`
   without a release). 0.0.10 moves YAML scalars into `Value` instead of
   copying them; the sidecar goldens and the `emit_sidecars` heap gate are
   unchanged by it. It pulls `noyalib` 0.0.26, a third incompatible 0.0.x
   copy beside 0.0.15 and 0.0.19; collapsing those is a separate bump.
+
 - **cargo-vet trusts `frontmatter-gen`'s publisher**, the owner's user id,
   with the same window as `noyalib` and `staticdatagen`.
+
 - **cargo-vet trusts staticdatagen's release workflow.** From 0.0.18 the
   crate is published through crates.io Trusted Publishing, so its publisher
   record is `github:sebastienrousseau/staticdatagen` rather than the owner's
@@ -64,6 +75,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reports, and GitHub counts a skipped required check as passed.
   `crates/**` and the manifests join the relevant set, since a
   dependency bump changes what gets fuzzed.
+
+- **Three benchmark targets reported success while measuring nothing.**
+  `cargo bench --bench core` printed `running 0 tests ... 0 measured`
+  and exited 0; so did `plugins` and `bench_concurrent_operations`.
+  Thirty benchmarks had never run. `harness` defaults to true, so cargo
+  built the criterion harnesses under libtest, which looks for
+  `#[bench]` items, finds none, and passes. `autobenches = false` now
+  makes every bench target an explicit, reviewed declaration.
+
+- **`benches/core/content.rs` panicked on its first iteration.** Its
+  schema fixture used `content_type` and `field_type = "DateTime"`; the
+  wire format is `name` and `type`, lower-case, and `DateTime` is not a
+  `FieldType`. The fixture had drifted from the parser and nothing
+  caught it, because the target it lived in never executed.
+
+- **`bench_concurrent_operations` could not compile once it ran.** A
+  criterion bench builds without `--test`, so the `#[test]` functions in
+  its `#[cfg(test)] mod tests` were stripped and only an unused import
+  remained. Those tests checked the bench's own fixture helpers and were
+  ignored without the `benchmark` feature, so they had effectively never
+  run either; their assertions now live in the helpers and run on every
+  bench invocation.
 
 ### Testing
 
@@ -91,6 +124,7 @@ turned up.
   the first byte of the output. The one-line golden snapshots of those pages
   also failed `reuse lint` 6.x, which reads a comment closer only at end of
   line.
+
 - **Authored markup inside `<pre><code>` is no longer escaped.** 0.0.58
   escaped `<` and `>` inside every bare `<code>` element, so a theme
   shipping hand-highlighted code had its `<span class="code-kw">` tags
@@ -447,6 +481,7 @@ regenerated. Sites that publish only ASCII-separated tags are unaffected.
   it shipped. `split_terms` in `ssg-core` now recognises `,` `،` `，` `、`
   and `;`, and the four call sites that each open-coded `split(',')` share
   one definition.
+
 - **`slugify` had no length cap** (#695). Fixed independently of the
   separator bug, because it is reachable without it: any sufficiently long
   legitimate term hits the same 255-byte wall. Slugs are now truncated to
@@ -485,6 +520,7 @@ silent — producing wrong output with no error at all.
   a locale-scoped prefix, and `page_url` carries the locale segment so a
   canonical points at the file actually written. Single-locale sites are
   unaffected.
+
 - **Islands vanished from minified pages** (#680). `extract_island_components`
   matched the literal `component="`, but `html-generator` minifies some
   pages during generation and strips quotes it does not need, so
@@ -493,7 +529,9 @@ silent — producing wrong output with no error at all.
   static fallback for ever without erroring. The extractor now accepts
   `a="v"`, `a='v'` and bare `a=v`, and refuses to match a longer attribute
   that merely starts with the name.
+
 - **GPG signatures never reached the release** (#678).
+
 - **`multilingual_full` failed the HTML invariants gate** (#677).
 
 ### Added
@@ -501,16 +539,19 @@ silent — producing wrong output with no error at all.
 - **`site_prefix` in taxonomy templates** (#680). `url_prefix` is
   locale-scoped; assets are not. A template building asset URLs from the
   scoped prefix asked for `/atlas/fr/styles.css`, which does not exist.
+
 - **Coverage now measures both feature configurations** (#683). The job ran
   only with default features, so `#[cfg(not(feature = "templates"))]` code
   never entered the coverage binary and counted as uncovered on every diff.
   A second `--no-default-features` pass is accumulated into the same report.
+
 - **3,446 library tests that had never been compiled** (#683).
   `cargo test --lib --no-default-features` did not build: `src/core/lang.rs`
   imported `HashMap` behind the `templates` feature while its test module
   used it ungated, and a taxonomy test called a templates-only function. The
   feature-powerset job runs `cargo check`, which does not build test code,
   so nothing had ever compiled them.
+
 - **CI gates that scan nothing now fail** (#681), and Miri failures break
   the build rather than being reported and ignored.
 
@@ -562,6 +603,7 @@ instruction, and v0.0.49 produced no artefacts at all.
     a green image build that shipped no image. The cache moved to GHCR
     itself, with `ignore-error=true` so a cache fault can never fail a
     release again.
+
 - **A release tag started two heavyweight workflow runs.** `scheduled.yml`
   triggered on `v*` tags as "release-gating coverage", but nothing in
   `release.yml` waited on its result, so it gated nothing while doubling
@@ -569,6 +611,7 @@ instruction, and v0.0.49 produced no artefacts at all.
   with no release. The tag trigger is gone, and `release.yml` gained a
   `concurrency` group with `cancel-in-progress: false` so a release is
   never silently superseded mid-publish.
+
 - **`examples/multilingual_full` audited the pre-0.0.50 output layout.** It
   expected each locale home page at `<lang>/index/index.html` — the extra
   directory level this release removes — and so reported all five as
@@ -576,6 +619,7 @@ instruction, and v0.0.49 produced no artefacts at all.
   asserts that the translated-slug pages are *reciprocally linked* rather
   than merely present; unpaired translations fail the example hard, in CI
   included.
+
 - **`layout` was ignored on every page** (`src/plugins/template_plugin.rs`).
   `before_compile` writes front-matter sidecars to `<build_dir>/.meta`, but
   `staticdatagen` promotes `output.build-tmp` onto `output` once the compile
@@ -588,11 +632,13 @@ instruction, and v0.0.49 produced no artefacts at all.
   from `render_page`'s pass-through arm, which it had been counting as a
   success — a pipeline doing nothing logged `Rendered N page(s)` exactly like
   a working one.
+
 - **`content/content.schema.toml` broke the build it configures**
   (`src/core/content_stager.rs`). The documented location for typed
   front-matter schemas was staged as a page, and `staticdatagen` aborted with
   `Failed to extract metadata: No valid front matter found`. Build-time
   control files are now excluded from staging.
+
 - **Nested `index.md` gained a directory level**
   (`src/core/content_stager.rs`). `fr/index.md` compiled to
   `fr/index/index.html` rather than `fr/index.html`, so every locale home
@@ -600,12 +646,14 @@ instruction, and v0.0.49 produced no artefacts at all.
   `write_files_to_build_directory` compares the whole processed name against
   `"index"` — so this is a staging-time side-step, not a fix, and it leaves
   the file alone when both `fr.md` and `fr/index.md` are authored.
+
 - **Extracted CSS and JS 404'd on sub-path deployments**
   (`src/plugins/csp.rs`). Inline blocks are externalised into fingerprinted,
   SRI-signed `_csp/` files referenced as `/_csp/…`, which resolves against
   the domain root. On a GitHub Pages project site the whole stylesheet was
   lost. The prefix now derives from `base_url`'s path component; sites at the
   domain root are unaffected.
+
 - **Markdown tables broke reflow on every phone width**
   (`src/plugins/postprocess/html_fix.rs`). A table cannot reflow — its
   columns have a minimum width — so a five-column Markdown table pushed the
@@ -613,11 +661,13 @@ instruction, and v0.0.49 produced no artefacts at all.
   now wrapped in a focusable, labelled scroll container, which is the
   accepted remedy. Applied in the generator because Markdown-generated
   tables have no wrapper a theme could style.
+
 - **Generated taxonomy pages had no skip link** and no focus styling
   (`src/plugins/builtin_templates/base.html`). Every authored page opened
   with one; the generated ones dropped a keyboard user straight into the
   navigation. These pages link no theme stylesheet, so the link carries its
   own rules, using system colours so it survives forced-colours mode.
+
 - **The injected search trigger sat on top of theme header controls**
   (`src/plugins/search.rs`). It is pinned to the top-right, which is exactly
   where a themed site puts its own controls; measured across a 13-viewport
@@ -625,6 +675,7 @@ instruction, and v0.0.49 produced no artefacts at all.
   language switcher at every phone width, so a tap landed on whichever won
   the z-order. Below 48rem it now sits as a 44px circle in the bottom
   corner — the conventional mobile affordance, and out of the header's way.
+
 - **Markdown table alignment emitted obsolete `align` attributes**
   (`src/plugins/postprocess/html_fix.rs`,
   [#618](https://github.com/sebastienrousseau/static-site-generator/issues/618)).
@@ -637,6 +688,7 @@ instruction, and v0.0.49 produced no artefacts at all.
   which is what makes header alignment stylable at all. Done with a real
   parser, since an `align=` literal inside a `<pre>` block is content, not
   markup.
+
 - **Islands never hydrated** (`src/plugins/islands.rs`,
   `src/plugins/assets.rs`). Three independent faults, each sufficient alone:
   the injected loader tag was root-absolute like `_csp/` above; the loader
@@ -656,6 +708,7 @@ instruction, and v0.0.49 produced no artefacts at all.
   matter, read from the sidecars; the locale matrix inverts from
   `rel_path -> {locale}` to `key -> {locale -> rel_path}`. Pages without a
   key keep path matching, so existing sites are unaffected.
+
 - **Taxonomy pages work for the first time** (`src/plugins/taxonomy.rs`).
   `resolve_user_template_dir` fell back to `<template_dir>` itself when no
   `tera/` existed, so MiniJinja was handed the theme's StaticWeaver
@@ -672,6 +725,7 @@ instruction, and v0.0.49 produced no artefacts at all.
   which generated pages previously lacked while every authored page had one;
   and the index's term links are marked `| safe`, since autoescape was
   rendering `/` as `&#x2f;`.
+
 - **Derived path globals** (`src/core/content_stager.rs`). Templates can
   reference `{{site_path}}`, `{{site_url}}`, `{{locale_path}}` and
   `{{locale_url}}`; the stager derives each from `base_url` and the page's
@@ -691,6 +745,7 @@ instruction, and v0.0.49 produced no artefacts at all.
   `site_*`, so a theme can use the locale forms throughout and gain locales
   later without editing content. Removed 60 hand-maintained fields and 20
   hardcoded permalinks from the reference themes.
+
 - **Theme compatibility is enforced** (`src/core/theme_manifest.rs`). A theme
   declares the oldest generator it works with — `min_version` in
   `theme.toml`, or `min_ssg_version` in `theme.json` — and nothing read it.
@@ -701,6 +756,7 @@ instruction, and v0.0.49 produced no artefacts at all.
   versions and the manifest that declared the floor. A theme with no
   manifest, no `min_version`, or an unparseable one imposes no floor and
   builds as before.
+
 - **Root-hosted default locale** (`src/plugins/i18n.rs`). Every locale
   previously needed its own directory, including the default, which forced
   `/en/about/` and left the site root empty. The default locale may now live
@@ -717,6 +773,7 @@ instruction, and v0.0.49 produced no artefacts at all.
   Alternates now carry the target's resolved language. Two tests asserting
   the old asymmetry were updated, with the reasoning recorded in their
   bodies.
+
 - **`x-default` is emitted only when the default locale serves the page**,
   rather than pointing at a URL that may not exist.
 
@@ -736,11 +793,14 @@ floors, MSRV), not whether a feature was described anywhere.
   explanation of how each `hreflang` value is chosen and why reciprocity
   depends on it. The sitemap and language-switcher sections were corrected
   to match — the switcher lists a locale only when a paired page exists.
+
 - **`docs/guide/content.md`** gained `translation_key` in the standard
   front-matter field table, where an author would actually look for it.
+
 - **`src/plugins/i18n.rs`** module docs now explain pairing, root-locale
   serving and reciprocity. The existing rustdoc was accurate but attached to
   private items, so none of it reached docs.rs.
+
 - **`README.md`** describes the feature in the i18n row rather than only
   bumping its version badge, and the examples table lists
   `multilingual_full`, which was absent.
@@ -751,6 +811,7 @@ floors, MSRV), not whether a feature was described anywhere.
   ([GHSA-5p4m-2wfm-xmqj](https://github.com/advisories/GHSA-5p4m-2wfm-xmqj),
   high): quadratic CPU consumption resolving `!!omap`. Development-only — the
   harness is not part of the published crate.
+
 - **`extract-zip` 2.0.1 symlink path traversal**
   ([GHSA-jmr9-qjv8-65gv](https://github.com/advisories/GHSA-jmr9-qjv8-65gv),
   high) is **accepted, not fixed**. No patched version exists: the advisory
@@ -808,7 +869,9 @@ the release shipped without a changelog entry.
 ### Planned / Upcoming (deferred — not v0.0.46 scope)
 
 - **Residual content-staging shim removal** — two narrow gaps remain in `src/core/content_stager.rs` until upstream follow-ups land: template-default injection (blocked on [staticdatagen#99](https://github.com/sebastienrousseau/staticdatagen/issues/99) — opting the staticweaver Engine into `lax_undefined`) and multi-line quoted-scalar collapse (blocked on [staticdatagen#100](https://github.com/sebastienrousseau/staticdatagen/issues/100) — bumping the transitive `metadata-gen` dep to `0.0.5`). Once both land, the module collapses to ~50 LOC.
+
 - **Complete internal anyhow elimination** across 9 core modules (`cache`, `collections`, `content`, `depgraph`, `deploy`, `frontmatter`, `scaffold`, `stream`, `template_engine`) and 7 plugin modules (`ai`, `csp`, `llm`, `postprocess/{helpers,html_fix}`, `seo/{canonical,seo_plugin}`). `scaffold.rs` is the heaviest module in this sweep (14 uses). Once complete, `anyhow` will be dropped from the library's `[dependencies]` list in `Cargo.toml`.
+
 - **Ratchet CI coverage floor to ≥98.0%** (regions, lines, functions). Currently at 95.71 / 96.87 / 95.77 with `--lib`. The remaining uncovered regions sit in I/O-heavy production glue that needs source-level seams.
 
 ## [0.0.47] - 2026-07-04
@@ -826,48 +889,60 @@ landed with measured evidence. Implements the
   long-form (`July 1, 2026`) → ISO 8601, zero new deps, proptest
   round-tripped; wired into the RSS, Atom, JSON Feed, news-sitemap, and
   sitemap plugins. Unparseable fields log which format failed.
+
 - **Native permalink derivation** (`src/core/urls.rs` + content stager, spec
   A2/B1): pages without `permalink`/`url` get one derived from
   `base_url + output_path` at staging time — feeds can never hard-fail on a
   missing channel link. Active in the real build path via
   `compile_site_with_base_url`.
+
 - **Single page-language resolver** (spec A5): frontmatter `language` →
   `hreflang` → locale path prefix → site default. JSON-LD `inLanguage`,
   `og:locale`, `<html lang>`, and the hreflang self-reference now agree on
   every page, enforced by the new **`lang_consistency` audit gate** (gate
   15).
+
 - **`IoPool` writer pool** ([#569](https://github.com/sebastienrousseau/static-site-generator/issues/569)
   phase 1): bounded-channel writer threads decouple `fs::write` from rayon
   CPU workers; the fused transform pass now **skips unchanged files**
   (a no-op rebuild writes zero files). io_uring backend remains phase 2.
+
 - **`AgentApiPlugin`** (#586 port 3): `/api/agents/{index,posts,topics,person}.json`
   — a stable, deterministic JSON API for AI crawlers and agent toolchains.
+
 - **`OembedPlugin`** (#586 port 4, opt-in): per-page `oembed.json` +
   discovery `<link>`.
+
 - **Per-tag landing pages** (#586 port 5): `/tags/<tag>/index.html` with
   canonical/OG essentials inlined; author-authored tag hubs are never
   clobbered.
+
 - **`[security] sri_algorithm` config** (spec B3): SRI `integrity=`
   attributes now default to **SHA-384** (matching the long-documented
   claim), configurable to sha256/sha512; CSP directive source hashes stay
   SHA-256 for UA compatibility.
+
 - **Per-page CSP → edge headers** (spec B4): inline script/style/JSON-LD
   hashes are computed per page and emitted as per-path entries in
   `_headers` / `vercel-headers.json` — hash-strict CSP without
   `'unsafe-inline'`.
+
 - **Social-meta derivation cascade** (spec B8): `og:*`/`twitter:*` derive
   from base frontmatter (`twitter_title ⇐ seo_title ⇐ title`,
   `og_image ⇐ banner ⇐ image`, …); explicit fields always win, no global
   bleed-through.
+
 - **CI**: `determinism.yml` (macOS↔Linux output byte-diff + double-build
   reproducibility — the gate that would have caught spec A1 on day one),
   `fuzz.yml` + four cargo-fuzz targets
   ([#566](https://github.com/sebastienrousseau/static-site-generator/issues/566)),
   OSSF Scorecard, `cargo-semver-checks` job, cargo-vet exemption ratchet,
   and a multi-arch (amd64+arm64) GHCR image.
+
 - **`tools/bench-vs-{hugo,zola,eleventy}.sh`** — the comparison scripts
   BENCHMARKS.md documented (closes the remainder of
   [#559](https://github.com/sebastienrousseau/static-site-generator/issues/559)).
+
 - **cargo-vet first-party audits**: 13 genuine `safe-to-deploy` audits of
   the same-author dependency stack; exemptions 544 → 533 with a
   ratchet-only-downward CI gate.
@@ -880,9 +955,11 @@ landed with measured evidence. Implements the
   parse minified HTML (unquoted, valueless, reordered attributes). The demo
   site audit is at **zero error-severity findings** (was 27 errors / 183
   total alerts).
+
 - **Latent UTF-8 corruption** in strikethrough expansion: multi-byte
   characters were mangled on any line processed through the old
   byte-by-byte path.
+
 - **Demo-site defects behind real alerts**: SPDX comment before
   `<!DOCTYPE html>`, missing H1s, missing `og:image`, empty-src logos,
   valueless `alt`.
@@ -895,6 +972,7 @@ landed with measured evidence. Implements the
 - **One URL convention everywhere**: canonical, feed `<link>`, sitemap and
   news-sitemap `<loc>` all derive via `urls::derive_page_url`
   (`…/foo/index.html` → `…/foo/`).
+
 - **Claims reconciliation**: "PQC-aware" → "PQC posture guidance" (ML-DSA
   provenance signing is roadmap
   [#579](https://github.com/sebastienrousseau/static-site-generator/issues/579));
@@ -995,14 +1073,19 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 ### Changed
 
 - **`Cargo.toml`** — `staticdatagen 0.0.9 → 0.0.10`. Lockfile reflects the transitive bumps: `staticweaver 0.0.2 → 0.0.3`, `rss-gen 0.0.5 → 0.0.6`.
+
 - **`src/core/content_stager.rs`** — reduced from ~1,300 to ~660 LOC. Four shim public functions retired (their bugs closed natively in `staticdatagen 0.0.10`): `stage_content_with_default_layout`, `inject_default_layout_if_missing`, `ensure_tags_stub` (private), `stage_templates_with_required_stubs`. The `DEFAULT_LAYOUT` + `REQUIRED_TEMPLATE_FILES` consts and three helpers (`copy_templates_tree`, `frontmatter_has_layout_key`, the layout-injection branch of `copy_tree`) went with them. 21 obsolete unit tests removed. Module docstring rewritten to document the two residual shims and their upstream tracking issues.
+
 - **`src/core/pipeline.rs::compile_site`** — drops the `stage_templates_with_required_stubs` call; the user's `template_dir` is now passed directly to `staticdatagen::compile`. The pipeline doc-comment now describes the v0.0.46 residual scope rather than the v0.0.45 regression matrix.
+
 - **3 v0.0.45-era input-validation tests updated** (`test_compile_site_error`, `test_internal_compile_with_empty_directories`, `test_args_all_required_arguments`) — empty directories are now a valid "no work to do" build under `staticdatagen 0.0.10` (closes upstream #68 / #69) so the tests were re-pointed at a genuine io error (a file passed where a directory is expected) to keep error-propagation coverage.
 
 ### Added
 
 - **`examples/multilingual_full/`** — 32-file content tree (5 locales × `index.md` + 5 posts) demonstrating the nested `content/<lang>/<slug>.md` layout that `staticdatagen 0.0.10` (closes upstream #70) walks recursively. Registered as the `multilingual_full` `[[example]]`. Verified end-to-end: 30/30 per-locale pages land.
+
 - **`tests/regression_user_site.rs::nested_locale_subdirectories_build_per_language`** — new always-on regression covering the recursive walk on a 3 × 2 in-memory tempdir.
+
 - **Two upstream follow-up issues filed** to track the remaining staticdatagen wiring needed before the residual shim disappears: [staticdatagen#99](https://github.com/sebastienrousseau/staticdatagen/issues/99) (`Engine::with_lax_undefined(true)`) and [staticdatagen#100](https://github.com/sebastienrousseau/staticdatagen/issues/100) (bump `metadata-gen` to `0.0.5`).
 
 ### Fixed
@@ -1042,12 +1125,15 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 ### Changed
 
 - **CI coverage floors raised** from 95.0 → 95.5 / 96.5 / 95.5 (regions / lines / functions). Coverage gate uses `cargo llvm-cov --lib` to keep the heavy `example_outputs.rs` integration suite in its own job.
+
 - **Miri trigger model**: nightly schedule + `run-miri` label-gated PR runs (decoupled from every push).
+
 - **100-page build budget** in `tests/perf_budgets.rs` raised 500ms → 800ms to absorb the `content_stager` shim. Reverts in v0.0.46.
 
 ### Security
 
 - **cargo-vet attestation** (#561) layered over `cargo-deny`.
+
 - **SARIF feed into GitHub Code Scanning** (#562) surfaces audit findings in the Security tab.
 
 ### Performance
@@ -1074,12 +1160,15 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 - Overlapping-tag similarity indexing for Related Posts.
 - Word count and estimated reading time calculations in frontmatter metadata.
 - Configurable CDN URL prefixing for markdown images.
+
 - **Structured Error Handling**: Introduced `ssg_core::Error` for the core compilation module and a comprehensive library-wide `SsgError` wrapping all I/O, validation, template rendering, and path safety violations.
+
 - **Contextual I/O Extensions**: Added `PathErrorExt` helper trait to cleanly propagate system directory and file paths alongside underlying I/O errors.
 
 ### Changed
 
 - **Encapsulation Pass**: Module declarations in `src/lib.rs` for implementation groups (`core`, `plugins`, `server`) changed from `pub mod` to `pub(crate) mod` (renamed internally as `*_group` to avoid clashing with facade re-exports). Only clean, public facade APIs are exported.
+
 - **Layout Restructuring**: Restructured parent crate codebase, organizing source files into `src/core/`, `src/plugins/`, and `src/server/` directories.
 
 ## [0.0.39] - 2026-05-10
@@ -1095,11 +1184,13 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
   hashes (or fingerprinted filenames) needs a one-time rebuild;
   the short fingerprint suffix and the long SRI both change shape
   to canonical SHA-256-derived values.
+
 - **`RunOptions` demoted to crate-internal.** Was nominally `pub` in
   `src/pipeline.rs`; now `pub(crate)`. The module is `pub(crate)`
   too, so the effective surface is unchanged for external consumers
   that imported via `ssg::pipeline::RunOptions`. No re-export was
   in place, so this should be a no-op for everyone but the curious.
+
 - **Six public enums marked `#[non_exhaustive]`:** `DeployTarget`,
   `FieldType`, `UrlPrefixStrategy`, `ReadabilityFormula`,
   `ChangeKind`, `ProcessError`. Downstream code that pattern-matches
@@ -1113,63 +1204,84 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
   `<link rel="sbom" type="application/vnd.cyclonedx+json"
   href="/sbom.cdx.json">` discoverable via the IANA-registered link
   relation. Closes #457.
+
 - **Typed content collection API** (`src/collections.rs`):
   `get_collection::<T>(dir)` / `get_entry::<T>(dir, slug)` for
   serde-typed Markdown loading, mirroring Astro's `getCollection`
   ergonomics with compile-time type safety. Closes #456.
+
 - **WCAG 2.2 build-time checks** (`src/accessibility.rs`):
   `check_target_size` (2.5.8), `check_focus_appearance` (2.4.13)
   plus a `wcag-compliance.json` matrix artifact. README claim
   promoted from "WCAG 2.1 AA" to "WCAG 2.2 AA". Closes #421, #463.
+
 - **JSON-LD schema.org validation** (`src/seo/jsonld.rs`):
   `validate_jsonld` checks required fields per `@type`; new CI
   step walks every example output. Closes #467.
+
 - **CSS `url()` rewriting in `FingerprintPlugin`** (`src/assets.rs`):
   three-pass fingerprint pipeline so CSS-embedded image and font
   references stay valid after content-hashed renames. Closes #468.
+
 - **Content-addressable assets widened to 14 extensions**: CSS, JS,
   MJS plus 7 image formats + 4 font formats. Per-platform
   `Cache-Control: immutable` rules emitted for Netlify, Vercel,
   Cloudflare Pages.
+
 - **Reproducible-build verification job** in `scheduled.yml`:
   double-build with `--locked --offline` + SHA-256 hash diff.
   Closes #424.
+
 - **SECURITY.md** (canonical security policy): disclosure SLA,
   threat model, security defaults, reproducible-build recipe,
   build-provenance verification.
+
 - **WCAG 2.2 + EAA compliance guide**
   (`docs/guide/wcag-compliance.md`): full criterion mapping, EAA
   enforcement context (28 June 2025), member-state implementations,
   before/after migration metrics. Closes #470.
+
 - **API stabilisation audit**
   (`docs/architecture/api-stability-audit.md`): 4-tier inventory of
   ~79 public types + Plugin trait. Closes #427.
+
 - **Perf baseline doc** (`docs/perf/baseline-100p.md`): 18.7 ms
   100-page measurement + 6-subsystem hotspot inventory + profiling
   recipes. Closes #471.
+
 - **Regression contract** (`docs/architecture/regression-contract.md`):
   canonical inventory of every CI gate and its user-facing promise.
+
 - **`tests/chaos.rs`** — 9 chaos-engineering tests (corrupt
   frontmatter, symlink loops, concurrent builds). Closes #423.
+
 - **`tests/element_presence.rs`** — universal HTML invariants gate
   (lang, title, main, charset) on every example page.
+
 - **`tests/perf_budgets.rs`** — hard wall-clock budgets: 10-page <
   100 ms, 100-page < 500 ms, 500-page < 2 s.
+
 - **`tests/jsonld_validation.rs`** — schema.org required-field
   validation across every example output, wired into CI.
+
 - **`tests/golden_files.rs`** — golden-file regression framework
   with normalisation (timestamps, fingerprints, SRI) and
   `UPDATE_GOLDEN=1` workflow. Closes #466 (framework phase).
+
 - **`tests/docs_accuracy.rs`** — verifies README claims match
   source-of-truth files (test count, WCAG version, coverage floors,
   MSRV, version sync).
+
 - **`tests/doc_links.rs`** — every internal Markdown link in
   README/CHANGELOG/SECURITY/docs/* resolves to an existing file.
+
 - **OpenTelemetry feature-gate scaffolding** (`src/otel.rs`):
   `otel` Cargo feature, `--trace` CLI flag, one demo span around
   `execute_build_pipeline`. Closes #422 phase A.
+
 - **Multi-OS `example_outputs` portability job** in `scheduled.yml`:
   weekly macOS + Windows runs. Closes #473.
+
 - **Per-criterion SEO comparison matrices** in
   `docs/compare/ssg-vs-{hugo,zola,astro}.md` covering 17–18 SEO
   criteria each. Closes #461.
@@ -1179,9 +1291,11 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 - **README test-count claim refreshed** from 1,640 → 1,685+ lib
   tests, plus mention of new `collections` + `sbom` + `otel`
   modules.
+
 - **Cargo.toml keywords**: `["cli","generator","ssg","static-site",
   "wasm"]` → `["rust","markdown","jamstack","ssg","wasm"]` for
   better crates.io discoverability. Closes #428.
+
 - **`FingerprintPlugin` rename suffix** is still the first 8 hex
   chars but now derived from real SHA-256 instead of FNV-1a.
 
@@ -1191,19 +1305,24 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
   `integrity="sha256-..."` attributes were silently invalid. Now
   real SHA-256 via the `sha2` crate + canonical base64 via the
   `base64` crate. Verified against NIST test vectors.
+
 - **CSS `url()` references broke** after image/font fingerprinting
   because the CSS file content wasn't patched before the CSS file
   was itself hashed. Three-pass pipeline fixes the ordering.
+
 - **CSS parser false positives in WCAG checks** —
   `/* width: 10px */` no longer triggers 2.5.8; `@media print {
   button { width: 10px } }` no longer fires unconditionally;
   multiple `<style>` blocks now all scanned.
+
 - **JSON-LD validator over-strictness** — `WebPage` requires only
   `name` (per Google rich-results docs), not `name + url +
   inLanguage`. The latter two are Recommended only.
+
 - **`tests/chaos.rs::read_only_output_directory_returns_clean_error`**
   now uses a Drop guard for permission restoration so panics don't
   leave stale 0o555 tempdirs on CI disk.
+
 - **Reproducible-build job** runs `cargo fetch --locked` then both
   build invocations as `--locked --offline` to eliminate transient
   registry state.
@@ -1230,8 +1349,11 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
   branch**: 6× openssl (alerts #29–#33, #35, #36; all `< 0.10.79`),
   1× rustls-webpki (#34; `< 0.103.13`). Severity mix: 6 high + 1
   moderate + 1 low.
+
 - **Real SHA-256 for SRI** (above).
+
 - **Reproducible-build verification** in CI.
+
 - **`SECURITY.md`** canonical security policy.
 
 ## [0.0.38] - 2026-04-20
@@ -1239,11 +1361,17 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 ### Added
 
 - **Agentic LLM pipeline**: `--ai-fix` CLI flag triggers audit, diagnose, fix, verify, and report cycle with configurable max refinement attempts and JSON output
+
 - **Multilingual readability**: Kandel-Moles (FR), Wiener Sachtextformel (DE), Gulpease (IT), LIX (SV/NO/DA), Fernandez Huerta (ES) with BCP 47 language detection from frontmatter
+
 - **OG image generation**: auto-generated SVG social cards from page title and site name, injected via `og:image` meta tag, zero new dependencies
+
 - **Scalability benchmarks**: Criterion benchmarks at 100, 1K, and 10K page tiers with CI job on release tags
+
 - **axe-core CI**: `@axe-core/playwright` integration for WCAG 2.1 AA audit with JSON report artifacts
+
 - **CSP whitepaper**: `docs/whitepaper/csp-without-compromise.md` documenting build-time inline extraction and SRI hashing
+
 - **237 new unit tests**: coverage raised from 94.24% to 95.06% regions (1,640 total)
 
 ### Changed
@@ -1275,16 +1403,27 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 ### Added
 
 - **WebAssembly**: `ssg-core` and `ssg-wasm` crates for browser/edge compilation
+
 - **Interactive islands**: `<ssg-island>` Web Components with lazy hydration
+
 - **Streaming compilation**: batch-based compiler for 100K+ page sites
+
 - **Local LLM pipeline**: auto-generate alt text, meta descriptions, readability auditing
+
 - **Dependency graph**: `DepGraph` for incremental rebuild tracking
+
 - **Browser error overlay**: build errors rendered in-browser via WebSocket
+
 - **CSS hot reload**: stylesheet changes without full page reload
+
 - **Property-based testing**: proptest for frontmatter, markdown, shortcode fuzzing
+
 - **WASM integration tests**: 12 wasm-bindgen-test cases in headless Chrome
+
 - **llms.txt spec compliance**: section index, language field, disallow patterns
+
 - **Performance gates**: 8 timed CI assertions (compilation, search, cache, streaming)
+
 - **Enterprise regression suite**: 27 tests for cache resilience, licence, i18n, pipeline
 
 ### Changed
@@ -1321,72 +1460,103 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
   enclosures, categories, language, lastBuildDate, copyright),
   `ManifestFixPlugin` (word-boundary-safe truncation), `HtmlFixPlugin` (JSON-LD
   date conversion, HTTPS context, broken img repair).
+
 - **Content schema validation** — new `content` module with `ContentSchema`,
   `FieldDef`, TOML schema loader, compile-time frontmatter validation, and
   `--validate` CLI flag for schema-only checks. 62 tests.
+
 - **Responsive image pipeline** — `ImageOptimizationPlugin` now emits
   `<picture>` elements with AVIF/WebP `<source>` tags, responsive `srcset` at
   320/640/1024/1440, `loading="lazy" decoding="async"` by default,
   `fetchpriority="high"` → `loading="eager"`, width/height from source metadata.
+
 - **i18n routing** — new `i18n` module with `I18nPlugin`, automatic hreflang
   injection for multi-locale pages, `x-default` support, per-locale sitemaps
   with `xhtml:link` alternates, `generate_lang_switcher_html()` helper.
+
 - **Parallel plugin pipeline** — `MinifyPlugin` and `SearchIndex::build`
   converted to `par_iter()`. New `--jobs N` CLI flag for Rayon thread count.
+
 - **Benchmark suite** — Criterion benchmarks for 10–10K synthetic pages,
   `benchmarks/README.md` with cross-SSG comparison instructions, `BENCHMARKS.md`
   template.
+
 - **Accessibility CI** — `.github/workflows/a11y.yml` with pa11y WCAG 2.1 AA
   scanning, `make a11y` target.
+
 - **SBOM + CI hardening** — `.github/workflows/sbom.yml` with CycloneDX
   generation and Sigstore build provenance attestation.
+
 - **Multi-platform release workflow** — `.github/workflows/release.yml` builds 5
   targets on `v*` tags: Linux glibc, Linux musl (static), macOS ARM64, macOS
   Intel, Windows. SHA256 checksums, GitHub Release, crates.io publish.
+
 - **Install script** — `scripts/install.sh` auto-detects OS/arch, downloads
   correct binary, verifies checksum, installs to `~/.local/bin`.
+
 - **Homebrew formula** — `packaging/homebrew/ssg.rb` for `brew install`.
+
 - **SPDX license headers** — added to all 60+ source files.
+
 - **Deploy security headers** — `Content-Security-Policy` and
   `Strict-Transport-Security` (HSTS) added to Netlify/Vercel/Cloudflare configs.
+
 - **Enhanced SEO plugin** — full OG suite (og:url, og:image, og:image:width/
   height, og:locale), full Twitter Card suite (summary_large_image for
   articles), JSON-LD Article/WebPage with datePublished, dateModified, author
   as Person entity, image as ImageObject, inLanguage.
+
 - **Canonical URL replacement** — `CanonicalPlugin` now replaces template
   placeholders with correct `base_url + path` instead of skipping existing tags.
 
 ### Changed
 
 - **Renamed** all references from "Shokunin" to "Static Site Generator".
+
 - **Dependencies reduced** from 25 → 21 direct deps: `once_cell` → `OnceLock`,
   `dtt` → `chrono`, `colored` → ANSI codes, `uuid` moved to dev-deps.
+
 - **Tokio features trimmed** from `["full"]` to `["fs", "rt-multi-thread",
   "macros", "time"]` — removes 8 unused subsystems.
+
 - **MSRV** synced between `build.rs` (was 1.74) and `Cargo.toml` (1.88).
+
 - **Dev server** only starts when `--serve` is explicitly requested (was
   blocking unconditionally after every build, breaking CI).
+
 - **Accessibility checker** recognises `alt=""` with `role="presentation"` and
   bare `alt` attribute (minified) as valid decorative images.
+
 - **Template contrast** — WCAG AAA colours: `--vp-t3` → `#545458`/`#a1a1aa`,
   `--vp-br` → `#1a3a8a`, links underlined for colour-blind distinguishability.
+
 - **Musl static binary** — added to CI portability matrix (weekly + release).
+
 - **`deny.toml`** — removed stale `CC0-1.0` and `Unicode-DFS-2016` entries.
 
 ### Fixed
 
 - **Sitemap** — duplicate XML declarations, double-slash URLs, stale lastmod.
+
 - **News sitemap** — "Unnamed Publication" / "Untitled Article" placeholders
   replaced with real frontmatter data.
+
 - **RSS feed** — root feed now aggregates all article items (was single
   self-referencing entry).
+
 - **OG/Twitter tags** — empty on non-index pages due to comment-marker
   detection instead of actual `<meta>` tag checks.
+
 - **JSON-LD dates** — RFC 2822 → ISO 8601 conversion.
+
 - **JSON-LD @context** — `http://schema.org/` → `https://schema.org`.
+
 - **Manifest.json** — description truncated mid-word at 120 chars.
+
 - **Markdown .class= syntax** — `<p src=` injected into `<img>` tags.
+
 - **Lighthouse scores** — A11y 91→100, SEO 85→100 on generated output.
+
 - **CI** — a11y workflow cancellation, Chrome sandbox flags, mold linker
   config incompatibility with CI runners.
 
@@ -1408,6 +1578,7 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
   - `multilingual` — 6 priority locales (EN/FR/ES/DE/JA/AR) rewritten with a
     real i18n product narrative ("Write once, ship in 28 languages")
   - `plugins` — annotated lifecycle walkthrough, own dirs, root templates
+
 - **Comprehensive regression test suite** — `+140 tests` across 3 new files:
   - `tests/example_outputs.rs` (19 tests) — runs every example end-to-end +
     11 negative validator tests proving the validators catch what they claim
@@ -1418,19 +1589,25 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
     valid pages pass, missing fields fail, unknown enum values fail, missing
     schema file tolerated, multiple errors aggregated, legacy `validate_only`
     path still works
+
 - **Coverage gate** — `.github/workflows/ci.yml` enforces region ≥95.0%, line
   ≥97.0%, function ≥95.0%. Lib coverage measured at 95.22% / 97.46% / 95.79%.
+
 - **`validate_with_schema(content_dir, schema_path)` API** — schema can now
   live outside `content_dir`, avoiding `staticdatagen::compile`'s read-every-
   file behaviour that previously blocked the docs example schema validation.
+
 - **Browser-compat fixes in `HtmlFixPlugin`** — removes empty `<link
   rel="preload" href>` tags; injects modern `mobile-web-app-capable` meta
   alongside the deprecated apple variant.
+
 - **`ManifestFixPlugin` empty-icon filtering** — drops icon entries whose `src`
   is empty (Chrome would otherwise log a manifest icon download error).
+
 - **Mobile-menu desktop fix** — added `.mobile-menu{display:none}` to base CSS
   in all 6 shared templates; previously the rule lived only inside
   `@media(max-width:768px)` so the menu rendered as a duplicate nav on desktop.
+
 - **Mobile nav alignment fix** — added `.nav-controls{margin-left:auto}` to the
   `@media(max-width:768px)` block so theme switch + hamburger sit flush right
   when `.nav-search` is hidden.
@@ -1443,24 +1620,30 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
   - `template/tera` → `templates/tera` (singular `template/` removed)
   - `benchmarks/README.md` → `benches/README.md` (benchmarks/ removed)
   - Empty root `content/`, `templates/`, `public/`, `build/` removed
+
 - **CI workflows consolidated 7 → 3**:
   - `ci.yml` (PR gate; lint → test ×3 OS · examples · coverage · audit
     in parallel; <5 min wall time target)
   - `scheduled.yml` (weekly + tag; portability matrix, musl static, pa11y,
     SBOM)
   - `release.yml` (tag; build × 5 platforms + GHCR + GPG + AUR + crates.io)
+
 - **Release pipeline expanded** — adds `.rpm` (cargo-generate-rpm), macOS
   `.pkg` (pkgbuild), Windows `.msi` (cargo-wix), multi-arch GHCR container
   (`ghcr.io/sebastienrousseau/static-site-generator:vX.Y.Z` + `:latest`),
   AUR push (gated on `AUR_SSH_KEY` secret), GPG detached signatures (gated
   on `GPG_PRIVATE_KEY` secret).
+
 - **Cache files relocated** — `.ssg-cache.json` + `.ssg-plugins-cache.json`
   moved from repo root → `target/.ssg-cache/{ssg,plugins}.json`.
+
 - **Clippy re-enabled** — `cargo clippy --lib -- -D warnings` is now CI-gated;
   tests/examples allow `unwrap_used` + `expect_used` via documented
   workspace-wide `[lints.clippy]` allowance list. Lib has 0 warnings.
+
 - **`Dockerfile` added** — two-stage build (cargo + debian-slim runtime) for
   the GHCR multi-arch image.
+
 - **`Cargo.toml` packaging metadata** — `[package.metadata.generate-rpm]` for
   RPM asset list, `[package.metadata.wix]` for MSI installer config.
 
@@ -1470,11 +1653,14 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
   at the first `>` character inside an SVG `data:` URL in `src=`, causing
   spurious `<img> missing alt text: (no src)` reports. New quote-aware
   `find_tag_end()` respects attribute quoting.
+
 - **Schema validation silently passing** — docs example reported "all pages
   valid" without actually validating because schema was outside `content_dir`
   (where the legacy `validate_only` looked). New API + relocated schema fix it.
+
 - **Nav clutter on single-page templates** — `basic` example trims Posts/Tags
   nav items + footer Resources column + hero CTAs via `:has()` CSS injection.
+
 - **Stray repo artifacts removed** — `*.log`, `fixes.txt`, `.DS_Store`,
   `public.build-tmp/` purged from working tree (already gitignored).
 
@@ -1485,44 +1671,65 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 - **Localized search widget** — `SearchLabels` struct with 28 bundled locale
   translations; `LocalizedSearchPlugin` injects per-locale search modal
   strings (button, placeholder, footer hints, no-results message).
+
 - **GFM Markdown extensions** — new `MarkdownExtPlugin` adds tables,
   ~~strikethrough~~, and task-list checkboxes on top of staticdatagen's
   renderer.
+
 - **WCAG AAA green palette** — brand colours switched from blue to green
   (matching the Kaishi logo) with solid-hex text tokens: 7.05:1–16.5:1
   contrast ratios in both light and dark modes.
+
 - **28-locale multilingual example** — full content + template trees for
   en, fr, ar, bn, cs, de, es, ha, he, hi, id, it, ja, ko, nl, pl, pt,
   ro, ru, sv, th, tl, tr, uk, vi, yo, zh, zh-tw.
+
 - **`cmd::resolve_host()` / `resolve_port()`** — `$SSG_HOST` / `$SSG_PORT`
   env-var overrides for WSL2, Codespaces, and dev-container users.
+
 - **`make init`** — one-command bootstrap (detects platform, installs
   rustfmt + clippy + cargo-deny, wires up git hooks, runs first build).
+
 - **`make hooks`** — installs `.githooks/pre-commit` signed-commit guard.
+
 - **`make clean`** — removes build artefacts and stray log files.
+
 - **`.devcontainer/devcontainer.json`** — one-click VS Code / Codespaces
   environment.
+
 - **`.githooks/pre-commit`** — cross-platform (bash) hook that refuses
   unsigned commits.
+
 - **`.github/workflows/portability.yml`** — cost-optimised 3-OS CI matrix
   (fast Linux gate per push; full matrix weekly + on release tags).
+
 - **`<h1>` on all pages** — content templates now emit
   `<h1 class="page-title">{{title}}</h1>`.
+
 - **`<meta name="mobile-web-app-capable">`** added alongside the deprecated
   apple-prefixed variant.
+
 - **`prefers-reduced-motion`** global CSS override.
+
 - **44 px tap targets** for `.lang-btn` and `.menu-toggle`; `.theme-switch`
   uses a transparent `::after` hit-area extension.
+
 - **`docs/README.md`** — explains the gitignored `docs/` build-target
   directory.
+
 - **Criterion benchmark suite** — `benches/bench_site_generation.rs`
   measures end-to-end compile throughput at 10, 50, and 100 pages.
   `make bench` target added to Makefile.
+
 - **`CHANGELOG.md`** — Keep a Changelog format with full release notes.
+
 - **README Table of Contents** — 11-item jump index at the top.
+
 - **Code of Conduct** linked from README.
+
 - **`make doc`** — generates API documentation with `-D warnings` and
   opens in browser.
+
 - **Mermaid plugin lifecycle diagram** in CONTRIBUTING.md.
 
 ### Changed
@@ -1531,6 +1738,7 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
   `SeoPlugin`, `CanonicalPlugin`, and `JsonLdPlugin` now use
   `par_iter().try_for_each()` instead of sequential `for` loops for
   HTML file injection. `AtomicUsize` replaces mutable counters.
+
 - **`warp` dependency removed** — `handle_server()` now uses
   `http_handle::Server` via `tokio::task::spawn_blocking`. Cargo.lock
   shrank by 292 lines. Direct deps: 25 → 24.
@@ -1538,22 +1746,31 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 - **CI pipelines pinned to SHA** — all shared workflow refs and GitHub
   Actions pinned to immutable commit SHAs instead of mutable `@main` /
   `@v4` / `@stable` tags. Eliminates supply-chain risk.
+
 - **`.editorconfig`** expanded with `[*.{json,toml}]` and `[*.html]`
   rules at indent 2.
+
 - **MSRV** bumped from 1.74.0 to **1.88.0** (deps had silently escalated).
+
 - **README** rewritten: test count (342→741), CLI reference (10→14 flags),
   cross-platform prerequisites table, library example uses `ssg::run()`,
   CI claim corrected (stable only, not nightly), module list expanded to
   all 30 src modules.
+
 - **CONTRIBUTING.md** architecture tree synced to all 30 modules; signed-tag
   enforcement; per-platform setup instructions.
+
 - **`Cargo.toml`** `documentation` URL → `https://docs.rs/ssg` (was dead
   `static-site-generator.one`); `homepage` → GitHub repository URL.
+
 - **`ssg --help`** no longer leaks `[INFO]` log lines (logger init moved
   below `Cli::build().get_matches()`).
+
 - **Portability CI** split into fast gate (1 job/push) + full matrix
   (weekly/tags) — ~6× cost reduction.
+
 - **`src/process.rs`** gained `//!` module-level documentation.
+
 - **`src/lib.rs`** `ServeTransport` doc fixed (broken `[NoopTransport]`
   intra-doc link).
 - Hardcoded `/tmp/` paths in tests replaced with `std::env::temp_dir()`.
@@ -1562,31 +1779,44 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 
 - **RTL dropdown positioning** — `right:0` → `inset-inline-end:0` so the
   language menu anchors correctly on Hebrew / Arabic pages.
+
 - **English root link** (`/`) was being rewritten to `/<locale>/` by the
   inline JS — added `h !== '/'` guard.
+
 - **Cross-locale navigation** — language switcher links now preserve the
   current sub-path (e.g. `/en/tags/` → `/fr/tags/`).
+
 - **Banner URLs** corrected: `stock/images/banners/` → `stocks/images/`.
+
 - **Logo URLs** migrated: `kaishi/images/logos/` → `kaishi/v1/logos/`.
+
 - **Theme switch button** visual restored after tap-target rule blew up
   its 40×22 pill to 44×44 square.
+
 - **Search widget dark mode** — greys were globally replaced with light-mode
   values, making text invisible; now context-aware (light: `#595960`,
   dark: `#cccccf`).
+
 - **PR template** — added signed-commit checklist item.
+
 - **Search locale isolation** — widget now fetches
   `/<lang>/search-index.json` per locale instead of always loading the
   English root index. Result URLs are prefixed with the locale path.
+
 - **Search hero content indexed** — `extract_text()` no longer strips
   `<header>` blocks, so hero taglines and subtitles are searchable.
+
 - **Search JS scoping crash** — `lm` and `lp` locale variables hoisted
   from `load()` to the outer IIFE scope; eliminates `ReferenceError`
   that silently crashed the search function on every keystroke.
+
 - **`cargo deny check licenses`** — added Zlib to allow list (used by
   `foldhash`); removed stale RUSTSEC-2025-0068 ignore.
+
 - **RUSTSEC-2026-0097** (rand 0.8.5 unsound) acknowledged in both
   `.cargo/audit.toml` and `deny.toml` — transitive via `phf_generator`,
   SSG never calls `rand::rng()` directly.
+
 - **Unused import** in `quickstart_example.rs` removed.
 
 ### Removed
@@ -1594,6 +1824,7 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 - **Inline JS nav sort** — was comparing translated `textContent` against
   an English `order` array, scrambling the menu. Source-HTML order now
   persists directly.
+
 - **Language selector page** at `/` — root now serves English content
   directly; language switcher is embedded in the nav bar.
 
