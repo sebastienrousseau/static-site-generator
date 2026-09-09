@@ -559,11 +559,19 @@ strip = false                               # Do not strip symbols in test build
 # Packaging metadata
 # -----------------------------------------------------------------------------
 
-# cargo-generate-rpm — used by .github/workflows/release.yml to produce
-# `ssg-X.Y.Z-1.x86_64.rpm` for Fedora / RHEL / openSUSE consumers.
+# cargo-generate-rpm — used by the release workflow to produce
+# `ssg-X.Y.Z-1.<arch>.rpm` for Fedora / RHEL / openSUSE consumers.
+#
+# The binary's source path must stay `target/release/...`. cargo-generate-rpm
+# rewrites that prefix to `target/<triple>/release/` when `--target` is given,
+# which is how one entry serves both x86_64 and aarch64. Naming a triple here
+# instead pins the asset to that one architecture: the aarch64 leg of the
+# v0.0.60 release failed with `Asset file not found:
+# target/x86_64-unknown-linux-gnu/release/ssg`, and because every later job
+# needs all builds green, the crates.io publish was skipped with it.
 [package.metadata.generate-rpm]
 assets = [
-    { source = "target/x86_64-unknown-linux-gnu/release/ssg", dest = "/usr/bin/ssg", mode = "755" },
+    { source = "target/release/ssg", dest = "/usr/bin/ssg", mode = "755" },
     { source = "LICENSE-MIT",    dest = "/usr/share/doc/ssg/LICENSE-MIT",    mode = "644", doc = true },
     { source = "LICENSE-APACHE", dest = "/usr/share/doc/ssg/LICENSE-APACHE", mode = "644", doc = true },
     { source = "README.md",      dest = "/usr/share/doc/ssg/README.md",      mode = "644", doc = true },
