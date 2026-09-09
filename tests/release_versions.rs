@@ -355,3 +355,74 @@ fn dependency_snippets_in_docs_name_the_current_version() {
         stale.join("\n  ")
     );
 }
+
+/// crates.io rejects a publish whose keywords break its limits, and the
+/// publish step is fail-fast: one bad keyword stops the whole release
+/// after the earlier crates have already gone out, which cannot be undone.
+///
+/// `ssg-mcp` shipped `"static-site-generator"` (21 characters). crates.io
+/// answered `400 Bad Request: "static-site-generator" is an invalid
+/// keyword (keywords must have less than 20 characters)` during the
+/// v0.0.60 bootstrap, after five sibling crates had already published.
+///
+/// The bound here is 19 rather than 20 because that is what the server's
+/// own message states; every keyword in the workspace is well inside it.
+#[test]
+fn every_publishable_crate_has_keywords_crates_io_will_accept() {
+    const MAX_KEYWORDS: usize = 5;
+    const MAX_KEYWORD_LEN: usize = 19;
+
+    let mut manifests = vec![workspace().join("Cargo.toml")];
+    let crates_dir = workspace().join("crates");
+    let mut members: Vec<_> = fs::read_dir(&crates_dir)
+        .expect("crates/ is readable")
+        .filter_map(Result::ok)
+        .map(|e| e.path().join("Cargo.toml"))
+        .filter(|p| p.is_file())
+        .collect();
+    members.sort();
+    manifests.extend(members);
+
+    let mut checked = 0usize;
+    for manifest in manifests {
+        let text = read(&manifest);
+        // Unpublished members cannot fail a crates.io publish.
+        if text.contains("publish = false") {
+            continue;
+        }
+        let Some(line) = text.lines().find(|l| l.starts_with("keywords"))
+        else {
+            continue;
+        };
+        let keywords: Vec<&str> = line.split('"').skip(1).step_by(2).collect();
+        assert!(
+            !keywords.is_empty(),
+            "{}: a `keywords` line with no keywords",
+            manifest.display()
+        );
+        assert!(
+            keywords.len() <= MAX_KEYWORDS,
+            "{}: {} keywords; crates.io accepts at most {MAX_KEYWORDS}",
+            manifest.display(),
+            keywords.len()
+        );
+        for kw in &keywords {
+            assert!(
+                kw.len() <= MAX_KEYWORD_LEN,
+                "{}: keyword {kw:?} is {} characters; crates.io rejects \
+                 anything longer than {MAX_KEYWORD_LEN}, and that failure \
+                 lands mid-publish after earlier crates are already live",
+                manifest.display(),
+                kw.len()
+            );
+        }
+        checked += 1;
+    }
+
+    // A test that checked nothing would pass just as quietly as the bug.
+    assert!(
+        checked >= 6,
+        "expected to check the root crate and its publishable members, \
+         but only inspected {checked} manifest(s)"
+    );
+}
