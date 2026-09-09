@@ -151,6 +151,16 @@ fn setup_test_files(
         file.write_all(&data).unwrap();
     }
 
+    // Postconditions: a fixture that silently built the wrong shape would
+    // make every measurement below meaningless.
+    assert!(src_dir.exists() && dst_dir.exists());
+    let built: Vec<_> = fs::read_dir(&src_dir)
+        .unwrap()
+        .filter_map(Result::ok)
+        .collect();
+    assert_eq!(built.len(), count as usize);
+    assert_eq!(fs::metadata(built[0].path()).unwrap().len(), size);
+
     (temp_dir, src_dir, dst_dir)
 }
 
@@ -184,6 +194,15 @@ fn setup_nested_directories() -> (tempfile::TempDir, PathBuf, PathBuf) {
         for j in 0..3 {
             let file_path = nested_dir.join(format!("file_{j}.txt"));
             fs::write(file_path, format!("content {i}_{j}")).unwrap();
+        }
+    }
+
+    // Postconditions, as above: five levels, three files each.
+    for i in 0..5 {
+        let dir = src_dir.join(format!("level_{i}"));
+        assert!(dir.is_dir());
+        for j in 0..3 {
+            assert!(dir.join(format!("file_{j}.txt")).is_file());
         }
     }
 
@@ -226,74 +245,3 @@ fn setup_mixed_content() -> (tempfile::TempDir, PathBuf, PathBuf) {
 
 criterion_group!(benches, bench_concurrent_copy, bench_verify_files);
 criterion_main!(benches);
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    #[cfg_attr(
-        not(feature = "benchmark"),
-        ignore = "requires benchmark feature"
-    )]
-    fn test_setup_test_files() {
-        let (_tmp, src, dst) = setup_test_files(5, 1024);
-        assert!(src.exists());
-        assert!(dst.exists());
-
-        // Verify file count
-        let files: Vec<_> =
-            fs::read_dir(&src).unwrap().filter_map(Result::ok).collect();
-        assert_eq!(files.len(), 5);
-
-        // Verify file size
-        let file_size = fs::metadata(files[0].path()).unwrap().len();
-        assert_eq!(file_size, 1024);
-    }
-
-    #[test]
-    #[cfg_attr(
-        not(feature = "benchmark"),
-        ignore = "requires benchmark feature"
-    )]
-    fn test_setup_nested_directories() {
-        let (_tmp, src, _) = setup_nested_directories();
-
-        // Verify directory structure
-        for i in 0..5 {
-            let dir = src.join(format!("level_{i}"));
-            assert!(dir.exists());
-            assert!(dir.is_dir());
-
-            // Verify files in each directory
-            for j in 0..3 {
-                let file = dir.join(format!("file_{j}.txt"));
-                assert!(file.exists());
-                assert!(file.is_file());
-            }
-        }
-    }
-
-    #[test]
-    #[cfg_attr(
-        not(feature = "benchmark"),
-        ignore = "requires benchmark feature"
-    )]
-    fn test_setup_mixed_content() {
-        let (_tmp, src, _) = setup_mixed_content();
-
-        // Verify root files
-        for i in 0..5 {
-            assert!(src.join(format!("root_{i}.txt")).exists());
-        }
-
-        // Verify directories and their content
-        for i in 0..3 {
-            let dir = src.join(format!("dir_{i}"));
-            assert!(dir.exists());
-            assert!(dir.join("content.txt").exists());
-            assert!(dir.join("empty").exists());
-            assert!(dir.join("empty").is_dir());
-        }
-    }
-}

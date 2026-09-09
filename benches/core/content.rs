@@ -12,16 +12,25 @@
 use criterion::{criterion_group, Criterion};
 use ssg::content::parse_schemas;
 
+// Keys must match `RawSchema` / `RawField` in `src/core/content.rs`: the
+// schema is keyed by `name`, and each field's type is `type` (serde
+// renames it from `field_type`), lower-case, from the `FieldType` set.
+// This fixture had `content_type` / `field_type = "DateTime"`, none of
+// which parse — the bench panicked on the first iteration. Nothing
+// noticed, because the `core` bench target had no `harness = false` and
+// so never ran.
 const POST_SCHEMA: &str = r#"
 [[schemas]]
-content_type = "post"
+name = "post"
+
 [[schemas.fields]]
 name = "title"
-field_type = "String"
+type = "string"
 required = true
+
 [[schemas.fields]]
 name = "date"
-field_type = "DateTime"
+type = "date"
 required = true
 "#;
 

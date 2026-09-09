@@ -17,6 +17,7 @@ homepage = "https://github.com/sebastienrousseau/static-site-generator" # The pr
 documentation = "https://docs.rs/ssg" # Doc URL
 repository = "https://github.com/sebastienrousseau/static-site-generator"
 readme = "README.md"                    # The README file
+autobenches = false                     # Every bench is declared in a [[bench]] block below; see the comment there
 build = "build.rs"                      # The build script
 
 # -----------------------------------------------------------------------------
@@ -325,6 +326,14 @@ required-features = ["benchmark"]
 name = "all_pub_api"
 harness = false
 
+# Standalone criterion bench. Needs an explicit entry for `harness = false`:
+# auto-discovery cannot set it, and without it cargo builds the file under
+# libtest, which finds no `#[bench]` items and reports success having
+# measured nothing.
+[[bench]]
+name = "bench_concurrent_operations"
+harness = false
+
 # -----------------------------------------------------------------------------
 # Module-mirror harnesses: one explicit entry per `src/<group>/` folder.
 # Each binary's `main.rs` declares the per-module submodules under it; see
@@ -337,6 +346,7 @@ path = "tests/core/main.rs"
 [[bench]]
 name = "core"
 path = "benches/core/main.rs"
+harness = false
 
 [[test]]
 name = "plugins"
@@ -345,6 +355,7 @@ path = "tests/plugins/main.rs"
 [[bench]]
 name = "plugins"
 path = "benches/plugins/main.rs"
+harness = false
 
 [[test]]
 name = "server"
