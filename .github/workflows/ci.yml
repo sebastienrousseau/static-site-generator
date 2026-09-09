@@ -520,8 +520,17 @@ jobs:
       # without them the script skips those steps and would report a pass
       # it did not earn.
       - name: Install shells and the roff linter
+        # The hosted runner image configures third-party apt sources this
+        # job never installs from — Google Chrome among them. When one
+        # serves a bad index, `apt-get update` exits 100 and fails the job.
+        # Dropping them first keeps their availability off the critical
+        # path; see the same guard in release.yml.
         run: |
-          sudo apt-get update -qq
+          set -euo pipefail
+          sudo rm -f /etc/apt/sources.list.d/google-chrome.list \
+                     /etc/apt/sources.list.d/microsoft-prod.list
+          sudo apt-get update -qq \
+            || echo "apt-get update reported an error; continuing"
           sudo apt-get install -y --no-install-recommends zsh fish mandoc
       - name: make DESTDIR=/tmp/stage install
         run: ./scripts/install-smoke.sh /tmp/stage
