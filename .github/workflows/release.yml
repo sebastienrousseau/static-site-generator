@@ -132,7 +132,31 @@ jobs:
           targets: ${{ matrix.target }}
 
       - if: matrix.musl
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
+        name: Install musl-tools
+        # The hosted x86_64 runner image configures third-party apt sources
+        # this job has no use for — Google Chrome among them. When one serves
+        # a bad index, `apt-get update` exits 100 and takes the release with
+        # it, even though every Ubuntu index fetched cleanly. That is what
+        # blocked v0.0.60 three runs in a row:
+        #
+        #   E: Failed to fetch https://dl.google.com/linux/chrome-stable/...
+        #      Packages.gz  Hash Sum mismatch
+        #
+        # The aarch64 image carries no such source, so the same step passed
+        # there and failed here for a reason belonging to neither.
+        #
+        # Drop the sources we never install from, then let a residual update
+        # failure through. This weakens nothing: `apt-get install` below is
+        # the real gate and still fails loudly if musl-tools is genuinely
+        # unavailable. An unreachable mirror for a repo we do not use is not
+        # a reason to fail a release.
+        run: |
+          set -euo pipefail
+          sudo rm -f /etc/apt/sources.list.d/google-chrome.list \
+                     /etc/apt/sources.list.d/microsoft-prod.list
+          sudo apt-get update \
+            || echo "apt-get update reported an error; continuing"
+          sudo apt-get install -y musl-tools
 
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
         with:
