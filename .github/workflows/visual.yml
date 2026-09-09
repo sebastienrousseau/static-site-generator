@@ -41,7 +41,15 @@ jobs:
 
       - name: Install Playwright
         working-directory: tests/visual
+        # The hosted runner image configures third-party apt sources this
+        # job never installs from — Google Chrome among them. When one
+        # serves a bad index, `apt-get update` exits 100 and fails the job.
+        # Dropping them first keeps their availability off the critical
+        # path; see the same guard in release.yml.
         run: |
+          set -euo pipefail
+          sudo rm -f /etc/apt/sources.list.d/google-chrome.list \
+                     /etc/apt/sources.list.d/microsoft-prod.list
           npm ci
           npx playwright install --with-deps chromium webkit
 
@@ -100,7 +108,15 @@ jobs:
 
       - name: Install Playwright
         working-directory: tests/visual
+        # The hosted runner image configures third-party apt sources this
+        # job never installs from — Google Chrome among them. When one
+        # serves a bad index, `apt-get update` exits 100 and fails the job.
+        # Dropping them first keeps their availability off the critical
+        # path; see the same guard in release.yml.
         run: |
+          set -euo pipefail
+          sudo rm -f /etc/apt/sources.list.d/google-chrome.list \
+                     /etc/apt/sources.list.d/microsoft-prod.list
           npm ci
           npx playwright install --with-deps chromium webkit
 
