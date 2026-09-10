@@ -553,9 +553,21 @@ fn minify_css(css: &str) -> String {
             // rejects — so every fluid type step in every theme silently fell
             // back and headings rendered at the body size.
             //
-            // `-` was already in both sets and so was never affected; `*` and
-            // `/` need no surrounding space and stay collapsible. Keeping the
-            // space in a `.a + .b` selector too costs two bytes and is valid.
+            // `*` is in both sets for the same class of reason, found the
+            // hard way. It needs no space inside `calc()`, but in a
+            // selector it is the universal selector and the space before
+            // it is a descendant combinator: `#btn *` became `#btn*`,
+            // which matches nothing. Three themes override the search
+            // widget with `#ssg-search-btn * { color: … !important }`,
+            // and all three overrides were silently discarded — the
+            // widget kept the generator's own colour and failed AAA
+            // contrast against the theme's surface. Keeping the space in
+            // `calc(2 * 3)` costs two bytes and is valid.
+            //
+            // `-` was already in both sets and so was never affected;
+            // `/` needs no surrounding space and stays collapsible.
+            // Keeping the space in a `.a + .b` selector too costs two
+            // bytes and is valid.
             // Media and support queries put a required space either side of
             // their combinators: `@media (a) and (b)` collapsed to
             // `@media(a)and(b)`, which is invalid and silently disables the
@@ -579,6 +591,7 @@ fn minify_css(css: &str) -> String {
                             || p == '.'
                             || p == '@'
                             || p == '%'
+                            || p == '*'
                             || p == '$';
                         let is_n_word = n.is_alphanumeric()
                             || n == '-'
@@ -588,6 +601,7 @@ fn minify_css(css: &str) -> String {
                             || n == '.'
                             || n == '@'
                             || n == '%'
+                            || n == '*'
                             || n == '$';
                         is_p_word && is_n_word
                     }
@@ -1310,6 +1324,42 @@ mod tests {
     ///
     /// A non-idempotent pass is a latent corruption: assets are re-minified
     /// on rebuilds, and each pass would degrade the file a little further.
+
+    /// A descendant combinator before the universal selector is a
+    /// space that carries meaning. Dropping it turns `#btn *` into
+    /// `#btn*`, which parses as garbage and matches nothing — the rule
+    /// is not tightened, it is discarded.
+    ///
+    /// Three published themes override the search widget with exactly
+    /// this shape, and all three overrides were being thrown away: the
+    /// widget kept the generator's own text colour and failed AAA
+    /// contrast against the theme's own surface. Nothing errored; the
+    /// rule simply stopped existing.
+    #[test]
+    fn minify_css_keeps_the_space_before_a_universal_selector() {
+        let out = minify_css("#btn, #btn * { color: red !important; }");
+        assert!(
+            out.contains("#btn *"),
+            "the descendant combinator must survive: {out}"
+        );
+        assert!(
+            !out.contains("#btn*"),
+            "must not produce the selector-eating form: {out}"
+        );
+    }
+
+    /// The same character inside `calc()` needs no space, but keeping
+    /// one is valid and costs two bytes — far cheaper than the class of
+    /// bug above.
+    #[test]
+    fn minify_css_leaves_calc_with_a_star_valid() {
+        let out = minify_css(".a { width: calc(2px * 3); }");
+        assert!(
+            out.contains("calc(2px * 3)") || out.contains("calc(2px*3)"),
+            "calc must stay valid either way: {out}"
+        );
+    }
+
     #[test]
     fn minify_css_is_idempotent() {
         let corpus = [
