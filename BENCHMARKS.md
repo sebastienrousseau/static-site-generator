@@ -2,14 +2,14 @@
 
 # Benchmarks
 
-Reproducible performance methodology and CI gates for SSG **v0.0.60**.
+Reproducible performance methodology and CI gates for SSG **v0.0.61**.
 
 > **Figures last measured at v0.0.58.** The methodology and the CI gates
 > below apply to this release; the numbers under _Current_ were carried
-> forward from that measurement. 0.0.60 changes no hot path these cover:
-> it collapses three copies of `noyalib` into one, bumps the oxc crates,
-> and repairs three benchmark targets that were reporting success while
-> measuring nothing. Re-measuring the full set is tracked in #559.
+> forward from that measurement. 0.0.61 changes no hot path these cover:
+> it fixes an audit gate that compared one element's SRI hash against
+> another's, and adds theme resolution, which runs once while the config
+> is read. Re-measuring the full set is tracked in #559.
 
 This document is **load-bearing**: the docs-accuracy gate
 (`tests/docs_accuracy.rs`) parses the tables below for the
@@ -145,7 +145,7 @@ Each row was measured on the same content corpus (`benches/corpus/small`,
 100 pages, full frontmatter). Wall-clock times are median-of-10 runs
 captured with [`hyperfine`](https://github.com/sharkdp/hyperfine).
 
-| Capability | SSG v0.0.60 | Hugo v0.155+ | Zola v0.20+ | Astro 6 | Eleventy 3 |
+| Capability | SSG v0.0.61 | Hugo v0.155+ | Zola v0.20+ | Astro 6 | Eleventy 3 |
 |---|---|---|---|---|---|
 | Language | Rust | Go | Rust | JS/TS | JS |
 | Runtime | None | None | None | Node 20+ | Node 20+ |
@@ -251,7 +251,7 @@ measurement.
 
 CI's coverage gate enforces the floors below (set in `ci.yml` `env`):
 
-| Metric | Floor | Current (v0.0.60) | Headroom |
+| Metric | Floor | Current (v0.0.61) | Headroom |
 |---|---:|---:|---:|
 | Regions | 98.0 % | 99.31 % | 1.31 |
 | Functions | 98.0 % | 99.24 % | 1.24 |

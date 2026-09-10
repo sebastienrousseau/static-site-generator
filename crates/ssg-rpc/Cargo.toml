@@ -1,6 +1,6 @@
 [package]
 name = "ssg-rpc"
-version = "0.0.60"
+version = "0.0.61"
 edition = "2021"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -27,7 +27,7 @@ schemars = { version = "1.2", default-features = false, features = ["derive", "s
 thiserror = "2"
 
 # Re-export the proc-macro so users only depend on `ssg-rpc`.
-ssg-rpc-macro = { path = "../ssg-rpc-macro", version = "0.0.60" }
+ssg-rpc-macro = { path = "../ssg-rpc-macro", version = "0.0.61" }
 
 [dev-dependencies]
 criterion = "0.8"
