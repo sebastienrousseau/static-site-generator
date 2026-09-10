@@ -203,3 +203,96 @@ fn compile_without_base_url_keeps_author_permalinks_verbatim() {
         "author permalink must pass through verbatim: {feed}"
     );
 }
+
+/// A project with content but no templates used to fail with
+/// `I/O error at 'public.build-tmp': ... No such file or directory` —
+/// naming the directory being written *to*, and no path for the file
+/// that was actually absent. `examples/basic` shipped in exactly that
+/// state, so following it verbatim produced an undiagnosable error.
+///
+/// The build must now name the missing templates and say how to get
+/// them.
+#[test]
+fn a_missing_root_template_is_named_rather_than_reported_as_io_at_the_output_dir(
+) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    let content = root.join("content");
+    let templates = root.join("templates");
+    std::fs::create_dir_all(&content).expect("content dir");
+    // The MiniJinja set alone is not enough: the StaticWeaver stage runs
+    // first and reads the template directory root.
+    std::fs::create_dir_all(templates.join("tera")).expect("tera dir");
+    std::fs::write(content.join("index.md"), "---\ntitle: T\n---\n\nBody\n")
+        .expect("write content");
+
+    let err = ssg::pipeline::compile_site(
+        &root.join("public.build-tmp"),
+        &content,
+        &root.join("public"),
+        &templates,
+    )
+    .expect_err("a project with no root templates must not build");
+
+    let msg = err.to_string();
+    for name in ["template.html", "index.html", "page.html", "post.html"] {
+        assert!(
+            msg.contains(name),
+            "the error should name the missing {name}, got: {msg}"
+        );
+    }
+    assert!(
+        msg.contains("ssg --new"),
+        "the error should say how to get the templates, got: {msg}"
+    );
+    assert!(
+        !msg.contains("public.build-tmp"),
+        "the error should not point at the output directory, got: {msg}"
+    );
+}
+
+/// The counterpart to the test above: the diagnostic must not claim
+/// templates are missing when they are all present. A page asking for a
+/// layout that does not exist also fails not-found, and there the
+/// honest answer is the original I/O error — pointing at a template
+/// directory that does contain the four usual files would send the
+/// reader somewhere there is nothing to find.
+#[test]
+fn a_not_found_with_every_root_template_present_keeps_the_io_error() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    let content = root.join("content");
+    let templates = root.join("templates");
+    std::fs::create_dir_all(&content).expect("content dir");
+    std::fs::create_dir_all(templates.join("tera")).expect("tera dir");
+    for name in ["template.html", "index.html", "page.html", "post.html"] {
+        std::fs::write(
+            templates.join(name),
+            "<!DOCTYPE html><html><body>{{content}}</body></html>\n",
+        )
+        .expect("write root template");
+    }
+    std::fs::write(
+        content.join("index.md"),
+        "---\ntitle: T\nlayout: nonexistent-layout\n---\n\nBody\n",
+    )
+    .expect("write content");
+
+    let err = ssg::pipeline::compile_site(
+        &root.join("public.build-tmp"),
+        &content,
+        &root.join("public"),
+        &templates,
+    )
+    .expect_err("a missing layout must still fail");
+
+    let msg = err.to_string();
+    assert!(
+        !msg.contains("does not contain"),
+        "must not blame the templates when all four are present: {msg}"
+    );
+    assert!(
+        msg.contains("Failed to compile site"),
+        "the original compile error should survive: {msg}"
+    );
+}
