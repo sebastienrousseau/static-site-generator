@@ -870,11 +870,11 @@ const SEARCH_WIDGET_SCRIPT: &str = r#"
    and this plugin cannot, so the offsets are custom properties with the
    previous values as defaults: setting `--ssg-search-top` is all a theme
    needs, and a theme that sets nothing behaves exactly as before. */
-#ssg-search-btn{position:fixed;top:var(--ssg-search-top,16px);right:var(--ssg-search-right,16px);z-index:9998;min-height:44px;display:flex;align-items:center;gap:8px;padding:8px 16px;background:#fff;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-family:-apple-system,system-ui,sans-serif;font-size:14px;color:#595960;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:border-color .15s,box-shadow .15s}
+#ssg-search-btn{position:fixed;top:var(--ssg-search-top,16px);right:var(--ssg-search-right,16px);z-index:9998;min-height:44px;display:flex;align-items:center;gap:8px;padding:8px 16px;background:#fff;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-family:-apple-system,system-ui,sans-serif;font-size:14px;color:#55555c;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:border-color .15s,box-shadow .15s}
 @media(max-width:47.999rem){#ssg-search-btn{top:auto;bottom:var(--ssg-search-bottom,16px);right:var(--ssg-search-right,16px);width:44px;height:44px;padding:0;justify-content:center;border-radius:50%;box-shadow:0 4px 14px rgba(0,0,0,.18)}#ssg-search-btn kbd,#ssg-search-btn span{display:none}}
 #ssg-search-btn:hover{border-color:#595960;box-shadow:0 2px 6px rgba(0,0,0,.12)}
 #ssg-search-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-#ssg-search-btn kbd{font-family:inherit;font-size:11px;padding:2px 6px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;color:#595960;margin-left:4px}
+#ssg-search-btn kbd{font-family:inherit;font-size:11px;padding:2px 6px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;color:#4f4f55;margin-left:4px}
 /* ── Modal overlay ── */
 #ssg-search-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);align-items:flex-start;justify-content:center;padding-top:12vh}
 #ssg-search-overlay.active{display:flex}
@@ -906,7 +906,7 @@ const SEARCH_WIDGET_SCRIPT: &str = r#"
 @media(prefers-color-scheme:dark){
 :root:not([data-theme="light"]) #ssg-search-btn{background:#1f2937;border-color:#374151;color:#cccccf}
 :root:not([data-theme="light"]) #ssg-search-btn:hover{border-color:#4b5563}
-:root:not([data-theme="light"]) #ssg-search-btn kbd{background:#374151;border-color:#4b5563;color:#cccccf}
+:root:not([data-theme="light"]) #ssg-search-btn kbd{background:#374151;border-color:#4b5563;color:#d9d9db}
 :root:not([data-theme="light"]) #ssg-search-box{background:#1f2937;color:#f9fafb}
 :root:not([data-theme="light"]) #ssg-search-header{border-color:#374151}
 :root:not([data-theme="light"]) #ssg-search-input{color:#f9fafb}
@@ -920,7 +920,7 @@ const SEARCH_WIDGET_SCRIPT: &str = r#"
 }
 [data-theme="dark"] #ssg-search-btn{background:#1f2937;border-color:#374151;color:#cccccf}
 [data-theme="dark"] #ssg-search-btn:hover{border-color:#4b5563}
-[data-theme="dark"] #ssg-search-btn kbd{background:#374151;border-color:#4b5563;color:#cccccf}
+[data-theme="dark"] #ssg-search-btn kbd{background:#374151;border-color:#4b5563;color:#d9d9db}
 [data-theme="dark"] #ssg-search-box{background:#1f2937;color:#f9fafb}
 [data-theme="dark"] #ssg-search-header{border-color:#374151}
 [data-theme="dark"] #ssg-search-input{color:#f9fafb}
