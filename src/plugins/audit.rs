@@ -88,6 +88,79 @@ impl AuditPlugin {
         )
     }
 
+    /// Yields the text of every opening tag in `html`, `<` to `>`.
+    ///
+    /// Quote-aware: a `>` inside an attribute value does not end the
+    /// tag. That matters because SRI checking has to read two
+    /// attributes of the *same* element, and the only way to be sure
+    /// they belong together is to bound the element first. Splitting on
+    /// lines does not bound anything once the HTML is minified.
+    fn opening_tags(html: &str) -> Vec<&str> {
+        let bytes = html.as_bytes();
+        let mut tags = Vec::new();
+        let mut i = 0usize;
+        while i < bytes.len() {
+            if bytes[i] != b'<' {
+                i += 1;
+                continue;
+            }
+            let start = i;
+            i += 1;
+            let mut quote: Option<u8> = None;
+            while i < bytes.len() {
+                let c = bytes[i];
+                match quote {
+                    Some(q) if c == q => quote = None,
+                    Some(_) => {}
+                    None if c == b'"' || c == b'\'' => quote = Some(c),
+                    None if c == b'>' => break,
+                    None => {}
+                }
+                i += 1;
+            }
+            if i < bytes.len() {
+                // `start..=i` spans `<` through `>`; slice on char
+                // boundaries so non-ASCII attribute values are safe.
+                if let Some(tag) = html.get(start..=i) {
+                    tags.push(tag);
+                }
+                i += 1;
+            }
+        }
+        tags
+    }
+
+    /// Reads a double- or single-quoted attribute value out of one tag.
+    ///
+    /// Matches on an attribute *boundary* — the name must be preceded by
+    /// whitespace — so `href` does not match inside `data-href`, and
+    /// `src` does not match inside `data-src` or `srcset`.
+    fn tag_attr<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
+        let mut from = 0usize;
+        while let Some(pos) = tag[from..].find(name) {
+            let at = from + pos;
+            let after = at + name.len();
+            let preceded_by_space = tag[..at]
+                .chars()
+                .next_back()
+                .is_some_and(char::is_whitespace);
+            let rest = tag.get(after..).unwrap_or("");
+            if preceded_by_space && rest.starts_with('=') {
+                let value = rest.get(1..).unwrap_or("");
+                let q = value.as_bytes().first().copied();
+                if q == Some(b'"') || q == Some(b'\'') {
+                    let q = q.unwrap_or(b'"') as char;
+                    let body = value.get(1..).unwrap_or("");
+                    if let Some(end) = body.find(q) {
+                        return body.get(..end);
+                    }
+                }
+            }
+            from = after.max(at + 1);
+        }
+        None
+    }
+
     /// Runs the 10-pillar audit against a compiled site directory.
     #[must_use]
     pub fn audit_directory(site_dir: &Path) -> QualityGateReport {
@@ -337,44 +410,43 @@ impl AuditPlugin {
             }
 
             // C. SRI Verification
-            for line in html.lines() {
-                if line.contains("integrity=\"sha384-") {
-                    if let Some(src_start) = line.find("src=\"") {
-                        let rem = &line[src_start + 5..];
-                        if let Some(src_end) = rem.find('"') {
-                            let src = &rem[..src_end];
-                            if !src.starts_with("http://")
-                                && !src.starts_with("https://")
-                            {
-                                if let Some(int_start) =
-                                    line.find("integrity=\"")
-                                {
-                                    let irem = &line[int_start + 11..];
-                                    if let Some(int_end) = irem.find('"') {
-                                        let int_val = &irem[..int_end];
-                                        let expected = asset_hashes
-                                            .get(src)
-                                            .or_else(|| {
-                                                asset_hashes.get(
-                                                    src.trim_start_matches('/'),
-                                                )
-                                            });
-                                        if let Some(exp) = expected {
-                                            if exp != int_val {
-                                                if let Some(p) = pillars
-                                                    .get_mut(
-                                                        "4. SRI Hashes Sync",
-                                                    )
-                                                {
-                                                    p.add_issue(format!(
-                                                        "{rel}: SRI mismatch for {src}"
-                                                    ));
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+            //
+            // Per element, not per line. The previous pass walked
+            // `html.lines()` and took the *first* `src="` and the
+            // *first* `integrity="` on any line that mentioned SRI —
+            // which are only the same element on pretty-printed HTML.
+            // Minified output puts a whole `<head>` on one line, and
+            // then the check compared one tag's `src` against another
+            // tag's `integrity`.
+            //
+            // That was both a false positive and a false negative. Six
+            // of the nine published themes reported
+            // `SRI mismatch for /theme-init.<hash>.js` whose integrity
+            // was in fact correct, and every SRI after the first on a
+            // minified line was never verified at all — a genuinely
+            // wrong hash there would have passed silently.
+            for tag in Self::opening_tags(&html) {
+                let Some(int_val) = Self::tag_attr(tag, "integrity") else {
+                    continue;
+                };
+                // `src` for <script>, `href` for <link rel=stylesheet>.
+                let Some(url) = Self::tag_attr(tag, "src")
+                    .or_else(|| Self::tag_attr(tag, "href"))
+                else {
+                    continue;
+                };
+                if url.starts_with("http://") || url.starts_with("https://") {
+                    continue;
+                }
+                let expected = asset_hashes
+                    .get(url)
+                    .or_else(|| asset_hashes.get(url.trim_start_matches('/')));
+                if let Some(exp) = expected {
+                    if exp != int_val {
+                        if let Some(p) = pillars.get_mut("4. SRI Hashes Sync") {
+                            p.add_issue(format!(
+                                "{rel}: SRI mismatch for {url}"
+                            ));
                         }
                     }
                 }
@@ -552,6 +624,121 @@ mod tests {
     fn test_audit_plugin_name() {
         let plugin = AuditPlugin;
         assert_eq!(plugin.name(), "audit");
+    }
+
+    /// Builds a site directory with one minified page whose `<head>`
+    /// holds several SRI-bearing elements on a single line — the shape
+    /// the real generator emits, and the shape the old line-based check
+    /// mishandled.
+    fn minified_site(script_integrity: &str) -> TempDir {
+        let dir = TempDir::new().expect("tempdir");
+        let root = dir.path();
+        let css = b"body{margin:0}";
+        let js = b"document.documentElement.classList.remove('no-js');";
+        fs::write(root.join("style.css"), css).expect("css");
+        fs::write(root.join("theme-init.js"), js).expect("js");
+        let css_sri = AuditPlugin::compute_sri(css);
+        // One line, stylesheet first, script second: the stylesheet's
+        // `integrity` precedes the script's `src`.
+        let html = format!(
+            "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">\
+             <title>t</title><meta http-equiv=\"Content-Security-Policy\" \
+             content=\"default-src 'self'; script-src 'self'\">\
+             <link rel=\"stylesheet\" href=\"/style.css\" \
+             integrity=\"{css_sri}\" crossorigin=\"anonymous\">\
+             <script src=\"/theme-init.js\" integrity=\"{script_integrity}\" \
+             crossorigin=\"anonymous\"></script></head><body><h1>t</h1>\
+             </body></html>"
+        );
+        fs::write(root.join("index.html"), html).expect("html");
+        dir
+    }
+
+    fn sri_issues(report: &QualityGateReport) -> Vec<String> {
+        report
+            .pillars
+            .get("4. SRI Hashes Sync")
+            .map(|p| p.issues.clone())
+            .unwrap_or_default()
+    }
+
+    /// The false positive. Every hash on the page is correct, but the
+    /// stylesheet's `integrity` appears before the script's `src` on the
+    /// same line. The old check paired them and reported a mismatch
+    /// against a script whose integrity was right — which is what made
+    /// six of the nine published themes score 9/10.
+    #[test]
+    fn correct_hashes_on_one_minified_line_raise_no_sri_issue() {
+        let js = b"document.documentElement.classList.remove('no-js');";
+        let dir = minified_site(&AuditPlugin::compute_sri(js));
+        let report = AuditPlugin::audit_directory(dir.path());
+        assert!(
+            sri_issues(&report).is_empty(),
+            "correct hashes must not be reported: {:?}",
+            sri_issues(&report)
+        );
+    }
+
+    /// The false negative, which matters more, and which needs a
+    /// fixture the old check would have got *right* on its first pair.
+    ///
+    /// Two scripts on one line. The first carries a correct hash, so the
+    /// old line-based pass matched `src`+`integrity` on it and stopped —
+    /// it only ever read the first of each per line. The second script's
+    /// hash is wrong and was never looked at. A wrong SRI hash makes the
+    /// browser refuse to run the script, so silence here is the
+    /// expensive failure.
+    #[test]
+    fn a_wrong_hash_after_a_correct_one_on_the_same_line_is_caught() {
+        let dir = TempDir::new().expect("tempdir");
+        let root = dir.path();
+        let first = b"console.log('first');";
+        let second = b"console.log('second');";
+        fs::write(root.join("first.js"), first).expect("first");
+        fs::write(root.join("second.js"), second).expect("second");
+        let good = AuditPlugin::compute_sri(first);
+        let html = format!(
+            "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">\
+             <title>t</title><meta http-equiv=\"Content-Security-Policy\" \
+             content=\"default-src 'self'; script-src 'self'\">\
+             <script src=\"/first.js\" integrity=\"{good}\" \
+             crossorigin=\"anonymous\"></script>\
+             <script src=\"/second.js\" \
+             integrity=\"sha384-notTheHashOfSecondJsAtAllNotEvenClose\" \
+             crossorigin=\"anonymous\"></script></head><body><h1>t</h1>\
+             </body></html>"
+        );
+        fs::write(root.join("index.html"), html).expect("html");
+
+        let report = AuditPlugin::audit_directory(root);
+        let issues = sri_issues(&report);
+        assert!(
+            issues.iter().any(|i| i.contains("/second.js")),
+            "the wrong hash on the second script must be reported, \
+             got: {issues:?}"
+        );
+        assert!(
+            !issues.iter().any(|i| i.contains("/first.js")),
+            "the correct first script must not be reported: {issues:?}"
+        );
+    }
+
+    /// `tag_attr` matches on an attribute boundary, so a `data-` prefixed
+    /// look-alike is not mistaken for the real attribute.
+    #[test]
+    fn tag_attr_does_not_match_a_prefixed_lookalike() {
+        let tag = "<script data-src=\"/decoy.js\" src=\"/real.js\">";
+        assert_eq!(AuditPlugin::tag_attr(tag, "src"), Some("/real.js"));
+        let only_decoy = "<script data-src=\"/decoy.js\">";
+        assert_eq!(AuditPlugin::tag_attr(only_decoy, "src"), None);
+    }
+
+    /// A `>` inside an attribute value must not end the tag early.
+    #[test]
+    fn opening_tags_are_bounded_quote_aware() {
+        let html = "<a title=\"a > b\" href=\"/x\">text</a>";
+        let tags = AuditPlugin::opening_tags(html);
+        assert_eq!(AuditPlugin::tag_attr(tags[0], "href"), Some("/x"));
     }
 
     #[test]

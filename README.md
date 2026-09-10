@@ -15,7 +15,7 @@
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.60-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.61-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
   <a href="#license"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg?style=for-the-badge" alt="License: MIT OR Apache-2.0" /></a>
   <a href="#minimum-supported-rust-version"><img src="https://img.shields.io/badge/MSRV-1.88.0-dea584.svg?style=for-the-badge&logo=rust" alt="MSRV 1.88.0" /></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/static-site-generator?style=for-the-badge&label=openssf%20scorecard" alt="OpenSSF Scorecard" /></a>
@@ -41,6 +41,7 @@
 - [The CLI](#the-cli) — subcommands, build flags, legacy form
 - [Library Usage](#library-usage) — plugins, schemas, the AI pipeline
 - [Examples](#examples) — eight runnable examples and the edge adapters
+- [Themes](#themes) — build on a published theme by name
 
 **Operational**
 
@@ -58,7 +59,7 @@
 
 ```toml
 [dependencies]
-ssg = "0.0.60"
+ssg = "0.0.61"
 ```
 
 ### Prebuilt binaries
@@ -74,7 +75,7 @@ brew install --formula https://raw.githubusercontent.com/sebastienrousseau/stati
 cargo install ssg
 
 # Debian / Ubuntu (amd64 or arm64)
-sudo dpkg -i ssg_0.0.60_amd64.deb
+sudo dpkg -i ssg_0.0.61_amd64.deb
 
 # Arch Linux (AUR)
 yay -S ssg
@@ -559,6 +560,47 @@ vercel deploy
 
 ---
 
+## Themes
+
+A theme is a directory of layouts and the assets they reference. Name
+one and SSG resolves it:
+
+```toml
+# ssg.toml
+theme = "quill"
+```
+
+```sh
+ssg build --theme quill
+```
+
+Either form sets the template directory for you, so a project does not
+have to hand-write a path into someone else's tree — a path that breaks
+when the theme moves and says nothing about which theme it is.
+
+**Where themes are looked for**, in order:
+
+1. `themes/` beside the `ssg.toml` that names the theme, so a build does
+   not depend on the directory it was invoked from
+2. `themes/` in the working directory
+3. each entry of `SSG_THEME_PATH`
+
+**Inside a theme**, either `_layouts/` or `templates/` is accepted.
+Which convention a theme follows is its author's business, not its
+consumer's.
+
+**Precedence** is `--template` > `--theme` > `theme =` in the config.
+Naming a theme and a template directory together is how you override one
+layout without forking the theme.
+
+A name that does not resolve reports every directory searched and the
+themes that do exist. A directory that exists but holds no layouts says
+that instead, and says what it expected to find.
+
+The nine published themes — `apex`, `atlas`, `kaishi`, `kinetic`,
+`lucid`, `quill`, `stablo`, `velocity`, `voxt` — live at
+[ssg-themes](https://github.com/sebastienrousseau/ssg-themes.github.io).
+
 ## Stability guarantees
 
 ### What a version bump promises
@@ -722,7 +764,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 </details>
 
 <details>
-<summary><b>All 66 modules</b></summary>
+<summary><b>All 67 modules</b></summary>
 
 | Module | Purpose |
 | :--- | :--- |
@@ -764,6 +806,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | `taxonomy` | Tag and category index generation |
 | `template_engine` | `MiniJinja` templating engine integration |
 | `template_plugin` | `MiniJinja` template rendering plugin |
+| `theme` | Resolves a theme name to its layout directory, for `theme =` / `--theme` |
 | `walk` | Shared bounded directory walkers |
 | `watch` | Polling-based file watcher with change classification |
 | `event_watch` | Event-driven file watcher (`notify::recommended_watcher`, 100 ms debounce) — issue #526 |

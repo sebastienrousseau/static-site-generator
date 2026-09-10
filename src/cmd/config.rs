@@ -39,6 +39,15 @@ pub struct ImageConfig {
     pub lazy_avif: bool,
 }
 
+/// The template directory a project gets when it names none.
+///
+/// Kept as a function rather than `PathBuf::default` because an empty
+/// path is not the same thing as "the conventional one", and
+/// `apply_theme` distinguishes them.
+fn default_template_dir() -> PathBuf {
+    PathBuf::from("templates")
+}
+
 const fn default_avif_quality() -> u8 {
     70
 }
@@ -246,7 +255,26 @@ pub struct SsgConfig {
     /// Directory for generated output files.
     pub output_dir: PathBuf,
     /// Directory containing template files.
+    ///
+    /// Defaults to `templates`, so a config that names a `theme`
+    /// instead does not have to repeat a path it is about to have
+    /// resolved for it. `apply_theme` treats this default as "unset".
+    #[serde(default = "default_template_dir")]
     pub template_dir: PathBuf,
+    /// Name of a theme to take templates and assets from.
+    ///
+    /// A theme is a directory holding a layout set — `_layouts/` for
+    /// the published SSG themes, `templates/` for a project-shaped one.
+    /// Setting this resolves `template_dir` for you, so a project using
+    /// a theme does not have to hand-write a path into someone else's
+    /// tree. An explicit `template_dir` still wins: naming both is how
+    /// you override one layout without forking the theme.
+    ///
+    /// Resolution is by [`crate::theme::resolve`], which searches the
+    /// config file's own directory first and reports every path it
+    /// tried when a name does not resolve.
+    #[serde(default)]
+    pub theme: Option<String>,
     /// Optional directory for development server files.
     pub serve_dir: Option<PathBuf>,
     /// Base URL of the site.
@@ -344,7 +372,26 @@ impl SsgConfig {
             self.output_dir.clone_from(output_dir);
         }
 
-        // If `-t/--template` was used
+        // If `--theme` was used. Resolved against the working directory,
+        // because a flag is typed where the build is run, unlike a
+        // `theme =` key, which belongs to its config file.
+        //
+        // `template_dir` is reset to the default first. Without that, a
+        // config that already names a theme has had `template_dir`
+        // resolved for it, and `apply_theme` — which will not overwrite
+        // a directory somebody chose — cannot tell that apart from a
+        // deliberate choice and silently ignores the flag. Passing
+        // `--theme stablo` over `theme = "quill"` produced a
+        // byte-identical quill site.
+        if let Some(theme) = matches.get_one::<String>("theme") {
+            self.theme = Some(theme.clone());
+            self.template_dir = default_template_dir();
+            let cwd = std::env::current_dir().unwrap_or_default();
+            self.apply_theme(&cwd)?;
+        }
+
+        // If `-t/--template` was used. After the theme, so naming both
+        // on one command line overrides the theme's layouts.
         if let Some(template_dir) = matches.get_one::<PathBuf>("template") {
             self.template_dir.clone_from(template_dir);
         }
@@ -505,6 +552,21 @@ impl SsgConfig {
         if let Some(output_dir) = sub_m.get_one::<PathBuf>("output") {
             self.output_dir.clone_from(output_dir);
         }
+        // `--theme` before `--template`, and resetting `template_dir`
+        // first, for the reasons given in `override_with_cli`. This is
+        // the path `ssg build` actually takes, so a flag handled only
+        // there is a flag that does nothing in practice: `--theme` was
+        // wired into `override_with_cli` alone at first, and
+        // `ssg build --theme stablo` over `theme = "quill"` produced a
+        // byte-identical quill site without a word of complaint.
+        if sub_m.try_contains_id("theme").unwrap_or(false) {
+            if let Some(theme) = sub_m.get_one::<String>("theme") {
+                self.theme = Some(theme.clone());
+                self.template_dir = default_template_dir();
+                let cwd = std::env::current_dir().unwrap_or_default();
+                self.apply_theme(&cwd)?;
+            }
+        }
         if let Some(template_dir) = sub_m.get_one::<PathBuf>("template") {
             self.template_dir.clone_from(template_dir);
         }
@@ -554,7 +616,7 @@ impl SsgConfig {
             .extension()
             .is_some_and(|e| e.eq_ignore_ascii_case("json"));
 
-        let config: Self = if is_json {
+        let mut config: Self = if is_json {
             serde_json::from_str(&content).map_err(|e| {
                 CliError::ValidationError(format!(
                     "JSON parsing error in {}: {e}",
@@ -564,8 +626,40 @@ impl SsgConfig {
         } else {
             toml::from_str(&content)?
         };
+        config.apply_theme(path.parent().unwrap_or_else(|| Path::new(".")))?;
         config.validate()?;
         Ok(config)
+    }
+
+    /// Resolves `theme` into `template_dir`, relative to `base`.
+    ///
+    /// A no-op when no theme is named. An explicitly configured
+    /// `template_dir` wins: naming both is how a project overrides one
+    /// layout without forking the theme.
+    ///
+    /// `base` is the directory of the config file, so a `themes/`
+    /// beside `ssg.toml` resolves whatever the working directory
+    /// happens to be — a build must not depend on where it was invoked
+    /// from.
+    ///
+    /// # Errors
+    ///
+    /// [`CliError::ValidationError`] when the name does not resolve,
+    /// carrying every path searched and the names that do exist.
+    pub fn apply_theme(&mut self, base: &Path) -> Result<(), CliError> {
+        let Some(name) = self.theme.clone() else {
+            return Ok(());
+        };
+        let theme = crate::theme::resolve(&name, base)
+            .map_err(|e| CliError::ValidationError(e.to_string()))?;
+        // Only the default placeholder is replaced; anything the user
+        // actually chose is left alone.
+        if self.template_dir == Path::new("templates")
+            || self.template_dir.as_os_str().is_empty()
+        {
+            self.template_dir = theme.template_dir;
+        }
+        Ok(())
     }
 
     /// Validates the configuration's URLs and paths.
@@ -1403,6 +1497,91 @@ language = "en-GB"
             "/nonexistent/ssg-test-config.toml",
         ]);
         assert_err_variant(SsgConfig::from_matches(&matches), "IoError");
+    }
+
+    /// `theme` in a config file resolves `template_dir`, and does so
+    /// relative to the config file rather than the working directory.
+    #[test]
+    fn a_theme_in_the_config_resolves_the_template_dir() {
+        let tmp = tempdir().expect("tempdir");
+        fs::create_dir_all(tmp.path().join("themes/quill/_layouts"))
+            .expect("theme");
+        let cfg_path = tmp.path().join("ssg.toml");
+        fs::write(
+            &cfg_path,
+            "site_name = \"s\"\nsite_title = \"t\"\n\
+             site_description = \"d\"\nbase_url = \"https://example.com\"\n\
+             language = \"en-GB\"\ncontent_dir = \"content\"\n\
+             output_dir = \"public\"\ntheme = \"quill\"\n",
+        )
+        .expect("write config");
+
+        let cfg = SsgConfig::from_file(&cfg_path).expect("load");
+        assert_eq!(cfg.theme.as_deref(), Some("quill"));
+        assert!(
+            cfg.template_dir.ends_with("quill/_layouts"),
+            "template_dir should come from the theme, got {}",
+            cfg.template_dir.display()
+        );
+    }
+
+    /// Naming both is how a project overrides one layout without
+    /// forking the theme, so an explicit `template_dir` is not
+    /// overwritten by theme resolution.
+    #[test]
+    fn an_explicit_template_dir_survives_theme_resolution() {
+        let tmp = tempdir().expect("tempdir");
+        fs::create_dir_all(tmp.path().join("themes/quill/_layouts"))
+            .expect("theme");
+        let mut cfg = SsgConfig::default();
+        cfg.theme = Some("quill".to_string());
+        cfg.template_dir = PathBuf::from("my-own-layouts");
+        cfg.apply_theme(tmp.path()).expect("apply");
+        assert_eq!(cfg.template_dir, PathBuf::from("my-own-layouts"));
+    }
+
+    /// The regression that made `--theme` a no-op: a config naming a
+    /// theme has already had `template_dir` resolved, so a second
+    /// `apply_theme` saw a non-default value and declined to touch it.
+    /// `ssg build --theme stablo` over `theme = "quill"` then produced a
+    /// byte-identical quill site and said nothing.
+    #[test]
+    fn a_second_theme_replaces_one_already_resolved() {
+        let tmp = tempdir().expect("tempdir");
+        for name in ["quill", "stablo"] {
+            fs::create_dir_all(
+                tmp.path().join("themes").join(name).join("_layouts"),
+            )
+            .expect("theme");
+        }
+        let mut cfg = SsgConfig::default();
+        cfg.theme = Some("quill".to_string());
+        cfg.apply_theme(tmp.path()).expect("first");
+        assert!(cfg.template_dir.ends_with("quill/_layouts"));
+
+        // What the CLI override does: reset, then resolve the new name.
+        cfg.theme = Some("stablo".to_string());
+        cfg.template_dir = default_template_dir();
+        cfg.apply_theme(tmp.path()).expect("second");
+        assert!(
+            cfg.template_dir.ends_with("stablo/_layouts"),
+            "the second theme must win, got {}",
+            cfg.template_dir.display()
+        );
+    }
+
+    /// A config naming only a theme must parse: `template_dir` is what
+    /// the theme is there to supply.
+    #[test]
+    fn a_config_without_template_dir_parses() {
+        let cfg: SsgConfig = toml::from_str(
+            "site_name = \"s\"\nsite_title = \"t\"\n\
+             site_description = \"d\"\nbase_url = \"https://example.com\"\n\
+             language = \"en-GB\"\ncontent_dir = \"content\"\n\
+             output_dir = \"public\"\n",
+        )
+        .expect("a config without template_dir should parse");
+        assert_eq!(cfg.template_dir, PathBuf::from("templates"));
     }
 
     #[test]

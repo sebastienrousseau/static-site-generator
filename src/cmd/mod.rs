@@ -156,6 +156,7 @@ pub fn default_config() -> &'static Arc<SsgConfig> {
             content_dir: PathBuf::from("content"),
             output_dir: PathBuf::from("public"),
             template_dir: PathBuf::from("templates"),
+            theme: None,
             serve_dir: None,
             base_url: format!("http://{DEFAULT_HOST}:{DEFAULT_PORT}"),
             site_title: DEFAULT_SITE_TITLE.to_string(),

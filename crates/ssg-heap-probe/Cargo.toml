@@ -1,6 +1,6 @@
 [package]
 name = "ssg-heap-probe"
-version = "0.0.60"
+version = "0.0.61"
 edition = "2021"
 publish = false
 description = "Peak-heap probe for ssg's frontmatter path (#578). Not published."

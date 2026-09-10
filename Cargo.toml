@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.60"                      # The version of the library
+version = "0.0.61"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -182,10 +182,10 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.60" }
-ssg-core = { path = "crates/ssg-core", version = "0.0.60" }
-ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.60" }
-ssg-search = { path = "crates/ssg-search", version = "0.0.60" }
+ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.61" }
+ssg-core = { path = "crates/ssg-core", version = "0.0.61" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.61" }
+ssg-search = { path = "crates/ssg-search", version = "0.0.61" }
 thiserror = "2"
 staticdatagen = "0.0.19"
 toml = "1.1.2"
@@ -566,7 +566,7 @@ strip = false                               # Do not strip symbols in test build
 # rewrites that prefix to `target/<triple>/release/` when `--target` is given,
 # which is how one entry serves both x86_64 and aarch64. Naming a triple here
 # instead pins the asset to that one architecture: the aarch64 leg of the
-# v0.0.60 release failed with `Asset file not found:
+# v0.0.61 release failed with `Asset file not found:
 # target/x86_64-unknown-linux-gnu/release/ssg`, and because every later job
 # needs all builds green, the crates.io publish was skipped with it.
 [package.metadata.generate-rpm]

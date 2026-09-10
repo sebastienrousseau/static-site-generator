@@ -9,6 +9,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.61] - 2026-09-10
+
+Themes become a thing you name rather than a path you copy, and the
+audit gate that had been calling nine correct sites wrong is fixed.
+
+### Added
+
+- **`theme = "quill"` in `ssg.toml`, or `ssg build --theme quill`.**
+  Using a published theme meant hand-writing
+  `template_dir = "../ssg-themes.github.io/themes/quill/_layouts"` — a
+  path that breaks when the theme moves, says nothing about which theme
+  it is, and gives no useful error when it is wrong. A name resolves
+  against `themes/` beside the config file first, so a build does not
+  depend on the directory it was invoked from, then the working
+  directory, then `SSG_THEME_PATH`. Inside a theme, `_layouts/` and
+  `templates/` are both accepted: which convention a theme follows is
+  its author's business, not its consumer's.
+
+  Precedence is `--template` > `--theme` > config, so naming a theme and
+  a template directory together overrides one layout without forking the
+  theme. A name that does not resolve reports every root searched and
+  the themes that do exist; a directory holding no layouts says that
+  instead, and says what it expected.
+
+  All nine published themes build from a project that names them.
+
+### Fixed
+
+- **The SRI audit gate compared one element's hash against another's.**
+  Six of the nine published themes scored 9/10 on `4. SRI Hashes Sync`,
+  each reporting `SRI mismatch for /theme-init.<hash>.js` against a file
+  whose integrity attribute was, on inspection, exactly right.
+
+  The check walked `html.lines()` and took the *first* `src="` and the
+  *first* `integrity="` on any line mentioning SRI. Those belong to the
+  same element only while the HTML is pretty-printed; minified output
+  puts a whole `<head>` on one line. On apex's index.html it paired a
+  script at offset 3029 with a stylesheet's integrity at offset 2911.
+
+  The same shortcut hid the opposite failure: only ever reading the
+  first of each attribute per line meant every SRI after the first on a
+  minified line went unverified, so a genuinely wrong hash there passed
+  silently — and a wrong SRI hash means the browser refuses to run the
+  script. The check now bounds each element before reading its
+  attributes, quote-aware, and covers `<link>` via `href`.
+
+  All nine themes now build at 10/10 pillars with 0 issues, up from
+  three.
+
 ## [0.0.60] - 2026-09-09
 
 The first release since 0.0.56. Tags `v0.0.57`, `v0.0.58` and `v0.0.59`

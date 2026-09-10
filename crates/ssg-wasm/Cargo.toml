@@ -1,6 +1,6 @@
 [package]
 name = "ssg-wasm"
-version = "0.0.60"
+version = "0.0.61"
 edition = "2021"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
