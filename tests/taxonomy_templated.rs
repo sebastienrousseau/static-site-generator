@@ -58,6 +58,7 @@ fn config_with_language(root: &Path, language: &str) -> SsgConfig {
         content_dir: root.join("content"),
         output_dir: root.join("build"),
         template_dir: root.join("templates"),
+        theme: None,
         serve_dir: None,
         i18n: None,
         cdn_prefix: None,

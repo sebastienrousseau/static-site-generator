@@ -191,6 +191,7 @@ mod tests {
             content_dir: std::path::PathBuf::from("content"),
             output_dir: std::path::PathBuf::from("build"),
             template_dir: std::path::PathBuf::from("templates"),
+            theme: None,
             serve_dir: None,
             i18n: None,
             cdn_prefix: None,

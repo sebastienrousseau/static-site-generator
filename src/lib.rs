@@ -108,6 +108,7 @@ pub mod error;
 pub(crate) mod plugins_group;
 #[path = "server/mod.rs"]
 pub(crate) mod server_group;
+pub mod theme;
 #[path = "util/mod.rs"]
 pub mod util;
 pub use error::{PathErrorExt, SsgError};

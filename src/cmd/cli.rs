@@ -161,6 +161,12 @@ impl Cli {
                     .value_parser(clap::value_parser!(PathBuf)),
             )
             .arg(
+                Arg::new("theme")
+                    .help("Theme name; resolves the template directory")
+                    .long("theme")
+                    .value_name("NAME"),
+            )
+            .arg(
                 Arg::new("serve")
                     .help("Development server directory")
                     .long("serve")
@@ -342,6 +348,10 @@ impl Cli {
                     .short('t')
                     .value_name("DIR")
                     .value_parser(clap::value_parser!(PathBuf)),
+                Arg::new("theme")
+                    .help("Theme name; resolves the template directory")
+                    .long("theme")
+                    .value_name("NAME"),
                 Arg::new("quiet")
                     .help("Suppress non-error output")
                     .long("quiet")
@@ -692,8 +702,9 @@ mod tests {
         let arg_names: Vec<&str> =
             cmd.get_arguments().map(|a| a.get_id().as_str()).collect();
         for expected in [
-            "config", "new", "content", "output", "template", "serve", "watch",
-            "drafts", "deploy", "validate", "quiet", "verbose", "jobs",
+            "config", "new", "content", "output", "template", "theme", "serve",
+            "watch", "drafts", "deploy", "validate", "quiet", "verbose",
+            "jobs",
         ] {
             assert!(
                 arg_names.contains(&expected),

@@ -48,6 +48,7 @@ fn base_cfg(agents: Option<AgentsConfig>) -> SsgConfig {
         content_dir: PathBuf::from("content"),
         output_dir: PathBuf::from("build"),
         template_dir: PathBuf::from("templates"),
+        theme: None,
         serve_dir: None,
         i18n: None,
         cdn_prefix: None,
