@@ -203,3 +203,50 @@ fn compile_without_base_url_keeps_author_permalinks_verbatim() {
         "author permalink must pass through verbatim: {feed}"
     );
 }
+
+/// A project with content but no templates used to fail with
+/// `I/O error at 'public.build-tmp': ... No such file or directory` —
+/// naming the directory being written *to*, and no path for the file
+/// that was actually absent. `examples/basic` shipped in exactly that
+/// state, so following it verbatim produced an undiagnosable error.
+///
+/// The build must now name the missing templates and say how to get
+/// them.
+#[test]
+fn a_missing_root_template_is_named_rather_than_reported_as_io_at_the_output_dir(
+) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    let content = root.join("content");
+    let templates = root.join("templates");
+    std::fs::create_dir_all(&content).expect("content dir");
+    // The MiniJinja set alone is not enough: the StaticWeaver stage runs
+    // first and reads the template directory root.
+    std::fs::create_dir_all(templates.join("tera")).expect("tera dir");
+    std::fs::write(content.join("index.md"), "---\ntitle: T\n---\n\nBody\n")
+        .expect("write content");
+
+    let err = ssg::pipeline::compile_site(
+        &root.join("public.build-tmp"),
+        &content,
+        &root.join("public"),
+        &templates,
+    )
+    .expect_err("a project with no root templates must not build");
+
+    let msg = err.to_string();
+    for name in ["template.html", "index.html", "page.html", "post.html"] {
+        assert!(
+            msg.contains(name),
+            "the error should name the missing {name}, got: {msg}"
+        );
+    }
+    assert!(
+        msg.contains("ssg --new"),
+        "the error should say how to get the templates, got: {msg}"
+    );
+    assert!(
+        !msg.contains("public.build-tmp"),
+        "the error should not point at the output directory, got: {msg}"
+    );
+}

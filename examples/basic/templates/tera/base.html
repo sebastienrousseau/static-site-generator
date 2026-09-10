@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="{{ site.language | default(value='en') }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ page.title | default(value="Untitled") }}{% if site.title %} — {{ site.title }}{% endif %}{% endblock %}</title>
+  {# `page` is absent on taxonomy pages, which render through this
+     same base with `tag`/`posts` in scope instead. Without the
+     `is defined` guard the whole build aborts with
+     `undefined value (in base.html:7)` while naming `tag.html`,
+     a file the author never wrote. #}
+  {% if page is defined and page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
+  <link rel="stylesheet" href="/css/style.css">
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  <a href="#main-content" class="sr-only">Skip to main content</a>
+  <header role="banner">
+    <nav aria-label="Main navigation">
+      <a href="/">{{ site.name | default(value="Home") }}</a>
+      <a href="/about.html">About</a>
+    </nav>
+  </header>
+  <main id="main-content" role="main">
+    {% block content %}{% endblock %}
+  </main>
+  <footer role="contentinfo">
+    <p>&copy; {{ site.name | default(value="") }}. Built with <a href="https://static-site-generator.one">SSG</a>.</p>
+  </footer>
+</body>
+</html>

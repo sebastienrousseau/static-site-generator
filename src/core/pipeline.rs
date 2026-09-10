@@ -800,9 +800,52 @@ pub fn compile_site_with_locales(
         )
         .map_err(|e| SsgError::io(e, content_dir))?;
 
+    // `compile` reads the StaticWeaver templates from the root of the
+    // template directory, choosing one per page from its layout. Which
+    // of them a given site needs therefore depends on its content —
+    // a project with only `page.html` builds fine — so this is not a
+    // precondition that can be checked up front.
+    //
+    // What it is is undiagnosable when it fails. StaticWeaver surfaces a
+    // bare `No such file or directory` carrying no path, and the wrapper
+    // could only name `build_dir`: the directory being written *to*. A
+    // user following `examples/basic`, which shipped without templates,
+    // was told `I/O error at 'public.build-tmp'` about a file under
+    // `templates/` that had never existed (issue #752, and again on a
+    // hand-made project in v0.0.60).
+    //
+    // So keep the behaviour and fix the diagnosis: on a not-found,
+    // report the template directory and which of the usual four are
+    // absent from it.
     compile(build_dir, &staged_content, site_dir, template_dir).map_err(
         |e| {
             eprintln!("    Error compiling site: {e:?}");
+            if format!("{e:?}").contains("No such file or directory") {
+                const USUAL_ROOT_TEMPLATES: [&str; 4] =
+                    ["template.html", "index.html", "page.html", "post.html"];
+                let absent: Vec<&str> = USUAL_ROOT_TEMPLATES
+                    .iter()
+                    .copied()
+                    .filter(|name| !template_dir.join(name).is_file())
+                    .collect();
+                if !absent.is_empty() {
+                    return SsgError::Validation {
+                        field: "templates".to_string(),
+                        message: format!(
+                            "the compile step could not read a template. \
+                             {} does not contain {}. A site needs the \
+                             templates its content asks for at the template \
+                             directory root, plus the MiniJinja set under \
+                             `{}`. Run `ssg --new <name>` to scaffold a \
+                             project with both, or copy them from \
+                             `examples/basic/templates/`.",
+                            template_dir.display(),
+                            absent.join(", "),
+                            template_dir.join("tera").display(),
+                        ),
+                    };
+                }
+            }
             SsgError::io(
                 std::io::Error::other(format!("Failed to compile site: {e:?}")),
                 build_dir,

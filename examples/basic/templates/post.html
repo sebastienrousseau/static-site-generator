@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="{{language}}">
+<head>
+  <meta charset="{{charset}}" />
+  <meta name="viewport" content="{{viewport}}" />
+  <title>{{title}}</title>
+  <meta name="description" content="{{description}}" />
+  <link rel="canonical" href="{{permalink}}" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <a href="#main-content" class="sr-only">Skip to main content</a>
+  <header role="banner">
+    <nav aria-label="Main navigation">
+      <a href="/">Home</a>
+      <a href="/about/">About</a>
+    </nav>
+  </header>
+  <main id="main-content" role="main">
+    {{!content}}
+  </main>
+  <footer role="contentinfo">
+    <p>Built with <a href="https://static-site-generator.one">SSG</a>.</p>
+  </footer>
+</body>
+</html>
