@@ -633,7 +633,21 @@ jobs:
           # makes the job safe to re-run after a partial failure
           # (e.g. crates.io token rotation between attempts) without
           # the "release already exists" abort.
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+          #
+          # The existence check goes through the REST endpoint for a tag,
+          # not `gh release view`. `gh` resolves a name as well as a tag,
+          # so it matches DRAFT releases too — and a draft has no tag at
+          # all until it is published. In v0.0.60 a leftover draft named
+          # `v0.0.60` shadowed the real tagged release: this job took the
+          # "already exists" branch, uploaded all 43 signed artifacts into
+          # the draft, and the release users could actually see was left
+          # holding nothing but the SLSA provenance file. It was green
+          # throughout.
+          #
+          # `/releases/tags/<tag>` only ever resolves a published release
+          # with that tag, so a stray draft cannot capture the upload.
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" \
+               >/dev/null 2>&1; then
             echo "Release $GITHUB_REF_NAME already exists — updating in place"
             gh release edit "$GITHUB_REF_NAME" \
               --title "$GITHUB_REF_NAME" \
@@ -645,6 +659,20 @@ jobs:
               --notes-file /tmp/release-body.md \
               --generate-notes \
               artifacts/*
+          fi
+
+          # Whichever branch ran, the tagged release must now carry every
+          # artifact. Checking this here is the difference between the
+          # v0.0.60 failure being caught by CI and being caught by a user
+          # who could not download a binary.
+          expected=$(find artifacts -maxdepth 1 -type f | wc -l | tr -d ' ')
+          actual=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" \
+                     --jq '.assets | length')
+          echo "release assets: $actual (expected at least $expected)"
+          if [ "$actual" -lt "$expected" ]; then
+            echo "::error::the tagged release carries $actual asset(s)" \
+                 "but $expected were built — something else captured the upload"
+            exit 1
           fi
 
       - name: Attest build provenance
