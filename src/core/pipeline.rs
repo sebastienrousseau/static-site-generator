@@ -820,7 +820,31 @@ pub fn compile_site_with_locales(
     compile(build_dir, &staged_content, site_dir, template_dir).map_err(
         |e| {
             eprintln!("    Error compiling site: {e:?}");
-            if format!("{e:?}").contains("No such file or directory") {
+            // Portability: the not-found test must not be a match on
+            // English Unix wording. Windows says "The system cannot
+            // find the file specified.", so `contains("No such file or
+            // directory")` silently never fired there and the
+            // diagnostic below was dead on that platform — caught by
+            // the windows-latest leg of CI, not by review.
+            //
+            // Prefer the error kind, which is platform-independent.
+            // Fall back to the platform's *own* text for ENOENT, taken
+            // from the OS at runtime rather than hardcoded, for the
+            // case where the chain has flattened the io::Error into a
+            // formatted string.
+            let enoent = std::io::Error::from_raw_os_error(2).to_string();
+            // "No such file or directory (os error 2)" on Unix; "The
+            // system cannot find the file specified. (os error 2)" on
+            // Windows. Compare on the prose alone — the numeric suffix
+            // is not guaranteed to survive re-formatting.
+            let enoent_prose =
+                enoent.split(" (os error").next().unwrap_or(&enoent);
+            let not_found = e.chain().any(|cause| {
+                cause
+                    .downcast_ref::<std::io::Error>()
+                    .is_some_and(|io| io.kind() == std::io::ErrorKind::NotFound)
+            }) || format!("{e:?}").contains(enoent_prose);
+            if not_found {
                 const USUAL_ROOT_TEMPLATES: [&str; 4] =
                     ["template.html", "index.html", "page.html", "post.html"];
                 let absent: Vec<&str> = USUAL_ROOT_TEMPLATES
