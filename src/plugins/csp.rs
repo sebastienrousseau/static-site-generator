@@ -829,6 +829,50 @@ fn find_csp_meta_content(html: &str) -> Option<usize> {
     }
 }
 
+/// Directives a `<meta http-equiv>` policy must not carry.
+///
+/// The CSP specification only honours these when the policy arrives as
+/// an HTTP header. Delivered in a `<meta>` element a browser ignores
+/// them *and says so*: Chrome logs
+///
+/// > The Content Security Policy directive 'frame-ancestors' is ignored
+/// > when delivered via a `<meta>` element.
+///
+/// which is a console error on every page — Lighthouse fails
+/// `errors-in-console`, and the protection the directive was there to
+/// provide was never in force. Emitting it is worse than omitting it,
+/// because the policy reads as though the site is protected.
+///
+/// They stay in the policy used for header delivery, where they work.
+const META_INELIGIBLE_DIRECTIVES: [&str; 4] =
+    ["frame-ancestors", "report-uri", "report-to", "sandbox"];
+
+/// Strips the directives a `<meta>`-delivered policy cannot carry.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::csp::policy_for_meta;
+///
+/// let p = "default-src 'self'; frame-ancestors 'none'";
+/// assert_eq!(policy_for_meta(p), "default-src 'self'");
+/// ```
+#[must_use]
+pub fn policy_for_meta(policy: &str) -> String {
+    policy
+        .split(';')
+        .map(str::trim)
+        .filter(|d| !d.is_empty())
+        .filter(|d| {
+            let name = d.split_whitespace().next().unwrap_or("");
+            !META_INELIGIBLE_DIRECTIVES
+                .iter()
+                .any(|bad| name.eq_ignore_ascii_case(bad))
+        })
+        .collect::<Vec<_>>()
+        .join("; ")
+}
+
 /// Inserts a `<meta http-equiv="Content-Security-Policy" content="...">`
 /// tag immediately after the `<head>` opening tag.
 ///
@@ -880,7 +924,9 @@ pub fn inject_csp_meta(html: &str, policy: &str) -> String {
         return html.to_string();
     }
 
-    let policy = policy.to_string();
+    // Header-only directives are dropped here, not upstream: the same
+    // policy is still correct for header delivery.
+    let policy = policy_for_meta(policy);
     let injected = Rc::new(Cell::new(false));
     let injected_cb = Rc::clone(&injected);
     let head_handler = element!("head", move |el| {
@@ -991,6 +1037,41 @@ mod tests {
 
     use super::*;
     use tempfile::tempdir;
+
+    /// `frame-ancestors` in a `<meta>` policy is ignored by every
+    /// browser and logged as a console error, so the protection was
+    /// never in force while the policy read as though it were.
+    #[test]
+    fn a_meta_policy_drops_directives_meta_cannot_carry() {
+        let out = policy_for_meta(DEFAULT_CSP_POLICY);
+        assert!(
+            !out.contains("frame-ancestors"),
+            "frame-ancestors must not reach a meta policy: {out}"
+        );
+        for kept in ["default-src", "script-src", "style-src", "img-src"] {
+            assert!(out.contains(kept), "{kept} must survive: {out}");
+        }
+        assert!(!out.ends_with(';'), "no dangling separator: {out}");
+    }
+
+    #[test]
+    fn policy_for_meta_drops_every_header_only_directive() {
+        let p = "default-src 'self'; frame-ancestors 'none'; \
+                 report-uri /r; report-to grp; sandbox allow-forms";
+        assert_eq!(policy_for_meta(p), "default-src 'self'");
+    }
+
+    /// The injected tag itself must be clean, not merely the helper.
+    #[test]
+    fn the_injected_meta_tag_carries_no_frame_ancestors() {
+        let html = "<html><head><title>t</title></head><body></body></html>";
+        let out = inject_csp_meta(html, DEFAULT_CSP_POLICY);
+        assert!(out.contains("Content-Security-Policy"), "{out}");
+        assert!(
+            !out.contains("frame-ancestors"),
+            "the emitted tag must not carry it: {out}"
+        );
+    }
 
     /// A `<style>` block in the body used to leave its replacement
     /// `<link rel="stylesheet">` in the body. Every one of the nine
