@@ -89,6 +89,14 @@ the generator builds are fixed.
   published themes' sources against the ones in their built stylesheets —
   4 of 9 survived intact before, 9 of 9 after.
 
+- **`calc()` lost the whitespace that makes `+` an operator.**
+  `calc(var(--x) + 2px)` was minified to `calc(var(--x)+ 2px)`. In CSS
+  math, `+` and `-` are operators only when whitespace surrounds them, so
+  that output is a parse error rather than a shorter spelling of the same
+  thing. The rule kept a space only between two "word" characters, and
+  `)` is not one. Found by the check that replaced `lightningcss` as the
+  validity oracle — the parser had been accepting it.
+
 - **Two audit gates reported findings nothing could clear.**
   `IMG-NO-MODERN` asked SVG sources for a `.webp` or `.avif` sibling,
   which for a vector image would be a downgrade; and
