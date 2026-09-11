@@ -1411,21 +1411,6 @@ mod tests {
         }
     }
 
-    /// Minifying twice must equal minifying once.
-    ///
-    /// A non-idempotent pass is a latent corruption: assets are re-minified
-    /// on rebuilds, and each pass would degrade the file a little further.
-
-    /// A descendant combinator before the universal selector is a
-    /// space that carries meaning. Dropping it turns `#btn *` into
-    /// `#btn*`, which parses as garbage and matches nothing — the rule
-    /// is not tightened, it is discarded.
-    ///
-    /// Three published themes override the search widget with exactly
-    /// this shape, and all three overrides were being thrown away: the
-    /// widget kept the generator's own text colour and failed AAA
-    /// contrast against the theme's own surface. Nothing errored; the
-    /// rule simply stopped existing.
     /// Probe: which selector shapes survive minification intact?
     ///
     /// The space between two compound selectors is a descendant
@@ -1530,6 +1515,16 @@ mod tests {
         );
     }
 
+    /// A descendant combinator before the universal selector is a
+    /// space that carries meaning. Dropping it turns `#btn *` into
+    /// `#btn*`, which parses as garbage and matches nothing — the rule
+    /// is not tightened, it is discarded.
+    ///
+    /// Three published themes override the search widget with exactly
+    /// this shape, and all three overrides were being thrown away: the
+    /// widget kept the generator's own text colour and failed AAA
+    /// contrast against the theme's own surface. Nothing errored; the
+    /// rule simply stopped existing.
     #[test]
     fn minify_css_keeps_the_space_before_a_universal_selector() {
         let out = minify_css("#btn, #btn * { color: red !important; }");
@@ -1555,6 +1550,10 @@ mod tests {
         );
     }
 
+    /// Minifying twice must equal minifying once.
+    ///
+    /// A non-idempotent pass is a latent corruption: assets are re-minified
+    /// on rebuilds, and each pass would degrade the file a little further.
     #[test]
     fn minify_css_is_idempotent() {
         let corpus = [
