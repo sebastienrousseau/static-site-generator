@@ -134,6 +134,8 @@ fn check_text(text: &str, source: &str, findings: &mut Vec<Finding>) {
     let mentions_tls13 = lower.contains("tls-1.3")
         || lower.contains("tlsv1.3")
         || lower.contains("tls13")
+        // The spelling ssg's own `_headers` generator writes.
+        || lower.contains("tls 1.3")
         || lower.contains("\"1.3\"");
     if !mentions_tls13 {
         findings.push(
@@ -254,7 +256,10 @@ mod tests {
 
     #[test]
     fn tls13_alt_spellings_accepted() {
-        for spelling in ["tlsv1.3", "tls13", "\"1.3\""] {
+        // "TLS 1.3" with a space is what ssg's own generated _headers
+        // writes, so leaving it out made the generator emit a file its
+        // own auditor reported as missing a TLS 1.3 declaration.
+        for spelling in ["tlsv1.3", "tls13", "\"1.3\"", "tls 1.3", "tls-1.3"] {
             // Short max-age yields PQC-HSTS-SHORT, keeping `f`
             // non-empty so the no-TLS13-MISSING predicate evaluates.
             let content = format!(
