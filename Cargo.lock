@@ -3800,7 +3800,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.61"
+version = "0.0.62"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -3846,7 +3846,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-a11y"
-version = "0.0.61"
+version = "0.0.62"
 dependencies = [
  "serde",
  "serde_json",
@@ -3854,7 +3854,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.0.61"
+version = "0.0.62"
 dependencies = [
  "log",
  "noyalib",
@@ -3868,7 +3868,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-heap-probe"
-version = "0.0.61"
+version = "0.0.62"
 dependencies = [
  "ssg",
  "tempfile",
@@ -3876,7 +3876,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-mcp"
-version = "0.0.61"
+version = "0.0.62"
 dependencies = [
  "schemars",
  "serde",
@@ -3886,7 +3886,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc"
-version = "0.0.61"
+version = "0.0.62"
 dependencies = [
  "criterion",
  "inventory",
@@ -3899,7 +3899,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc-macro"
-version = "0.0.61"
+version = "0.0.62"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3908,7 +3908,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-search"
-version = "0.0.61"
+version = "0.0.62"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",
@@ -3922,7 +3922,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-wasm"
-version = "0.0.61"
+version = "0.0.62"
 dependencies = [
  "js-sys",
  "serde-wasm-bindgen",
