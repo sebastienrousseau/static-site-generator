@@ -644,7 +644,6 @@ fn code_markup_postprocessing_stays_stable() {
 // Per-example goldens (#466 criteria 1, 2, 6, 7)
 // =====================================================================
 
-
 /// The eight bundled examples that carry content.
 ///
 /// #466 asks for "a canonical build of each example" and a minimum of
