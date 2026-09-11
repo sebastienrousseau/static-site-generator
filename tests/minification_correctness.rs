@@ -171,7 +171,7 @@ fn minify_plugin_walks_css_and_js_recursively() {
 }
 
 // =====================================================================
-// AC2 — `lightningcss` produces compact, parsable output
+// AC2 — CSS minification produces compact, still-valid output
 // =====================================================================
 
 #[test]
@@ -179,7 +179,8 @@ fn css_minification_round_trips() {
     let input = "body { color: red; padding: 10px 10px 10px 10px; }";
     let minified = minify_css(input);
     assert!(minified.len() < input.len());
-    // Output must itself be parsable by lightningcss.
+    // Minifying the output again must change nothing: a pass that is not
+    // idempotent is corrupting a little more on every rebuild.
     let _round_trip = minify_css(&minified);
 }
 

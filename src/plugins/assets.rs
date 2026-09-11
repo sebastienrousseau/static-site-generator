@@ -680,7 +680,19 @@ pub fn minify_css(css: &str) -> String {
                 _ => false,
             };
 
+            // In a math function `+` and `-` are operators only when
+            // whitespace surrounds them: `calc(var(--x) + 2px)` collapsed to
+            // `calc(var(--x)+ 2px)` is a parse error, not a shorter spelling.
+            // A value can end in `)` and the operand after one can open with
+            // `(`, and neither is a "word" character below, so those two
+            // boundaries have to be named.
+            let math_operator_boundary = matches!(
+                (prev, next),
+                (Some(')'), Some('+' | '-')) | (Some('+' | '-'), Some('('))
+            );
+
             let is_needed = joins_prelude_tokens
+                || math_operator_boundary
                 || match (prev, next) {
                     (Some(p), Some(n)) => {
                         let is_p_word = p.is_alphanumeric()
@@ -1383,20 +1395,20 @@ mod tests {
     // Minifier edge branches
     // -------------------------------------------------------------------
 
-    /// Everything this minifier emits must still parse as CSS.
+    /// Everything this minifier emits must still be valid CSS.
     ///
     /// This is the gate that was missing when `clamp(2.07rem, 1.75rem + 1.6vw,
     /// 3.13rem)` became `clamp(...,1.75rem+1.6vw,...)`: valid-looking output,
     /// rejected by every browser, and every heading in nine themes silently
     /// fell back to the body size.
     ///
-    /// `lightningcss` is a dev-dependency purely as an oracle here: it
-    /// parses, it does not minify. ssg's own pass is the only thing that
-    /// rewrites a stylesheet.
+    /// The oracle used to be `lightningcss`. It is gone: even as a
+    /// dev-dependency it pulled `parcel_sourcemap` and `rkyv 0.7.46`, which
+    /// carries a published advisory, into the graph. A CSS parser is a large
+    /// thing to trust for one assertion, so the rules that the failure
+    /// actually broke are checked directly instead.
     #[test]
-    fn minified_css_always_reparses() {
-        use lightningcss::stylesheet::{ParserOptions, StyleSheet};
-
+    fn minified_css_stays_valid() {
         // Constructs chosen because each has a whitespace or delimiter rule
         // that a naive collapser gets wrong.
         let corpus = [
@@ -1416,10 +1428,90 @@ mod tests {
 
         for css in corpus {
             let out = minify_css(css);
-            assert!(
-                StyleSheet::parse(&out, ParserOptions::default()).is_ok(),
-                "minified output does not parse as CSS\n  in:  {css}\n  out: {out}"
-            );
+            assert_balanced(&out, css);
+            assert_math_operators_keep_their_spaces(&out, css);
+        }
+    }
+
+    /// Braces, parens, brackets and quotes must still pair up.
+    fn assert_balanced(out: &str, src: &str) {
+        let (mut braces, mut parens, mut brackets) = (0i32, 0i32, 0i32);
+        let mut quote: Option<char> = None;
+        let mut prev = '\0';
+        for c in out.chars() {
+            if let Some(q) = quote {
+                if c == q && prev != '\\' {
+                    quote = None;
+                }
+            } else {
+                match c {
+                    '"' | '\'' => quote = Some(c),
+                    '{' => braces += 1,
+                    '}' => braces -= 1,
+                    '(' => parens += 1,
+                    ')' => parens -= 1,
+                    '[' => brackets += 1,
+                    ']' => brackets -= 1,
+                    _ => {}
+                }
+                assert!(
+                    braces >= 0 && parens >= 0 && brackets >= 0,
+                    "unbalanced delimiter in\n  in:  {src}\n  out: {out}"
+                );
+            }
+            prev = c;
+        }
+        assert!(
+            braces == 0 && parens == 0 && brackets == 0 && quote.is_none(),
+            "unclosed delimiter in\n  in:  {src}\n  out: {out}"
+        );
+    }
+
+    /// Inside a math function, `+` and `-` are operators only when surrounded
+    /// by whitespace. `calc(1.75rem+1.6vw)` is not a tighter spelling of
+    /// `calc(1.75rem + 1.6vw)` - it is a parse error, and this is exactly how
+    /// nine themes lost every heading size.
+    fn assert_math_operators_keep_their_spaces(out: &str, src: &str) {
+        for func in ["calc(", "clamp(", "min(", "max("] {
+            let mut from = 0;
+            while let Some(at) = out[from..].find(func) {
+                let open = from + at + func.len() - 1;
+                let mut depth = 0i32;
+                let mut close = open;
+                for (i, c) in out[open..].char_indices() {
+                    match c {
+                        '(' => depth += 1,
+                        ')' => {
+                            depth -= 1;
+                            if depth == 0 {
+                                close = open + i;
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                let body: Vec<char> = out[open + 1..close].chars().collect();
+                for (i, &c) in body.iter().enumerate() {
+                    if c != '+' && c != '-' {
+                        continue;
+                    }
+                    // A leading sign, or one right after `(` or `,`, is part
+                    // of the number rather than an operator.
+                    let prev =
+                        body[..i].iter().rev().find(|c| !c.is_whitespace());
+                    if !matches!(prev, Some(p) if p.is_alphanumeric() || *p == '%' || *p == ')')
+                    {
+                        continue;
+                    }
+                    assert!(
+                        body.get(i.wrapping_sub(1)).is_some_and(|c| c.is_whitespace())
+                            && body.get(i + 1).is_some_and(|c| c.is_whitespace()),
+                        "`{c}` lost the whitespace that makes it an operator in {func}…)\n  in:  {src}\n  out: {out}"
+                    );
+                }
+                from = close.max(from + at + 1);
+            }
         }
     }
 

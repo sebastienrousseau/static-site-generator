@@ -279,7 +279,8 @@ fn find_closing_tag(hay: &[u8], name: &str) -> Option<usize> {
 ///
 /// What it does not touch:
 ///
-/// * the content of [`RAW_TEXT_ELEMENTS`], byte for byte
+/// * the content of `<pre>`, `<textarea>`, `<script>` and `<style>`,
+///   byte for byte
 /// * anything between `<` and `>`, so attribute values keep their spacing
 /// * comments, including conditional ones
 ///

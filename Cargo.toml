@@ -132,13 +132,6 @@ version_check = "0.9.5"                   # Ensures that a compatible Rust versi
 [dev-dependencies]
 # Dependencies required for testing and development.
 criterion = "0.8.2"                       # Benchmarking library to test performance
-# An independent CSS parser, used only to check that what ssg's own minifier
-# emits still parses. It is a test oracle, not part of minification: it never
-# rewrites a stylesheet and is not in the shipped binary or any consumer's
-# dependency graph. This is the gate that caught `clamp(2.07rem, 1.75rem +
-# 1.6vw, 3.13rem)` becoming `clamp(...,1.75rem+1.6vw,...)` - valid-looking
-# output that every browser rejected.
-lightningcss = "1.0.0-alpha.71"
 serial_test = "4.0"                        # Serialise fail-rs failpoint tests so they don't race
 uuid = { version = "1.23.1", features = ["v4"] }
 fail = { version = "0.5", features = ["failpoints"] }  # Fault injection for tests/fault_injection.rs
