@@ -5,10 +5,10 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.61"                      # The version of the library
+version = "0.0.62"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
-rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
+rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen)
 license = "MIT OR Apache-2.0"           # Dual licensing strategy
 description = """
 A secure-by-default static site generator built in Rust. WCAG 2.2 AA validation, CSP/SRI hardening, native JS/CSS minification, automated CycloneDX SBOM, local LLM content pipeline, WebAssembly target, interactive islands, streaming compilation for 100K+ pages, 28-locale i18n, and one-command deployment.
@@ -112,22 +112,6 @@ test-fault-injection = ["fail/failpoints"]   # Test-only fault injection for fs 
 # is an unconditional dep because the plugin module is too.
 ai = []
 
-# Native HTML / JS / CSS minification (issue #519).
-# Off by default — opting in pulls `minify-html`, `oxc_minifier`,
-# `oxc_parser`, `oxc_codegen`, `oxc_allocator`, `oxc_span`, and
-# `lightningcss` into the build. When disabled, `MinifyPlugin` falls
-# back to a whitespace-collapsing pass that short-circuits on `<pre>`.
-minify = [
-    "dep:minify-html",
-    "dep:oxc_minifier",
-    "dep:oxc_parser",
-    "dep:oxc_codegen",
-    "dep:oxc_allocator",
-    "dep:oxc_span",
-    "dep:lightningcss",
-    "dep:walkdir",
-]
-
 # OpenTelemetry build-pipeline tracing (issue #422). Off by default —
 # enabling pulls `tracing` + `tracing-subscriber` for stdout JSON
 # export. The OTLP/gRPC + Jaeger exporters are an additive layer
@@ -182,10 +166,10 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.61" }
-ssg-core = { path = "crates/ssg-core", version = "0.0.61" }
-ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.61" }
-ssg-search = { path = "crates/ssg-search", version = "0.0.61" }
+ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.62" }
+ssg-core = { path = "crates/ssg-core", version = "0.0.62" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.62" }
+ssg-search = { path = "crates/ssg-search", version = "0.0.62" }
 thiserror = "2"
 staticdatagen = "0.0.19"
 toml = "1.1.2"
@@ -246,18 +230,6 @@ image = { version = "0.25", optional = true, default-features = false, features 
 # — matches our rayon-based build pipeline. No C dependencies.
 ravif = { version = "0.13", optional = true, default-features = false, features = ["threading"] }
 rgb = { version = "0.8", optional = true }
-
-# Native HTML / JS / CSS minification (feature = "minify", issue #519).
-# Versions pinned to those already resolved transitively via
-# staticdatagen to keep the dependency graph tight.
-minify-html = { version = "0.18.1", optional = true }
-oxc_minifier = { version = "0.148.0", optional = true }
-oxc_parser = { version = "0.148.0", optional = true }
-oxc_codegen = { version = "0.148.0", optional = true }
-oxc_allocator = { version = "0.148.0", optional = true }
-oxc_span = { version = "0.148.0", optional = true }
-lightningcss = { version = "1.0.0-alpha.71", optional = true }
-walkdir = { version = "2.5", optional = true }
 
 # Owned crate for frontmatter parsing
 frontmatter-gen = "0.0.11"

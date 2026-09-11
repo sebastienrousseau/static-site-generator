@@ -9,6 +9,101 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.62] - 2026-09-11
+
+Minification becomes ssg's own code, and six bugs that reached every site
+the generator builds are fixed.
+
+### Changed
+
+- **Minification is functionality, not a dependency.** The `minify`
+  feature and the crates behind it are gone: `minify-html`,
+  `oxc_minifier`, `oxc_parser`, `oxc_codegen`, `oxc_allocator`,
+  `oxc_span`, `lightningcss` and `walkdir`. That is 117 crates out of the
+  dependency graph, 608 to 491, and one of them was a `1.0.0-alpha`. A
+  minifier rewrites every byte the generator emits, so a bug in one is a
+  bug on every page of every site; it belongs where this crate's own
+  tests cover it and where it cannot change underneath a release.
+
+  Nothing that was on by default is lost. The feature was opt-in, so the
+  default build already used in-tree code — and used it badly. HTML
+  whitespace was collapsed across the whole document, including inside
+  `<script>`, `<style>` and `<textarea>`, so `var s = "a  b"` was
+  silently rewritten to `var s = "a b"`; and the pass gave up on the
+  entire document if `<pre` appeared anywhere in it. CSS and JS files
+  were collected and then discarded unless the feature was on, so the
+  default build shipped them unminified, and the directory walk was
+  top-level only, so nested pages were never minified at all.
+
+  All of that is fixed and behaves identically in every build. The HTML
+  pass tracks which element it is inside, leaves raw-text content byte
+  for byte, keeps attribute spacing and comments, and minifies around a
+  `<pre>` instead of surrendering to it. The walk is recursive,
+  iterative so a deep tree cannot overflow the stack, and does not follow
+  symlinks.
+
+  The trade is compression, and it is real: on the JavaScript fixture in
+  `tests/minification_correctness.rs`, `oxc_minifier` reached 40% by
+  renaming variables and eliminating dead code; ours reaches 23%, because
+  it removes comments and whitespace and never rewrites a token. Net page
+  weight still falls, since CSS and JS are minified in the default build
+  where they previously were not.
+
+  `lightningcss` remains a dev-dependency, used purely as a test oracle:
+  it parses ssg's output to prove it is still valid CSS, and never
+  minifies anything. It is not in the shipped binary or in any consumer's
+  dependency graph.
+
+### Fixed
+
+- **Extracted stylesheets were left as `<link>` elements inside
+  `<body>`.** The CSP pass writes each inline `<style>` out to a file and
+  replaces it with a `<link>`, but replaced it in place — so a `<style>`
+  that appeared in the body left its stylesheet there too, where it
+  blocks rendering later than it should and is invalid in strict parsers.
+  They are hoisted into `<head>` now, in source order.
+
+- **A meta-delivered CSP carried directives `<meta>` cannot honour.**
+  `frame-ancestors`, `report-uri`, `report-to` and `sandbox` are ignored
+  when the policy arrives in a `<meta>` element. Emitting them there
+  promised protection the browser was never going to provide; they are
+  filtered out of the meta form and belong in a response header.
+
+- **The injected search widget failed AAA contrast on every page that
+  used it.** Four hardcoded colours in the widget's own stylesheet sat
+  below 7:1 against the surfaces it renders on.
+
+- **The CSS minifier deleted descendant combinators.** The space in
+  `#btn *` is a combinator; dropping it produces `#btn*`, which parses as
+  garbage and matches nothing. Three published themes overrode the search
+  widget with exactly that shape and all three overrides were being
+  discarded silently.
+
+- **The CSS minifier could not tell a selector from a value.** One
+  character-class heuristic served both contexts, so it was tuned for
+  values and wrong for selectors: `.a :hover` became `.a:hover`,
+  `a[href] span` became `a[href]span`, `:not(.a) .b` became
+  `:not(.a).b`. The first three match a different element or nothing at
+  all, without erroring. Selector and value context are tracked
+  separately now, with a test that compares the selectors in the nine
+  published themes' sources against the ones in their built stylesheets —
+  4 of 9 survived intact before, 9 of 9 after.
+
+- **`calc()` lost the whitespace that makes `+` an operator.**
+  `calc(var(--x) + 2px)` was minified to `calc(var(--x)+ 2px)`. In CSS
+  math, `+` and `-` are operators only when whitespace surrounds them, so
+  that output is a parse error rather than a shorter spelling of the same
+  thing. The rule kept a space only between two "word" characters, and
+  `)` is not one. Found by the check that replaced `lightningcss` as the
+  validity oracle — the parser had been accepting it.
+
+- **Two audit gates reported findings nothing could clear.**
+  `IMG-NO-MODERN` asked SVG sources for a `.webp` or `.avif` sibling,
+  which for a vector image would be a downgrade; and
+  `PQC-TLS13-MISSING` did not recognise `TLS 1.3` with a space — the
+  spelling ssg's own `_headers` generator writes, so the generator
+  emitted a file its own auditor rejected.
+
 ## [0.0.61] - 2026-09-10
 
 Themes become a thing you name rather than a path you copy, and the

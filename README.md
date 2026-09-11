@@ -15,7 +15,7 @@
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.61-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.62-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
   <a href="#license"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg?style=for-the-badge" alt="License: MIT OR Apache-2.0" /></a>
   <a href="#minimum-supported-rust-version"><img src="https://img.shields.io/badge/MSRV-1.88.0-dea584.svg?style=for-the-badge&logo=rust" alt="MSRV 1.88.0" /></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/static-site-generator?style=for-the-badge&label=openssf%20scorecard" alt="OpenSSF Scorecard" /></a>
@@ -59,7 +59,7 @@
 
 ```toml
 [dependencies]
-ssg = "0.0.61"
+ssg = "0.0.62"
 ```
 
 ### Prebuilt binaries
@@ -75,7 +75,7 @@ brew install --formula https://raw.githubusercontent.com/sebastienrousseau/stati
 cargo install ssg
 
 # Debian / Ubuntu (amd64 or arm64)
-sudo dpkg -i ssg_0.0.61_amd64.deb
+sudo dpkg -i ssg_0.0.62_amd64.deb
 
 # Arch Linux (AUR)
 yay -S ssg
@@ -260,7 +260,7 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **Templates** | `MiniJinja` engine with inheritance, loops, conditionals, custom filters |
 | **Search** | Client-side full-text search with modal UI, 28 locale translations, `Ctrl+K` / `Cmd+K` |
 | **Security** | CSP build-time extraction (zero `unsafe-inline`), SRI hash generation, asset fingerprinting, path traversal prevention, structured `SsgError` type-safe error hierarchy |
-| **Minification** | Native HTML / JS / CSS minification (opt-in `minify` feature) via [`minify-html`](https://crates.io/crates/minify-html/0.15.0) `0.15` (HTML, `<pre>` preserved), [`oxc_minifier`](https://crates.io/crates/oxc_minifier/0.95.0) `0.95` (JS, mangle + DCE), and [`lightningcss`](https://crates.io/crates/lightningcss/1.0.0-alpha.71) `1.0.0-alpha.71` (CSS). Recursive walk processes every `.html`, `.css`, and `.js` file under `site_dir` regardless of depth. |
+| **Minification** | Native HTML / JS / CSS minification, always on and written in-tree — no `minify-html`, `oxc_minifier` or `lightningcss`. A minifier rewrites every byte the generator emits, so it is kept where this crate's own tests cover it. `<pre>`, `<textarea>`, `<script>` and `<style>` content survives byte for byte, attribute values keep their spacing, and comments are preserved. Recursive walk processes every `.html`, `.css` and `.js` file under `site_dir` regardless of depth. |
 | **Supply Chain** | Automated `CycloneDX` 1.5 SBOM (`sbom.cdx.json`) generated on every build via `SbomPlugin`, listing compiler version, dependency tree, and license metadata |
 | **DX** | CSS hot reload, browser error overlay via WebSocket, file watching with change classification |
 | **WebAssembly** | `ssg-core` + `ssg-wasm` + `ssg-search` compile to `wasm32-unknown-unknown` with wasm-bindgen; `ssg-wasm` ships ISR + RPC entry points for Edge runtimes (CI-enforced ≤ 2 MB gzipped) |
@@ -272,7 +272,7 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **Architecture Decision Records** | Six baseline ADRs under [`docs/adr/`](docs/adr/) in Nygard format documenting the tokio-free architecture, Rayon orchestration, `lol_html` selection, sync `tungstenite` HMR, `ureq` LLM transport, and CycloneDX-over-SPDX SBOM choice. CI-enforced `adr: ADR-NNNN` citation graph (v0.0.45 #557) |
 | **Supply-chain attestation** | `cargo-vet` (v0.0.45 #561) layers per-crate audit attestation over `cargo deny`'s license + CVE checks. Imports Mozilla Firefox, Bytecode Alliance, and Google trust sets; exemption-reduction policy in [`supply-chain/README.md`](supply-chain/README.md) |
 | **Concurrency proofs** | Miri job ([`.github/workflows/miri.yml`](.github/workflows/miri.yml), v0.0.45 #560) runs `cargo miri test --lib` on a nightly schedule + `run-miri`-labelled PRs. Loom + Kani follow in v0.0.46 (#564 / #565) |
-| **Feature-matrix CI** | `cargo hack check --feature-powerset --depth 2` (v0.0.45 #584) exercises every reachable subset of `{ai, benchmark, cli, image-optimization, minify, otel, templates, test-fault-injection}` on every PR — catches cfg-gating gaps before they merge |
+| **Feature-matrix CI** | `cargo hack check --feature-powerset --depth 2` (v0.0.45 #584) exercises every reachable subset of `{ai, benchmark, cli, image-optimization, otel, templates, test-fault-injection}` on every PR — catches cfg-gating gaps before they merge |
 | **Agentic discovery** | Opt-in `/agents.txt` (robots-style AI agent allow/deny), `/.well-known/ai-plugin.json` (`OpenAI` plugin manifest), `/.well-known/mcp.json` (Model Context Protocol registry with auto-populated resources) |
 | **ISO 20022 JSON-LD** | Schema.org descriptors for regulated financial sites: `BankAccount`, `FinancialProduct`, `MonetaryAmount`, `PaymentInstrument`, `RegulatedFinancialInstitution`. Built-in IBAN + BIC validators |
 | **View Transitions** | Opt-in (`transitions = true`) View Transitions API client + lazy hydration; persistent `<header>` / `<footer>` get `view-transition-name` so they don't animate across boundaries; falls back to plain reload in non-supporting browsers |

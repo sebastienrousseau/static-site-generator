@@ -1,5 +1,5 @@
 {
-    "version": "0.0.61",
+    "version": "0.0.62",
     "description": "Fast, SEO-optimised static site generator built in Rust",
     "homepage": "https://github.com/sebastienrousseau/static-site-generator",
     "license": "MIT|Apache-2.0",

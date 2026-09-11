@@ -1573,18 +1573,13 @@ pub fn bench_plugins_misc(c: &mut Criterion) {
     c.bench_function("plugins::minify_html", |b| {
         b.iter(|| black_box(minify_html(black_box(SAMPLE_HTML))));
     });
-    // minify_css / minify_js are gated on the `minify` feature.
-    #[cfg(feature = "minify")]
-    {
-        use ssg::plugins::{minify_css, minify_js};
-        c.bench_function("plugins::minify_css", |b| {
-            b.iter(|| black_box(minify_css(black_box("body { color: red; }"))));
-        });
-        c.bench_function("plugins::minify_js", |b| {
-            b.iter(|| black_box(minify_js(black_box("var x = 1 + 2;"))));
-        });
-    }
-    // SKIPPED: plugins::minify_css / minify_js when `minify` feature off.
+    use ssg::plugins::{minify_css, minify_js};
+    c.bench_function("plugins::minify_css", |b| {
+        b.iter(|| black_box(minify_css(black_box("body { color: red; }"))));
+    });
+    c.bench_function("plugins::minify_js", |b| {
+        b.iter(|| black_box(minify_js(black_box("var x = 1 + 2;"))));
+    });
 
     // rpc_schema plugin.
     use ssg::rpc_schema::RpcSchemaPlugin;
