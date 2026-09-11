@@ -48,6 +48,7 @@
 
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
+use crate::plugins_group::topic_clusters::{TopicCluster, TopicClusters};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     fs,
@@ -158,6 +159,18 @@ impl Plugin for TaxonomyPlugin {
         // tags, categories, and topics.
         let renderer = TaxonomyRenderer::new(ctx);
 
+        // Curated pillar-page metadata for the `topics` taxonomy (#587).
+        // Empty unless the site ships `_data/topics.toml`, and a site that
+        // does not builds exactly as before.
+        let clusters =
+            crate::plugins_group::topic_clusters::load(&ctx.content_dir);
+        if !clusters.is_empty() {
+            let known: Vec<String> = topics.keys().cloned().collect();
+            crate::plugins_group::topic_clusters::warn_unknown(
+                &clusters, &known,
+            );
+        }
+
         // A multi-locale site gets one taxonomy tree per locale. Without
         // this every locale's pages share a single index, so an
         // English-language tag page lists French pages beside English ones
@@ -231,6 +244,7 @@ impl Plugin for TaxonomyPlugin {
                         scoped,
                         kind,
                         &scoped_renderer,
+                        topic_clusters_for(name, &clusters),
                     )?;
                     log::info!(
                         "[taxonomy] Generated {} {name} page(s) for {locale}",
@@ -245,6 +259,7 @@ impl Plugin for TaxonomyPlugin {
                     map,
                     kind,
                     &renderer,
+                    topic_clusters_for(name, &clusters),
                 )?;
                 log::info!("[taxonomy] Generated {} {name} page(s)", map.len());
             }
@@ -392,6 +407,7 @@ impl<'a> TaxonomyRenderer<'a> {
         term: &str,
         slug: &str,
         pages: &[(String, String)],
+        cluster: Option<&TopicCluster>,
     ) -> Result<String, SsgError> {
         let tmpl =
             self.env.get_template(kind.template_name()).map_err(|e| {
@@ -415,6 +431,21 @@ impl<'a> TaxonomyRenderer<'a> {
             "slug".to_string(),
             serde_json::Value::String(slug.to_string()),
         );
+        // Curated pillar-page copy (#587). Both are absent unless
+        // `_data/topics.toml` describes this term, and a template that
+        // does not mention them renders exactly as it did before.
+        if let Some(lede) = cluster.and_then(|c| c.lede.as_deref()) {
+            let _ = ctx_map.insert(
+                "lede".to_string(),
+                serde_json::Value::String(lede.to_string()),
+            );
+        }
+        if let Some(banner) = cluster.and_then(|c| c.banner.as_deref()) {
+            let _ = ctx_map.insert(
+                "banner".to_string(),
+                serde_json::Value::String(banner.to_string()),
+            );
+        }
         let _ = ctx_map.insert(
             "taxonomy_name".to_string(),
             serde_json::Value::String(taxonomy_name.to_string()),
@@ -679,6 +710,7 @@ impl<'a> TaxonomyRenderer<'a> {
         term: &str,
         slug: &str,
         pages: &[(String, String)],
+        _cluster: Option<&TopicCluster>,
     ) -> Result<String, SsgError> {
         let lang = self.lang();
         let canonical = self.canonical(&format!("/{taxonomy_name}/{slug}/"));
@@ -1098,6 +1130,7 @@ fn generate_taxonomy_pages(
     terms: &HashMap<String, Vec<(String, String)>>,
     kind: TaxonomyKind,
     renderer: &TaxonomyRenderer<'_>,
+    clusters: Option<&TopicClusters>,
 ) -> Result<(), SsgError> {
     generate_taxonomy_pages_at(
         &site_dir.join(taxonomy_name),
@@ -1106,12 +1139,25 @@ fn generate_taxonomy_pages(
         terms,
         kind,
         renderer,
+        clusters,
     )
 }
 
 /// As [`generate_taxonomy_pages`], but writes into an explicit directory
 /// so a multi-locale site can place each locale's tree under its own
 /// prefix (`fr/tags/`) instead of sharing one at the site root.
+/// Curated metadata applies to the `topics` taxonomy and nothing else.
+///
+/// Tags and categories are derived vocabulary — there is no editorial
+/// copy to attach to them, and a `[tags]` section in the data file would
+/// be a mistake rather than a feature.
+fn topic_clusters_for<'a>(
+    taxonomy_name: &str,
+    clusters: &'a TopicClusters,
+) -> Option<&'a TopicClusters> {
+    (taxonomy_name == "topics" && !clusters.is_empty()).then_some(clusters)
+}
+
 fn generate_taxonomy_pages_at(
     tax_dir: &Path,
     taxonomy_name: &str,
@@ -1119,6 +1165,7 @@ fn generate_taxonomy_pages_at(
     terms: &HashMap<String, Vec<(String, String)>>,
     kind: TaxonomyKind,
     renderer: &TaxonomyRenderer<'_>,
+    clusters: Option<&TopicClusters>,
 ) -> Result<(), SsgError> {
     let tax_dir = tax_dir.to_path_buf();
     fs::create_dir_all(&tax_dir).with_path(&tax_dir)?;
@@ -1130,13 +1177,40 @@ fn generate_taxonomy_pages_at(
         let term_dir = tax_dir.join(slug);
         fs::create_dir_all(&term_dir).with_path(&term_dir)?;
 
+        // Curated metadata for this term, when `_data/topics.toml`
+        // describes it (#587). Absent for every other taxonomy, and for
+        // any topic nobody has written a pillar page for.
+        let cluster = clusters.and_then(|c| c.get(slug.as_str()));
+
+        // A curated `order` leads; everything else keeps the order the
+        // taxonomy produced. Only cloned when there is an order to apply.
+        let reordered;
+        let pages = match cluster {
+            Some(c) if !c.order.is_empty() => {
+                let mut owned = pages.clone();
+                crate::plugins_group::topic_clusters::apply_order(
+                    &c.order, &mut owned,
+                );
+                reordered = owned;
+                &reordered
+            }
+            _ => pages,
+        };
+
+        // A curated title replaces the term as displayed, not as slugged,
+        // so URLs do not move when someone edits the copy.
+        let display_term = cluster
+            .and_then(|c| c.title.as_deref())
+            .unwrap_or(term.as_str());
+
         let term_html = renderer.render_term_page(
             kind,
             taxonomy_name,
             taxonomy_title,
-            term,
+            display_term,
             slug,
             pages,
+            cluster,
         )?;
         let out_file = term_dir.join("index.html");
         write_taxonomy_page(&out_file, &term_html)?;
@@ -1980,6 +2054,82 @@ mod tests {
         );
     }
 
+    /// #587: curated pillar-page metadata reaches the rendered page.
+    ///
+    /// ssg already derives `/topics/{slug}/` from front matter. What it
+    /// cannot derive is the title a human would choose, the paragraph
+    /// saying what the topic is, or which page should lead — so this
+    /// asserts all three arrive, and that the pages the curation does not
+    /// name keep the order they had.
+    #[test]
+    fn curated_topic_metadata_reaches_the_pillar_page() {
+        let (tmp, site, meta, ctx) = make_layout();
+        for (name, title) in [("a", "Alpha"), ("b", "Bravo"), ("c", "Charlie")]
+        {
+            fs::write(
+                meta.join(format!("{name}.meta.json")),
+                format!(
+                    r#"{{"title": "{title}", "topic_clusters": "payments", "permalink": "/posts/{name}/"}}"#
+                ),
+            )
+            .unwrap();
+        }
+        let data = tmp.path().join("_data");
+        fs::create_dir_all(&data).unwrap();
+        fs::write(
+            data.join("topics.toml"),
+            concat!(
+                "[payments]\n",
+                "title = \"Payments, end to end\"\n",
+                "lede = \"What moves money and what it costs.\"\n",
+                "order = [\"c\"]\n",
+            ),
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let page = fs::read_to_string(site.join("topics/payments/index.html"))
+            .expect("the pillar page was written");
+
+        assert!(
+            page.contains("Payments, end to end"),
+            "curated title is missing:\n{page}"
+        );
+        assert!(
+            page.contains("What moves money and what it costs."),
+            "curated lede is missing:\n{page}"
+        );
+
+        // Charlie is curated to lead; Alpha and Bravo keep their order.
+        let c = page.find("Charlie").expect("Charlie listed");
+        let a = page.find("Alpha").expect("Alpha listed");
+        let b = page.find("Bravo").expect("Bravo listed");
+        assert!(c < a && a < b, "curated order not applied:\n{page}");
+    }
+
+    /// Without a data file nothing changes — the feature can only add.
+    #[test]
+    fn topics_without_curation_render_exactly_as_before() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "topic_clusters": "payments"}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let page = fs::read_to_string(site.join("topics/payments/index.html"))
+            .expect("page written");
+        assert!(
+            page.contains(r#"<span class="term-name">payments</span>"#),
+            "the term renders as written, with no curated title: {page}"
+        );
+        assert!(!page.contains("class=\"lede\""), "no lede: {page}");
+        assert!(!page.contains("taxonomy-banner"), "no banner: {page}");
+    }
+
     #[test]
     fn term_pages_omit_og_image_when_not_configured() {
         // Default config has `og_image: None` — the tag/index gates
@@ -2295,6 +2445,7 @@ mod tests {
             &terms,
             TaxonomyKind::Tag,
             &renderer,
+            None,
         );
         assert!(res.is_err());
         let err = res.unwrap_err();

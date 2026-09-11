@@ -172,6 +172,7 @@ pub use crate::plugins_group::shortcodes;
 pub use crate::plugins_group::taxonomy;
 #[cfg(feature = "templates")]
 pub use crate::plugins_group::template_plugin;
+pub use crate::plugins_group::topic_clusters;
 pub use crate::plugins_group::view_transitions;
 
 // Re-export server modules

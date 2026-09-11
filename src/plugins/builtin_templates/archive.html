@@ -6,7 +6,15 @@
 {% block content %}
 <article class="taxonomy-page taxonomy-archive">
   <header>
+    {# `banner` and `lede` come from _data/topics.toml (#587) and are
+       absent unless the site curates this topic. #}
+    {% if banner %}
+    <img class="taxonomy-banner" src="{{ banner }}" alt="" width="1440" height="398" loading="lazy" decoding="async" />
+    {% endif %}
     <h1>{{ taxonomy_title }}: <span class="term-name">{{ term }}</span></h1>
+    {% if lede %}
+    <p class="lede">{{ lede }}</p>
+    {% endif %}
     <p class="taxonomy-meta">{{ posts | length }} page{% if posts | length != 1 %}s{% endif %}.</p>
   </header>
   <ul class="taxonomy-page-list">

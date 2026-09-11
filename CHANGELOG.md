@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Curated topic pages (#587).** ssg already derives `/topics/{slug}/`
+  from each page's `topic_clusters:` front matter. What it could not
+  derive is editorial judgement, so `_data/topics.toml` now supplies it:
+
+  ```toml
+  [post-quantum-cryptography]
+  title  = "Post-Quantum Cryptography"
+  lede   = "Lattice-based cryptography and the harvest-now-decrypt-later threat."
+  banner = "/images/pqc.webp"
+  order  = ["quantum-safe-banking-index", "securing-the-ledger"]
+  ```
+
+  `title` replaces the term where it is displayed, without moving any
+  URL; `lede` and `banner` render above the page list; `order` names the
+  pages that should lead, and everything else follows in the order it
+  already had. Every field is optional and the file itself is optional —
+  without it, topic pages render exactly as before.
+
+  Neither kind of drift fails a build: a slug in `order` that has left
+  the topic is skipped, and a `[section]` naming a topic no page carries
+  is reported on stderr and ignored. Curation and content move apart, and
+  a stale line in a data file is not a reason to stop shipping.
+
+  `topic_clusters` was previously undocumented despite being read; it is
+  now in the front-matter table with the rest.
+
 ### Fixed
 
 - **Head injections were duplicated into `<body>`.** Twelve plugins add
@@ -595,8 +623,10 @@ A one-line fix for a defect shipped in 0.0.52.
   variable as a *value*, and its default bool parser accepts only
   `"true"`/`"false"`, so the conventional form failed outright:
 
-      error: invalid value '1' for '--no-tag-pages'
-        [possible values: true, false]
+  ```text
+  error: invalid value '1' for '--no-tag-pages'
+    [possible values: true, false]
+  ```
 
   The flag form was unaffected, which is exactly why 0.0.52 shipped this way:
   `--no-tag-pages` was tested thoroughly and the environment variable

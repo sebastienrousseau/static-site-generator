@@ -32,9 +32,55 @@ Your content here.
 | `draft` | Bool | If `true`, excluded unless `--drafts` is passed |
 | `tags` | List | Tags for taxonomy generation |
 | `categories` | List | Categories for taxonomy generation |
+| `topic_clusters` | String | Comma-separated topics this page belongs to — see [Topic pages](#topic-pages) |
 | `template` | String | Override the default template for this page |
 | `language` | String | Page language (BCP 47), overrides site default |
 | `translation_key` | String | Pairs this page with its translations in other locales — see [i18n](i18n.md#translated-slugs). Required only when the translated pages have different slugs |
+
+### Topic pages
+
+`topic_clusters` groups pages under a subject rather than a keyword. A
+page joins one or more topics by naming them:
+
+```yaml
+topic_clusters: "payments, post-quantum-cryptography"
+```
+
+Each topic gets `/topics/{slug}/`, and `/topics/` lists them all. Pages
+self-assign, so adding an article to a topic is part of writing the
+article rather than an edit to a central list — which is what makes two
+articles mergeable without conflicting.
+
+#### Curating a topic
+
+Assignment is all a topic needs. What it cannot express is editorial
+judgement: the title a human would choose, what the topic is *about*,
+and which page should lead. `_data/topics.toml` supplies that, and every
+field is optional:
+
+```toml
+[post-quantum-cryptography]
+title  = "Post-Quantum Cryptography"
+lede   = "Lattice-based cryptography, NIST PQC standards, and the
+          harvest-now-decrypt-later threat."
+banner = "/images/pqc.webp"
+order  = ["quantum-safe-banking-index", "securing-the-ledger"]
+```
+
+| Field | Effect |
+|---|---|
+| `title` | Replaces the term where it is displayed. URLs do not move. |
+| `lede` | A paragraph above the page list. |
+| `banner` | An image at the top of the page. |
+| `order` | Pages that should lead, in this order. Everything else follows, in the order it already had. |
+
+The file is looked for beside `content/`, then inside it. It is entirely
+optional: without it, topic pages render exactly as they do today.
+
+Curation and content drift apart, so neither kind of drift fails a
+build. A slug in `order` that no longer belongs to the topic is skipped.
+A `[section]` naming a topic no page carries is reported on stderr and
+ignored — you will see it, but your build still finishes.
 
 ### Frontmatter Formats
 
