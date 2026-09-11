@@ -521,12 +521,20 @@ fn extract_inline_blocks(
     // markup the CSP pass was about to rewrite anyway.
     if !hoisted_links.is_empty() {
         let block = hoisted_links.concat();
-        if let Some(idx) = result.find("</head>") {
-            result = format!("{}{block}{}", &result[..idx], &result[idx..]);
-        } else {
+        // Parse rather than search for `</head>`. Splicing at the first byte
+        // match puts the links inside a commented-out `</head>`, where they
+        // are inert and nothing reports it (ssg#540 is the same fault found
+        // elsewhere). `inject_before_head_close` uses the HTML rewriter and
+        // returns its input unchanged when the document has no head, which
+        // is the one case the fallback below still has to cover.
+        let injected =
+            crate::util::head_dom::inject_before_head_close(&result, &block);
+        if injected == result {
             // No `<head>`: leave them where a browser will still find
             // them rather than dropping styling on the floor.
             result.push_str(&block);
+        } else {
+            result = injected;
         }
     }
 
@@ -1106,6 +1114,43 @@ mod tests {
             !out[out.find("<body").unwrap()..]
                 .contains("<link rel=\"stylesheet\""),
             "no stylesheet link may remain in <body>: {out}"
+        );
+    }
+
+    /// A `</head>` inside a comment is not the head's end tag.
+    ///
+    /// The hoist spliced at the first byte match of the literal string, so a
+    /// commented-out `</head>` earlier in the document captured the links:
+    /// they land inside the comment, inert, and the page loses its styling
+    /// with no error anywhere. `head_dom` already parses instead of
+    /// searching, and ssg#540 records the same fault being fixed there;
+    /// this path was still doing it by hand.
+    #[test]
+    fn hoisted_links_ignore_a_head_close_inside_a_comment() {
+        let dir = tempdir().expect("tempdir");
+        let site = dir.path();
+        let html = concat!(
+            "<html><head><!-- </head> --><title>T</title></head><body>",
+            "<style>.a{color:red}</style>",
+            "</body></html>"
+        );
+        let (out, n) = extract_inline_blocks(
+            html,
+            &site.join("_csp"),
+            site,
+            SriAlgorithm::Sha384,
+            "",
+        )
+        .expect("extract");
+        assert_eq!(n, 1);
+
+        let link = out
+            .find("<link rel=\"stylesheet\"")
+            .expect("a stylesheet link was emitted");
+        let comment_end = out.find("-->").expect("the comment survives");
+        assert!(
+            link > comment_end,
+            "the link was spliced inside the comment, where it does nothing:\n{out}"
         );
     }
 

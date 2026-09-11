@@ -19,6 +19,7 @@
 
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::html_rewriter::inject_before_body_close_or_append;
 use std::{collections::BTreeSet, fs, path::Path};
 
 /// Plugin that enables interactive islands via Web Components.
@@ -82,11 +83,7 @@ impl Plugin for IslandPlugin {
             "\n<script type=\"module\" src=\"{prefix}/_islands/ssg-island.js\"></script>\n"
         );
 
-        let output = if let Some(pos) = html.rfind("</body>") {
-            format!("{}{script}{}", &html[..pos], &html[pos..])
-        } else {
-            format!("{html}{script}")
-        };
+        let output = inject_before_body_close_or_append(html, &script);
 
         Ok(output)
     }
@@ -224,11 +221,7 @@ fn inject_island_loader(path: &Path) -> Result<(), SsgError> {
     let script =
         "\n<script type=\"module\" src=\"/_islands/ssg-island.js\"></script>\n";
 
-    let output = if let Some(pos) = html.rfind("</body>") {
-        format!("{}{script}{}", &html[..pos], &html[pos..])
-    } else {
-        format!("{html}{script}")
-    };
+    let output = inject_before_body_close_or_append(&html, &script);
 
     fs::write(path, output).with_path(path)?;
     Ok(())

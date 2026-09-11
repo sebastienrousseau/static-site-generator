@@ -19,6 +19,7 @@
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use crate::util::html_rewriter::decode_html_entities;
+use crate::util::html_rewriter::inject_before_body_close_or_append;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -591,19 +592,11 @@ fn transform_search_html(
             trigger.trim(),
             &html[slot_end..]
         );
-        let injected = if let Some(pos) = placed.rfind("</body>") {
-            format!("{}{}{}", &placed[..pos], rest, &placed[pos..])
-        } else {
-            format!("{placed}{rest}")
-        };
+        let injected = inject_before_body_close_or_append(&placed, &rest);
         return Ok(injected);
     }
 
-    let injected = if let Some(pos) = html.rfind("</body>") {
-        format!("{}{}{}", &html[..pos], script, &html[pos..])
-    } else {
-        format!("{html}{script}")
-    };
+    let injected = inject_before_body_close_or_append(html, &script);
 
     Ok(injected)
 }
@@ -768,11 +761,7 @@ fn inject_search_ui(path: &Path, script: &str) -> Result<(), SsgError> {
         return Ok(()); // Already injected
     }
 
-    let injected = if let Some(pos) = html.rfind("</body>") {
-        format!("{}{}{}", &html[..pos], script, &html[pos..])
-    } else {
-        format!("{html}{script}")
-    };
+    let injected = inject_before_body_close_or_append(&html, &script);
 
     fs::write(path, injected).with_path(path)?;
     Ok(())

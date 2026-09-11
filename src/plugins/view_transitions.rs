@@ -44,6 +44,7 @@
 use crate::cmd::SsgConfig;
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::html_rewriter::inject_before_body_close_or_append;
 use std::{fs, path::Path};
 
 /// Where the client script is written, relative to `site_dir`.
@@ -153,11 +154,8 @@ impl Plugin for ViewTransitionsPlugin {
             crate::util::head_dom::inject_before_head_close(html, &head_block);
 
         // Inject script just before </body> so the DOM is ready.
-        let with_script = if let Some(pos) = with_style.rfind("</body>") {
-            format!("{}{script_tag}{}", &with_style[..pos], &with_style[pos..])
-        } else {
-            format!("{with_style}{script_tag}")
-        };
+        let with_script =
+            inject_before_body_close_or_append(&with_style, &script_tag);
 
         Ok(with_script)
     }
