@@ -644,26 +644,6 @@ fn code_markup_postprocessing_stays_stable() {
 // Per-example goldens (#466 criteria 1, 2, 6, 7)
 // =====================================================================
 
-/// Suffix distinguishing goldens seeded under different feature sets.
-///
-/// The `minify` feature changes the bytes in ways no normaliser should
-/// erase: it strips comments, lowercases the doctype, and removes
-/// whitespace *inside* attribute values (`width=device-width,
-/// initial-scale=1` loses its space). Papering over that would mean
-/// rewriting attribute content, which is the very signal a golden
-/// exists to protect.
-///
-/// So minified and unminified output are treated as what they are --
-/// different artefacts -- and each gets its own golden. Seeding one set
-/// and running under the other configuration is what made this suite
-/// non-hermetic: it passed alone and failed under `--all-features`.
-const fn feature_suffix() -> &'static str {
-    if cfg!(feature = "minify") {
-        ".minify"
-    } else {
-        ""
-    }
-}
 
 /// The eight bundled examples that carry content.
 ///
@@ -816,7 +796,7 @@ fn golden_example(name: &str) -> usize {
         };
         let stem = artefact.replace(['.', '-'], "_");
         assert_or_update_golden(
-            &format!("example_{name}_{stem}{}.golden", feature_suffix()),
+            &format!("example_{name}_{stem}.golden"),
             &body,
         );
         goldened += 1;

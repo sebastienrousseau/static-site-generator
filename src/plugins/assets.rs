@@ -462,7 +462,16 @@ const fn in_value_context(block_stack: &[bool]) -> bool {
     matches!(block_stack.last(), Some(false))
 }
 
-fn minify_css(css: &str) -> String {
+/// Minifies CSS by collapsing insignificant whitespace and dropping
+/// comments.
+///
+/// ssg's own implementation rather than a dependency: minification rewrites
+/// every stylesheet the generator emits, so a bug here is a bug on every
+/// page, and a parser that "improves" a selector can silently change what it
+/// matches. This pass only removes what cannot matter - it never rewrites a
+/// selector, a value or a string.
+#[must_use]
+pub fn minify_css(css: &str) -> String {
     let mut result = String::with_capacity(css.len());
     let mut chars = css.chars().peekable();
     let mut in_comment = false;
@@ -710,8 +719,14 @@ fn minify_css(css: &str) -> String {
     clean.trim().to_string()
 }
 
-/// Minimal JS minifier that removes comments and compresses whitespace/newlines safely.
-fn minify_js(js: &str) -> String {
+/// Minifies JavaScript by removing comments and collapsing whitespace.
+///
+/// ssg's own implementation rather than a dependency. It is deliberately
+/// conservative: it does not rename, reorder or rewrite anything, so it
+/// cannot change what a script does. String literals, regex literals and
+/// the division operator are all left alone.
+#[must_use]
+pub fn minify_js(js: &str) -> String {
     let mut result = String::with_capacity(js.len());
     let mut chars = js.chars().peekable();
     let mut in_multi_comment = false;
@@ -1373,14 +1388,11 @@ mod tests {
     /// This is the gate that was missing when `clamp(2.07rem, 1.75rem + 1.6vw,
     /// 3.13rem)` became `clamp(...,1.75rem+1.6vw,...)`: valid-looking output,
     /// rejected by every browser, and every heading in nine themes silently
-    /// fell back to the body size. `tests/minification_correctness.rs`
-    /// round-trips the *other* minifier — the `lightningcss` one behind the
-    /// `minify` feature — but this one runs unconditionally in the fingerprint
-    /// path and nothing parsed its output.
+    /// fell back to the body size.
     ///
-    /// Requires the `minify` feature only because that is what pulls in a CSS
-    /// parser; CI runs `--all-features`.
-    #[cfg(feature = "minify")]
+    /// `lightningcss` is a dev-dependency purely as an oracle here: it
+    /// parses, it does not minify. ssg's own pass is the only thing that
+    /// rewrites a stylesheet.
     #[test]
     fn minified_css_always_reparses() {
         use lightningcss::stylesheet::{ParserOptions, StyleSheet};

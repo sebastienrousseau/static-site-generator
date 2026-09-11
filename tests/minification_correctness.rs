@@ -3,10 +3,15 @@
 
 //! Integration tests for native HTML/JS/CSS minification.
 //!
-//! Issue #519 — replaces the v0.0.41 whitespace-collapsing
-//! `MinifyPlugin` with `minify-html`, `oxc_minifier`, and
-//! `lightningcss`. These tests pin the behaviour the README's
-//! "native JS/CSS minification" claim depends on:
+//! Issue #519. Minification is ssg's own code, not a dependency: the
+//! `minify-html`, `oxc_minifier` and `lightningcss` versions of these passes
+//! were removed in 0.0.62, taking 117 crates out of the dependency graph. A
+//! minifier rewrites every byte the generator emits, so a bug in one is a bug
+//! on every page of every site; keeping it in-tree means it is covered by
+//! this crate's own tests and cannot change underneath a release.
+//!
+//! These tests pin the behaviour the README's "native JS/CSS minification"
+//! claim depends on:
 //!
 //! * AC5 — `<pre>` content survives minification byte-for-byte.
 //! * AC6 — every `.html` file at *any* depth under `site_dir` is
@@ -14,12 +19,6 @@
 //! * AC2 / AC3 — CSS and JS file outputs are valid and meaningfully
 //!   smaller than their inputs on representative fixtures.
 //!
-//! All assertions require the `minify` feature. The test binary is
-//! compiled only when that feature is active; without it the tests
-//! reduce to a single no-op smoke check so `cargo test --no-default-features`
-//! doesn't fail to link.
-
-#![cfg(feature = "minify")]
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use ssg::plugin::{Plugin, PluginContext};
@@ -178,11 +177,10 @@ fn minify_plugin_walks_css_and_js_recursively() {
 #[test]
 fn css_minification_round_trips() {
     let input = "body { color: red; padding: 10px 10px 10px 10px; }";
-    let minified = minify_css(input).expect("CSS should minify");
+    let minified = minify_css(input);
     assert!(minified.len() < input.len());
     // Output must itself be parsable by lightningcss.
-    let _round_trip =
-        minify_css(&minified).expect("minified CSS must re-parse");
+    let _round_trip = minify_css(&minified);
 }
 
 #[test]
@@ -201,7 +199,7 @@ fn css_minification_size_reduction_on_realistic_input() {
             font-weight: 400;
         }
     "#;
-    let minified = minify_css(input).expect("CSS should minify");
+    let minified = minify_css(input);
     let reduction = 1.0 - (minified.len() as f64 / input.len() as f64);
     assert!(
         reduction >= 0.30,
@@ -220,14 +218,20 @@ fn css_minification_size_reduction_on_realistic_input() {
 fn js_minification_round_trips() {
     let input =
         "function greet(name) { return 'hello, ' + name + '!'; } greet('world');";
-    let minified = minify_js(input).expect("JS should minify");
+    let minified = minify_js(input);
     assert!(minified.len() < input.len());
-    let _round_trip = minify_js(&minified).expect("minified JS must re-parse");
+    let _round_trip = minify_js(&minified);
 }
 
 #[test]
 fn js_minification_size_reduction_on_realistic_input() {
-    // Dead code + long variable names — exercises both mangling and DCE.
+    // Long variable names and an unread binding. ssg's minifier does not
+    // mangle or eliminate either: it removes comments and collapses
+    // whitespace, and never rewrites a token. That is the deliberate trade
+    // for owning the code — `oxc_minifier` reached 40% on this fixture by
+    // renaming and dropping dead code, at the cost of a JS parser, code
+    // generator and allocator in the dependency graph. Ours reaches ~23%
+    // and cannot change what the script does.
     let input = r#"
         const veryDescriptiveGreetingMessage = 'hello world';
         const anotherUnusedVariableNameForExtraBytes = 'never read';
@@ -238,11 +242,11 @@ fn js_minification_size_reduction_on_realistic_input() {
         console.log(veryDescriptiveGreetingMessage);
         console.log(computeSomething(1, 2));
     "#;
-    let minified = minify_js(input).expect("JS should minify");
+    let minified = minify_js(input);
     let reduction = 1.0 - (minified.len() as f64 / input.len() as f64);
     assert!(
-        reduction >= 0.40,
-        "expected ≥40% size reduction on representative JS, got {:.1}% ({} -> {} bytes)",
+        reduction >= 0.20,
+        "expected ≥20% size reduction on representative JS, got {:.1}% ({} -> {} bytes)",
         reduction * 100.0,
         input.len(),
         minified.len()

@@ -1071,9 +1071,10 @@ pub fn register_default_plugins(
     //
     // Two consequences worth knowing before relying on ordering here:
     //
-    //   - Without the `minify` feature the walk is top-level only, so
-    //     nested pages are untouched and the two halves of a site are
-    //     minified inconsistently.
+    //   - The walk is recursive, so every page under `site_dir` is
+    //     minified. It used to be top-level only unless the `minify`
+    //     feature was on, which left the two halves of a site
+    //     inconsistently minified.
     //   - `html-generator` minifies some pages during generation, before
     //     any plugin runs at all, which no plugin ordering can affect.
     //     That is why the i18n language-switcher marker is an element

@@ -87,39 +87,30 @@ impl Plugin for MinifyPlugin {
                 Ok(())
             })?;
 
-        // CSS + JS minification only run when the `minify` feature is on.
-        // In the default build these vectors are empty and the loops
-        // are no-ops.
-        #[cfg(feature = "minify")]
-        {
-            css_files.par_iter().try_for_each(
-                |path| -> Result<(), SsgError> {
-                    let content = fs::read_to_string(path).with_path(path)?;
-                    let minified = minify_css(&content).unwrap_or(content);
-                    fs::write(path, &minified).with_path(path)?;
-                    let _ = count.fetch_add(1, Ordering::Relaxed);
-                    Ok(())
-                },
-            )?;
+        // CSS and JS go through ssg's own minifiers, the same ones the
+        // asset pipeline uses. They used to run only under a `minify`
+        // feature that pulled in minify-html, lightningcss and five oxc
+        // crates; the default build populated these lists and then threw
+        // them away.
+        css_files
+            .par_iter()
+            .try_for_each(|path| -> Result<(), SsgError> {
+                let content = fs::read_to_string(path).with_path(path)?;
+                let minified = minify_css(&content);
+                fs::write(path, &minified).with_path(path)?;
+                let _ = count.fetch_add(1, Ordering::Relaxed);
+                Ok(())
+            })?;
 
-            js_files.par_iter().try_for_each(
-                |path| -> Result<(), SsgError> {
-                    let content = fs::read_to_string(path).with_path(path)?;
-                    let minified = minify_js(&content).unwrap_or(content);
-                    fs::write(path, &minified).with_path(path)?;
-                    let _ = count.fetch_add(1, Ordering::Relaxed);
-                    Ok(())
-                },
-            )?;
-        }
-
-        // Suppress unused-binding warnings on the default build where
-        // CSS/JS lists are populated but never consumed.
-        #[cfg(not(feature = "minify"))]
-        {
-            let _ = &css_files;
-            let _ = &js_files;
-        }
+        js_files
+            .par_iter()
+            .try_for_each(|path| -> Result<(), SsgError> {
+                let content = fs::read_to_string(path).with_path(path)?;
+                let minified = minify_js(&content);
+                fs::write(path, &minified).with_path(path)?;
+                let _ = count.fetch_add(1, Ordering::Relaxed);
+                Ok(())
+            })?;
 
         let total = count.load(Ordering::Relaxed);
         if total > 0 {
@@ -135,28 +126,44 @@ type MinifiableFiles = (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>);
 /// Walks `site_dir` and returns `(html, css, js)` file lists, honouring
 /// the plugin cache for incremental builds.
 ///
-/// * With the `minify` feature, the walk is recursive (via `walkdir`)
-///   and includes `.css` and `.js` files.
-/// * Without the feature, the walk is top-level only (matching the
-///   pre-0.0.42 behaviour) and CSS/JS lists are returned empty.
+/// The walk is iterative rather than recursive so a deep tree cannot
+/// overflow the stack, and symlinks are not followed - the same contract
+/// `walkdir`'s `follow_links(false)` gave, without the dependency. Errors on
+/// individual entries are skipped; only failing to read `site_dir` itself is
+/// reported, which is what the previous implementation did.
 fn collect_minifiable_files(
     site_dir: &std::path::Path,
     cache: Option<&crate::plugin::PluginCache>,
 ) -> Result<MinifiableFiles, SsgError> {
-    #[cfg(feature = "minify")]
-    {
-        let mut html = Vec::new();
-        let mut css = Vec::new();
-        let mut js = Vec::new();
-        for entry in walkdir::WalkDir::new(site_dir)
-            .follow_links(false)
-            .into_iter()
-            .filter_map(Result::ok)
-        {
-            if !entry.file_type().is_file() {
+    let mut html = Vec::new();
+    let mut css = Vec::new();
+    let mut js = Vec::new();
+
+    // Probe the root first so an unreadable site directory is an error
+    // rather than an empty result; deeper directories are skipped quietly,
+    // which is what filtering `walkdir`'s errors did.
+    drop(fs::read_dir(site_dir).with_path(site_dir)?);
+
+    let mut stack = vec![site_dir.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.filter_map(Result::ok) {
+            let Ok(file_type) = entry.file_type() else {
+                continue;
+            };
+            if file_type.is_symlink() {
                 continue;
             }
-            let path = entry.into_path();
+            let path = entry.path();
+            if file_type.is_dir() {
+                stack.push(path);
+                continue;
+            }
+            if !file_type.is_file() {
+                continue;
+            }
             let Some(ext) = path.extension().and_then(|e| e.to_str()) else {
                 continue;
             };
@@ -171,19 +178,8 @@ fn collect_minifiable_files(
                 _ => {}
             }
         }
-        Ok((html, css, js))
     }
-    #[cfg(not(feature = "minify"))]
-    {
-        let html: Vec<_> = fs::read_dir(site_dir)
-            .with_path(site_dir)?
-            .filter_map(|r| r.ok())
-            .map(|e| e.path())
-            .filter(|p| p.extension().is_some_and(|e| e == "html"))
-            .filter(|p| cache.is_none_or(|c| c.has_changed(p)))
-            .collect();
-        Ok((html, Vec::new(), Vec::new()))
-    }
+    Ok((html, css, js))
 }
 
 /// HTML minification.
@@ -206,132 +202,170 @@ fn collect_minifiable_files(
 /// let out = minify_html("<html>   <body>hi</body>  </html>");
 /// assert!(out.len() <= "<html>   <body>hi</body>  </html>".len());
 /// ```
-#[cfg(feature = "minify")]
-pub fn minify_html(html: &str) -> String {
-    let cfg = minify_html::Cfg {
-        // minify-html 0.18 renamed/inverted these two fields; explicit
-        // here (rather than relying on `Cfg::default()`) to preserve
-        // the original "never touch the doctype, never merge attribute
-        // spaces" intent byte-for-byte across the rename.
-        minify_doctype: false, // was `do_not_minify_doctype: true`
-        allow_removing_spaces_between_attributes: false, // was `keep_spaces_between_attributes: true`
-        keep_comments: false,
-        keep_html_and_head_opening_tags: true,
-        keep_closing_tags: true,
-        ..minify_html::Cfg::default()
+/// Elements whose text content must survive byte for byte.
+///
+/// `pre` and `textarea` render whitespace literally; `script` and `style`
+/// hold source in another language, where a run of spaces can sit inside a
+/// string literal. Collapsing any of them changes what the page does.
+const RAW_TEXT_ELEMENTS: [&str; 4] = ["pre", "textarea", "script", "style"];
+
+/// Scans one tag starting at `start` (which must index a `<`).
+///
+/// Returns the byte index just past the closing `>` and the lowercased
+/// element name for an opening tag. Attribute values are scanned with quote
+/// tracking, so a `>` inside one does not end the tag early.
+fn scan_tag(html: &str, start: usize) -> (usize, Option<String>) {
+    let bytes = html.as_bytes();
+    let mut i = start + 1;
+    let closing = bytes.get(i) == Some(&b'/');
+    if closing {
+        i += 1;
+    }
+    let name_start = i;
+    while i < bytes.len()
+        && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'-')
+    {
+        i += 1;
+    }
+    let name = if i > name_start && !closing {
+        Some(html[name_start..i].to_ascii_lowercase())
+    } else {
+        None
     };
-    let out = minify_html::minify(html.as_bytes(), &cfg);
-    // minify-html guarantees valid UTF-8 in, valid UTF-8 out for the
-    // accepted inputs we generate. Fall back to the original string on
-    // the unlikely path where it isn't, to keep the build non-fatal.
-    String::from_utf8(out).unwrap_or_else(|_| html.to_string())
+    let mut quote: Option<u8> = None;
+    while i < bytes.len() {
+        let c = bytes[i];
+        match quote {
+            Some(q) => {
+                if c == q {
+                    quote = None;
+                }
+            }
+            None => {
+                if c == b'"' || c == b'\'' {
+                    quote = Some(c);
+                } else if c == b'>' {
+                    return (i + 1, name);
+                }
+            }
+        }
+        i += 1;
+    }
+    (bytes.len(), name)
 }
 
-/// Fallback HTML minifier (whitespace collapse) — see the
-/// feature-gated overload above for the production minifier.
+/// Byte offset of `</name` in `hay`, case-insensitively, without allocating.
+fn find_closing_tag(hay: &[u8], name: &str) -> Option<usize> {
+    let n = name.as_bytes();
+    let mut i = 0;
+    while i + 2 + n.len() <= hay.len() {
+        if hay[i] == b'<'
+            && hay[i + 1] == b'/'
+            && hay[i + 2..i + 2 + n.len()].eq_ignore_ascii_case(n)
+        {
+            return Some(i);
+        }
+        i += 1;
+    }
+    None
+}
+
+/// Collapses insignificant whitespace in HTML.
+///
+/// This is ssg's own implementation rather than a dependency. Minification
+/// rewrites every page the generator emits, so a bug in it is a bug in every
+/// site; keeping it in-tree means it is covered by this crate's own tests and
+/// cannot change underneath a release.
+///
+/// What it does not touch:
+///
+/// * the content of [`RAW_TEXT_ELEMENTS`], byte for byte
+/// * anything between `<` and `>`, so attribute values keep their spacing
+/// * comments, including conditional ones
+///
+/// A previous version bailed out of the whole document if `<pre` appeared
+/// anywhere, and collapsed whitespace everywhere else - including inside
+/// `<script>`, where it silently rewrote string literals. This one tracks
+/// which element it is inside, so a page can contain a `<pre>` block and
+/// still be minified around it.
 ///
 /// # Examples
 ///
 /// ```rust
 /// use ssg::plugins::minify_html;
 ///
-/// // `<pre>` short-circuits both implementations to preserve whitespace.
-/// let html = "<pre>  spaced  </pre>";
-/// assert_eq!(minify_html(html), html);
+/// assert_eq!(minify_html("<p>  Hello   World  </p>"), "<p> Hello World </p>");
+///
+/// // A script's contents are left exactly as written.
+/// let js = r#"<script>var s = "a  b";</script>"#;
+/// assert_eq!(minify_html(js), js);
 /// ```
-#[cfg(not(feature = "minify"))]
+#[must_use]
 pub fn minify_html(html: &str) -> String {
-    // Fast path: any `<pre` anywhere disables minification entirely.
-    if html.contains("<pre") {
-        return html.to_string();
-    }
+    let bytes = html.as_bytes();
+    let mut out = String::with_capacity(html.len());
+    let mut i = 0usize;
+    // Whitespace seen in a text run, not yet emitted. Holding it back means a
+    // run collapses to one space and the space lands before the next thing,
+    // whether that is text or a tag.
+    let mut pending_space = false;
 
-    let mut result = String::with_capacity(html.len());
-    let mut in_whitespace = false;
-    for ch in html.chars() {
-        if ch.is_whitespace() {
-            if !in_whitespace {
-                result.push(' ');
-                in_whitespace = true;
+    while i < bytes.len() {
+        if bytes[i] == b'<' {
+            if pending_space {
+                out.push(' ');
+                pending_space = false;
             }
-        } else {
-            in_whitespace = false;
-            result.push(ch);
+            if html[i..].starts_with("<!--") {
+                let end =
+                    html[i..].find("-->").map_or(bytes.len(), |p| i + p + 3);
+                out.push_str(&html[i..end]);
+                i = end;
+                continue;
+            }
+            let (tag_end, name) = scan_tag(html, i);
+            let self_closing = html[i..tag_end].trim_end().ends_with("/>");
+            out.push_str(&html[i..tag_end]);
+            i = tag_end;
+
+            if let Some(name) = name {
+                if RAW_TEXT_ELEMENTS.contains(&name.as_str()) && !self_closing {
+                    let rest = &bytes[i..];
+                    let stop =
+                        find_closing_tag(rest, &name).unwrap_or(rest.len());
+                    out.push_str(&html[i..i + stop]);
+                    i += stop;
+                }
+            }
+            continue;
         }
+
+        let ch = html[i..].chars().next().unwrap_or('\0');
+        if ch.is_whitespace() {
+            pending_space = true;
+        } else {
+            if pending_space {
+                out.push(' ');
+                pending_space = false;
+            }
+            out.push(ch);
+        }
+        i += ch.len_utf8();
     }
-    result
-}
-
-/// Minifies a CSS source string with `lightningcss`.
-///
-/// Returns `None` if the input fails to parse — callers fall back to
-/// the original content so a malformed asset can't sink an entire
-/// build.
-///
-/// # Examples
-///
-/// ```rust
-/// use ssg::plugins::minify_css;
-///
-/// let mini = minify_css("body { color: red; }").unwrap();
-/// assert!(mini.len() < "body { color: red; }".len());
-/// ```
-#[cfg(feature = "minify")]
-pub fn minify_css(css: &str) -> Option<String> {
-    use lightningcss::printer::PrinterOptions;
-    use lightningcss::stylesheet::{MinifyOptions, ParserOptions, StyleSheet};
-
-    let mut sheet = StyleSheet::parse(css, ParserOptions::default()).ok()?;
-    sheet.minify(MinifyOptions::default()).ok()?;
-    let opts = PrinterOptions {
-        minify: true,
-        ..PrinterOptions::default()
-    };
-    sheet.to_css(opts).ok().map(|r| r.code)
-}
-
-/// Minifies a JavaScript source string with `oxc_minifier` +
-/// `oxc_codegen`.
-///
-/// Returns `None` if the input is not parseable as a script or module
-/// — callers fall back to the original content.
-///
-/// # Examples
-///
-/// ```rust
-/// use ssg::plugins::minify_js;
-///
-/// let mini = minify_js("var x = 1; var y = 2;").unwrap();
-/// assert!(mini.len() < "var x = 1; var y = 2;".len());
-/// ```
-#[cfg(feature = "minify")]
-pub fn minify_js(js: &str) -> Option<String> {
-    use oxc_allocator::Allocator;
-    use oxc_codegen::{Codegen, CodegenOptions};
-    use oxc_minifier::{Minifier, MinifierOptions};
-    use oxc_parser::Parser;
-    use oxc_span::SourceType;
-
-    let allocator = Allocator::default();
-    let source_type = SourceType::mjs();
-    let ret = Parser::new(&allocator, js, source_type).parse();
-    // oxc_parser 0.137 renamed `errors: Vec<_>` to `diagnostics:
-    // Diagnostics`, which can carry non-fatal warnings alongside real
-    // parse errors — `has_errors()` is the precise equivalent of the
-    // old `!errors.is_empty()` bail-out.
-    if ret.diagnostics.has_errors() {
-        return None;
+    if pending_space {
+        out.push(' ');
     }
-    let mut program = ret.program;
-    let options = MinifierOptions::default();
-    let _ = Minifier::new(options).minify(&allocator, &mut program);
-    let codegen_options = CodegenOptions {
-        minify: true,
-        ..CodegenOptions::default()
-    };
-    let out = Codegen::new().with_options(codegen_options).build(&program);
-    Some(out.code)
+    out
 }
+
+/// ssg's own CSS and JavaScript minifiers, re-exported so the whole
+/// minification surface lives behind one module.
+///
+/// These replace `lightningcss` and `oxc_minifier`, which sat behind an
+/// optional `minify` feature. A minifier rewrites every byte the generator
+/// emits; keeping it in-tree means it is covered by this crate's own tests
+/// and cannot change underneath a release.
+pub use crate::plugins_group::assets::{minify_css, minify_js};
 
 /// Image optimization plugin stub.
 ///
@@ -547,7 +581,7 @@ mod tests {
     }
 
     #[test]
-    fn test_minify_plugin_skips_non_html() -> Result<()> {
+    fn minify_plugin_minifies_css_too() -> Result<()> {
         let temp = tempdir().unwrap();
         let css_path = temp.path().join("style.css");
         fs::write(&css_path, "body {   color: red;   }").unwrap();
@@ -555,18 +589,17 @@ mod tests {
         let ctx = test_ctx_with(temp.path());
         MinifyPlugin.after_compile(&ctx).unwrap();
 
-        // CSS minification only runs under the `minify` feature; on
-        // the default build the file is untouched.
+        // This used to assert the opposite - that the file came back with
+        // its three spaces intact - because CSS was only minified when the
+        // `minify` feature pulled in lightningcss. The default build
+        // collected the file and threw the list away.
         let content = fs::read_to_string(&css_path).unwrap();
-        #[cfg(not(feature = "minify"))]
-        assert!(content.contains("   "));
-        #[cfg(feature = "minify")]
-        {
-            // With minify on, CSS *is* compressed — verify it parses
-            // back to the same logical rule.
-            assert!(content.contains("color"));
-            assert!(content.contains("red"));
-        }
+        assert!(
+            !content.contains("   "),
+            "CSS was not minified: {content:?}"
+        );
+        assert!(content.contains("color"));
+        assert!(content.contains("red"));
         Ok(())
     }
 
@@ -577,14 +610,78 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "minify"))]
+    #[test]
+    fn minify_html_leaves_raw_text_elements_byte_for_byte() {
+        // Every one of these was corrupted by the previous implementation,
+        // which collapsed whitespace everywhere outside a `<pre>`-bearing
+        // document. A run of spaces inside a string literal is data.
+        for input in [
+            r#"<script>var s = "a  b";</script>"#,
+            "<textarea>line1\n  line2</textarea>",
+            r#"<style>a{content:"x  y"}</style>"#,
+            "<pre>  keep   spaces  </pre>",
+        ] {
+            assert_eq!(
+                minify_html(input),
+                input,
+                "raw text was rewritten: {input:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn minify_html_minifies_around_a_pre_block() {
+        // The old pass gave up on the whole document the moment `<pre`
+        // appeared anywhere in it, so a single code block cost every other
+        // byte on the page.
+        let out = minify_html("<p>a   b</p><pre>x   y</pre><p>c   d</p>");
+        assert_eq!(out, "<p>a b</p><pre>x   y</pre><p>c d</p>");
+    }
+
+    #[test]
+    fn minify_html_keeps_attribute_values_intact() {
+        let input = r#"<a title="two  spaces" href="/x">t   t</a>"#;
+        assert_eq!(
+            minify_html(input),
+            r#"<a title="two  spaces" href="/x">t t</a>"#
+        );
+    }
+
+    #[test]
+    fn minify_html_does_not_end_a_tag_on_a_quoted_angle_bracket() {
+        let input = r#"<a title="a > b">x   y</a>"#;
+        assert_eq!(minify_html(input), r#"<a title="a > b">x y</a>"#);
+    }
+
+    #[test]
+    fn minify_html_preserves_comments() {
+        let input = "<!--[if IE]>  legacy  <![endif]--><p>a   b</p>";
+        assert_eq!(
+            minify_html(input),
+            "<!--[if IE]>  legacy  <![endif]--><p>a b</p>"
+        );
+    }
+
+    #[test]
+    fn minify_html_is_idempotent() {
+        let corpus = [
+            "<p>  a   b  </p>",
+            r#"<script>var s = "a  b";</script><p>  c  </p>"#,
+            "<pre>  x  </pre><div>  y  </div>",
+            "<!DOCTYPE html><html lang=\"en\"><body>  hi  </body></html>",
+        ];
+        for input in corpus {
+            let once = minify_html(input);
+            assert_eq!(minify_html(&once), once, "not idempotent: {input:?}");
+        }
+    }
+
     #[test]
     fn test_minify_html_collapses_whitespace() {
         let result = minify_html("<p>  Hello   World  </p>");
         assert_eq!(result, "<p> Hello World </p>");
     }
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     fn test_minify_html_preserves_pre() {
         let input = "<pre>  keep   spaces  </pre>";
@@ -642,7 +739,6 @@ mod tests {
         assert_eq!(pm.names(), vec!["minify", "image-opti", "deploy"]);
     }
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     fn minify_plugin_preserves_pre_blocks() {
         // Arrange
@@ -651,11 +747,10 @@ mod tests {
         // Act
         let result = minify_html(input);
 
-        // Assert — content with <pre> is returned verbatim
-        assert_eq!(result, input);
+        // Assert — the <pre> survives byte for byte, the rest is collapsed
+        assert_eq!(result, "<pre>  code   with   spaces  </pre><p> other </p>");
     }
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     fn minify_plugin_handles_nested_html() {
         // Arrange
@@ -768,21 +863,18 @@ mod tests {
     // minify_html — additional edge cases (fallback only)
     // -----------------------------------------------------------------
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     fn minify_html_empty_string() {
         let result = minify_html("");
         assert_eq!(result, "");
     }
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     fn minify_html_whitespace_only() {
         let result = minify_html("   \n\t  \n  ");
         assert_eq!(result, " ");
     }
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     fn minify_html_no_whitespace() {
         let input = "<p>hello</p>";
@@ -790,7 +882,6 @@ mod tests {
         assert_eq!(result, input);
     }
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     fn minify_html_preserves_pre_with_class() {
         let input = "<pre class=\"lang-rust\">  fn main() {  }  </pre>";
@@ -798,7 +889,6 @@ mod tests {
         assert_eq!(result, input);
     }
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     fn minify_html_tabs_and_newlines() {
         let input = "<div>\n\t<p>\n\t\tHello\n\t</p>\n</div>";
@@ -806,7 +896,6 @@ mod tests {
         assert_eq!(result, "<div> <p> Hello </p> </div>");
     }
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     fn minify_html_mixed_whitespace_types() {
         let input = "<span>  \t\n  word  \t\n  </span>";
@@ -814,14 +903,12 @@ mod tests {
         assert_eq!(result, "<span> word </span>");
     }
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     fn minify_html_single_char() {
         assert_eq!(minify_html("a"), "a");
         assert_eq!(minify_html(" "), " ");
     }
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     fn minify_html_multiple_pre_tags() {
         let input = "<pre>a</pre><pre>b</pre>";
@@ -854,7 +941,6 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
     fn minify_plugin_whitespace_only_html_file() -> Result<()> {
@@ -869,10 +955,9 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
-    fn minify_plugin_html_with_pre_block_not_modified() -> Result<()> {
+    fn minify_plugin_keeps_pre_and_minifies_the_rest() -> Result<()> {
         let temp = tempdir().unwrap();
         let original =
             "<html><pre>  keep  spaces  </pre><p>  other  </p></html>";
@@ -881,8 +966,15 @@ mod tests {
         let ctx = test_ctx_with(temp.path());
         MinifyPlugin.after_compile(&ctx).unwrap();
 
+        // The `<pre>` keeps every byte; the paragraph beside it does not.
+        // This used to assert the whole document came back untouched,
+        // because one `<pre>` anywhere disabled minification for the entire
+        // page - a code block cost every other byte on it.
         let content = fs::read_to_string(temp.path().join("pre.html")).unwrap();
-        assert_eq!(content, original);
+        assert_eq!(
+            content,
+            "<html><pre>  keep  spaces  </pre><p> other </p></html>"
+        );
         Ok(())
     }
 
@@ -1025,7 +1117,6 @@ mod tests {
         assert!(debug.contains("ImageOptiPlugin"));
     }
 
-    #[cfg(not(feature = "minify"))]
     #[test]
     fn test_minify_plugin_read_dir_error() {
         let temp = tempdir().unwrap();
@@ -1050,7 +1141,6 @@ mod tests {
     // `minify` feature — happy paths (only compiled with the feature)
     // -----------------------------------------------------------------
 
-    #[cfg(feature = "minify")]
     #[test]
     fn minify_html_preserves_pre_content_bit_identical() {
         let body = "fn main() {\n    println!(\"hi\");\n}";
@@ -1066,25 +1156,22 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "minify")]
     #[test]
     fn minify_css_compresses_input() {
         let input =
             "body  {\n  color:   red;\n  margin:  0px  0px  0px  0px;\n}";
-        let out = minify_css(input).expect("css minification");
+        let out = minify_css(input);
         assert!(out.len() < input.len());
         assert!(out.contains("red"));
     }
 
-    #[cfg(feature = "minify")]
     #[test]
     fn minify_js_compresses_input() {
         let input = "const greeting = 'hello world';\nconsole.log(greeting);";
-        let out = minify_js(input).expect("js minification");
+        let out = minify_js(input);
         assert!(out.len() < input.len());
     }
 
-    #[cfg(feature = "minify")]
     #[test]
     fn minify_plugin_recursive_walk_processes_nested_html() -> Result<()> {
         let temp = tempdir().unwrap();
