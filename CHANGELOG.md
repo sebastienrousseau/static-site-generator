@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Head injections were duplicated into `<body>`.** Twelve plugins add
+  something to `<head>` through `inject_before_head_close`, which matched
+  *every* `<head>` in the document. A page can carry a second, nested one:
+  the generator wraps an already-complete document in a layout, so `<main>`
+  holds a whole `<!DOCTYPE html>…<head>…</head>…` of its own. Every payload
+  was therefore injected twice, with the second copy landing inside
+  `<body>` — the syntax-highlighting stylesheet, the SBOM link, and five
+  Open Graph meta elements among them. Duplicate canonical links are worse
+  than useless; a search engine may honour neither.
+
+  The helper now injects into the first `</head>` in document order, which
+  is the document's own. Across the eight bundled examples this removes
+  9,475 bytes of duplicated head content, roughly 1 KB a page. Themes are
+  unaffected: none of the 73 pages in the theme suite carries a nested
+  document, and their output is byte-identical.
+
 ## [0.0.62] - 2026-09-11
 
 Minification becomes ssg's own code, and six bugs that reached every site

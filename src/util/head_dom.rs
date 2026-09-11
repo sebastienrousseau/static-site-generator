@@ -83,8 +83,17 @@ pub fn inject_before_head_close(html: &str, payload: &str) -> String {
         let pl = payload_owned.clone();
         let cb = Rc::clone(&injected_cb);
         let _ = el.on_end_tag(end_tag!(move |end| {
-            end.before(&pl, ContentType::Html);
-            cb.set(true);
+            // Only the first `</head>` in document order, which is the
+            // document's own. A page can carry a second, nested one: the
+            // generator wraps an already-complete document in a layout, so
+            // `<main>` holds a whole `<!DOCTYPE html>…<head>…` of its own.
+            // Injecting into every match put a copy of the payload inside
+            // `<body>` - a second canonical link, a second stylesheet, and
+            // on one example the only copy of the JSON-LD.
+            if !cb.get() {
+                end.before(&pl, ContentType::Html);
+                cb.set(true);
+            }
             Ok(())
         }));
         Ok(())
@@ -372,6 +381,37 @@ mod entity_decode_tests {
 
 #[cfg(test)]
 mod tests {
+
+    /// A page can contain a second, nested `<head>`: the generator wraps an
+    /// already-complete document inside a layout, so `<main>` holds a whole
+    /// `<!DOCTYPE html>…<head>…</head>…` of its own. Injecting into every
+    /// `<head>` puts a copy of the payload inside `<body>`.
+    ///
+    /// Measured on the plugins example, where twelve plugins use this helper:
+    /// two `/highlight.css` links, three canonical links, six alternate
+    /// links, ten Open Graph meta — with one of each pair, and the only copy
+    /// of the JSON-LD, landing in the body. Duplicate canonicals are worse
+    /// than useless; a search engine may honour neither.
+    #[test]
+    fn injection_targets_the_document_head_not_every_head() {
+        let html = concat!(
+            "<html><head><title>Outer</title></head><body><main>",
+            "<html><head><title>Nested</title></head><body>x</body></html>",
+            "</main></body></html>"
+        );
+        let out = inject_before_head_close(html, "<link rel=\"x\">");
+
+        assert_eq!(
+            out.matches("<link rel=\"x\">").count(),
+            1,
+            "payload was injected more than once:\n{out}"
+        );
+        let body_at = out.find("<body").expect("a body");
+        assert!(
+            out.find("<link rel=\"x\">").expect("the payload") < body_at,
+            "payload landed inside <body>:\n{out}"
+        );
+    }
 
     /// ssg#540: a `</head>` that appears inside a comment or a script in the
     /// head is not the head's end tag. A `find("</head>")` splice takes the
