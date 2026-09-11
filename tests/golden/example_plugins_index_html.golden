@@ -7,7 +7,7 @@
 
 
 
-  <link crossorigin="anonymous" href="/_csp/b837f9430a8d4d54.css" integrity="<SRI>" rel="stylesheet">
+
 
   <link href="atom.xml" rel="alternate" title="Atom Feed" type="application/atom+xml" />
   <link href="feed.json" rel="alternate" title="JSON Feed" type="application/feed+json" />
@@ -21,7 +21,7 @@
 <meta content="summary" name="twitter:card">
 <meta content="Untitled" name="twitter:title">
 <meta content="Plugin Pipeline Demo Skip to content Plugin Pipeline Search &#8984;K Features Posts Explore by tag Contact Us 🌐 EN 🇬🇧 English 🇫🇷 Français" name="twitter:description">
-<link href="http://127.0.0.1:8000/" rel="canonical"><link href="/sbom.cdx.json" rel="sbom" type="application/vnd.cyclonedx+json">
+<link href="http://127.0.0.1:8000/" rel="canonical"><link crossorigin="anonymous" href="/_csp/b837f9430a8d4d54.css" integrity="<SRI>" rel="stylesheet"><link crossorigin="anonymous" href="/_csp/fb4d8ab267d840d2.css" integrity="<SRI>" rel="stylesheet"><link crossorigin="anonymous" href="/_csp/1edcaa9ad9f99b2c.css" integrity="<SRI>" rel="stylesheet"><link href="/sbom.cdx.json" rel="sbom" type="application/vnd.cyclonedx+json">
 </head>
 <body>
   <a class="sr-only" href="#main-content">Skip to main content</a>
@@ -37,7 +37,7 @@
 
   <main id="main-content" role="main">
 
-<!DOCTYPE html><html lang="en-GB"><head><meta charset="utf-8" /><link crossorigin="" href="https://cloudcdn.pro" rel="preconnect" /><title>Plugin Pipeline Demo</title><meta content="demo@plugins.example.com (Plugin Pipeline Demo)" name="author"><meta content="Developer reference walking through every stage of the SSG plugin pipeline." name="description"><meta content="plugins, ssg, static site generator, rust, example" name="keywords"><meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport"><meta content="ARIA" name="accessibility" /><meta content="fullKeyboardControl" name="accessibility" /><meta content="noFlashingHazard" name="accessibility" /><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="Plugin Pipeline Demo" name="apple-mobile-web-app-title"><meta content="yes" name="mobile-web-app-capable" /><meta content="default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: https:; style-src 'self'; font-src 'self'; media-src 'self';" http-equiv="Content-Security-Policy" /><link href="https://plugins.example.com" hreflang="en" rel="alternate" />  <link href="https://cloudcdn.pro/kaishi/images/favicon.ico" rel="icon" type="image/x-icon" /> <link href="https://cloudcdn.pro/kaishi/images/icons/192x192.png" rel="apple-touch-icon" sizes="192x192" /> <link href="https://cloudcdn.pro/kaishi/images/icons/16x16.png" rel="icon" sizes="16x16" type="image/png" /> <link href="https://cloudcdn.pro/kaishi/images/icons/32x32.png" rel="icon" sizes="32x32" type="image/png" /><meta content="rgb(26, 58, 138)" name="theme-color" /><link href="/en/manifest.json" rel="manifest" /> <link href="/en/rss.xml" rel="alternate" type="application/rss+xml" /><link crossorigin="anonymous" href="/_csp/fb4d8ab267d840d2.css" integrity="<SRI>" rel="stylesheet">  <link href="atom.xml" rel="alternate" title="Atom Feed" type="application/atom+xml" />
+<!DOCTYPE html><html lang="en-GB"><head><meta charset="utf-8" /><link crossorigin="" href="https://cloudcdn.pro" rel="preconnect" /><title>Plugin Pipeline Demo</title><meta content="demo@plugins.example.com (Plugin Pipeline Demo)" name="author"><meta content="Developer reference walking through every stage of the SSG plugin pipeline." name="description"><meta content="plugins, ssg, static site generator, rust, example" name="keywords"><meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport"><meta content="ARIA" name="accessibility" /><meta content="fullKeyboardControl" name="accessibility" /><meta content="noFlashingHazard" name="accessibility" /><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="Plugin Pipeline Demo" name="apple-mobile-web-app-title"><meta content="yes" name="mobile-web-app-capable" /><meta content="default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: https:; style-src 'self'; font-src 'self'; media-src 'self';" http-equiv="Content-Security-Policy" /><link href="https://plugins.example.com" hreflang="en" rel="alternate" />  <link href="https://cloudcdn.pro/kaishi/images/favicon.ico" rel="icon" type="image/x-icon" /> <link href="https://cloudcdn.pro/kaishi/images/icons/192x192.png" rel="apple-touch-icon" sizes="192x192" /> <link href="https://cloudcdn.pro/kaishi/images/icons/16x16.png" rel="icon" sizes="16x16" type="image/png" /> <link href="https://cloudcdn.pro/kaishi/images/icons/32x32.png" rel="icon" sizes="32x32" type="image/png" /><meta content="rgb(26, 58, 138)" name="theme-color" /><link href="/en/manifest.json" rel="manifest" /> <link href="/en/rss.xml" rel="alternate" type="application/rss+xml" />  <link href="atom.xml" rel="alternate" title="Atom Feed" type="application/atom+xml" />
   <link href="feed.json" rel="alternate" title="JSON Feed" type="application/feed+json" />
 <meta content="max-snippet:-1, max-image-preview:large, max-video-preview:-1" name="robots">
 <link href="/highlight.css" rel="stylesheet">
@@ -65,7 +65,7 @@
 
 <!-- SSG Search Widget -->
 <div id="ssg-search-widget">
-<link crossorigin="anonymous" href="/_csp/ab0ff800df72e7d4.css" integrity="<SRI>" rel="stylesheet">
+
 <!-- Search trigger button -->
 <button aria-label="Search" id="ssg-search-btn" type="button">
 <svg viewbox="0 0 24 24"><circle cx="11" cy="11" r="8" /><line x1="21" x2="16.65" y1="21" y2="16.65" /></svg>

@@ -451,6 +451,17 @@ fn sha256_hex(data: &[u8]) -> String {
 }
 
 /// Minimal CSS minifier that removes comments and compresses whitespace.
+/// Whether the innermost open block holds declarations rather than
+/// further rules.
+///
+/// Empty stack means top level, which is a selector or at-rule prelude.
+/// Otherwise the innermost entry says what opened the block: an at-rule
+/// prelude (`false` here — its content is rules) or a selector (`true` —
+/// its content is declarations).
+const fn in_value_context(block_stack: &[bool]) -> bool {
+    matches!(block_stack.last(), Some(false))
+}
+
 fn minify_css(css: &str) -> String {
     let mut result = String::with_capacity(css.len());
     let mut chars = css.chars().peekable();
@@ -510,8 +521,60 @@ fn minify_css(css: &str) -> String {
     // where strings were, so `content: "  two  spaces  "` came out as
     // `content:"twospaces"` — the minifier rewriting authored text.
     let mut in_string: Option<char> = None;
+    // Whether the cursor is inside a declaration block. Outside one the
+    // text is a selector or an at-rule prelude, and there a space is
+    // usually a descendant combinator rather than padding.
+    //
+    // The two contexts need opposite defaults, which is what the
+    // character-class heuristic below could not express. In a value,
+    // spaces are noise apart from a few known cases. In a selector,
+    // dropping a space does not tighten the match, it changes it:
+    //
+    //     .a :hover     -> .a:hover      a different element
+    //     .a ::before   -> .a::before    a different element
+    //     a[href] span  -> a[href]span   matches nothing at all
+    //     [x] [y]       -> [x][y]        one element, not two
+    //     :not(.a) .b   -> :not(.a).b    one element, not two
+    //     #a *          -> #a*           invalid, rule discarded
+    //
+    // Every one of those was being emitted. The last cost three themes
+    // their search-widget override, silently.
+    // One entry per open brace: true when that block was opened by an
+    // at-rule prelude. The distinction matters because a block's content
+    // is declarations only if a *selector* opened it — inside
+    // `@media (…) { … }` the content is more rules, and their selectors
+    // need the same treatment as top-level ones.
+    //
+    // A bool was not enough. With a single in/out flag, everything
+    // nested in a media query was read as a value, and
+    // `:root:not([data-theme="light"]) .theme-toggle` lost the space
+    // after `)` — descendant became compound, and five themes lost their
+    // dark-mode icon rule.
+    let mut block_stack: Vec<bool> = Vec::new();
+    // Whether the prelude being read starts with `@`.
+    let mut prelude_is_at_rule = false;
     while i < chars.len() {
         let ch = chars[i];
+        if in_string.is_none() {
+            match ch {
+                '@' if !in_value_context(&block_stack) => {
+                    prelude_is_at_rule = true;
+                }
+                '{' => {
+                    block_stack.push(prelude_is_at_rule);
+                    prelude_is_at_rule = false;
+                }
+                '}' => {
+                    let _ = block_stack.pop();
+                    prelude_is_at_rule = false;
+                }
+                ';' if !in_value_context(&block_stack) => {
+                    prelude_is_at_rule = false;
+                }
+                _ => {}
+            }
+        }
+        let in_block = in_value_context(&block_stack);
 
         if let Some(q) = in_string {
             clean.push(ch);
@@ -539,6 +602,34 @@ fn minify_css(css: &str) -> String {
 
         if ch == ' ' {
             let prev = if i > 0 { Some(chars[i - 1]) } else { None };
+            if !in_block {
+                // Selector or at-rule prelude. Keep one space unless it
+                // sits against punctuation that already separates the
+                // tokens: a combinator, a comma, or a brace. Keeping it
+                // around `>` would be valid too, but those few bytes are
+                // worth reclaiming where the meaning cannot change.
+                //
+                // Neighbours are the last character *emitted* and the
+                // next *non-space* character, so a run of whitespace
+                // collapses to one rather than being judged space by
+                // space — `body   {` kept two of its three otherwise.
+                let mut j = i;
+                while j < chars.len() && chars[j] == ' ' {
+                    j += 1;
+                }
+                let next_sel = chars.get(j).copied();
+                let last = clean.chars().next_back();
+                let separator = |c: Option<char>| {
+                    matches!(c, Some('{' | '}' | ',' | '>' | '~' | '+' | ';'))
+                        || c.is_none()
+                };
+                if !separator(last) && !separator(next_sel) && last != Some(' ')
+                {
+                    clean.push(' ');
+                }
+                i = j;
+                continue;
+            }
             let next = if i + 1 < chars.len() {
                 Some(chars[i + 1])
             } else {
@@ -553,9 +644,21 @@ fn minify_css(css: &str) -> String {
             // rejects — so every fluid type step in every theme silently fell
             // back and headings rendered at the body size.
             //
-            // `-` was already in both sets and so was never affected; `*` and
-            // `/` need no surrounding space and stay collapsible. Keeping the
-            // space in a `.a + .b` selector too costs two bytes and is valid.
+            // `*` is in both sets for the same class of reason, found the
+            // hard way. It needs no space inside `calc()`, but in a
+            // selector it is the universal selector and the space before
+            // it is a descendant combinator: `#btn *` became `#btn*`,
+            // which matches nothing. Three themes override the search
+            // widget with `#ssg-search-btn * { color: … !important }`,
+            // and all three overrides were silently discarded — the
+            // widget kept the generator's own colour and failed AAA
+            // contrast against the theme's surface. Keeping the space in
+            // `calc(2 * 3)` costs two bytes and is valid.
+            //
+            // `-` was already in both sets and so was never affected;
+            // `/` needs no surrounding space and stays collapsible.
+            // Keeping the space in a `.a + .b` selector too costs two
+            // bytes and is valid.
             // Media and support queries put a required space either side of
             // their combinators: `@media (a) and (b)` collapsed to
             // `@media(a)and(b)`, which is invalid and silently disables the
@@ -579,6 +682,7 @@ fn minify_css(css: &str) -> String {
                             || p == '.'
                             || p == '@'
                             || p == '%'
+                            || p == '*'
                             || p == '$';
                         let is_n_word = n.is_alphanumeric()
                             || n == '-'
@@ -588,6 +692,7 @@ fn minify_css(css: &str) -> String {
                             || n == '.'
                             || n == '@'
                             || n == '%'
+                            || n == '*'
                             || n == '$';
                         is_p_word && is_n_word
                     }
@@ -1304,6 +1409,145 @@ mod tests {
                 "minified output does not parse as CSS\n  in:  {css}\n  out: {out}"
             );
         }
+    }
+
+    /// Probe: which selector shapes survive minification intact?
+    ///
+    /// The space between two compound selectors is a descendant
+    /// combinator. Dropping it does not tighten the selector, it changes
+    /// what it matches — usually to nothing. This walks the shapes a
+    /// stylesheet actually contains and asserts each one survives.
+    /// At-rule preludes are not selectors but live in the same
+    /// out-of-block context, and their spaces are equally load-bearing:
+    /// `@media (a) and (b)` collapsed to `@media(a)and(b)` is invalid
+    /// and silently disables the whole query.
+    #[test]
+    fn minify_css_preserves_at_rule_preludes() {
+        let cases = [
+            "@media (min-width: 40rem)",
+            "@media screen and (min-width: 40rem)",
+            "@media (prefers-color-scheme: dark)",
+            "@media (min-width: 40rem) and (max-width: 60rem)",
+            "@supports (display: grid)",
+            "@media (color-gamut: p3)",
+            "@media not all and (monochrome)",
+        ];
+        let mut broken = Vec::new();
+        for prelude in cases {
+            let out = minify_css(&format!("{prelude} {{ .a {{color:red}} }}"));
+            if !out.starts_with(prelude) {
+                broken.push(format!("`{prelude}` -> `{out}`"));
+            }
+        }
+        assert!(
+            broken.is_empty(),
+            "at-rule preludes mangled:\n  {}",
+            broken.join("\n  ")
+        );
+    }
+
+    /// The whole point is that nothing anyone actually wrote is
+    /// changed. Every selector in every published theme is round-tripped
+    /// through the minifier and must come back meaning the same thing.
+    #[test]
+    fn minify_css_is_faithful_on_selectors_from_the_published_themes() {
+        // Shapes taken from the nine themes, including the one that
+        // cost three of them their search-widget override.
+        let corpus = [
+            "#ssg-search-btn, #ssg-search-btn *",
+            ".prose a[href^=\"http\"]::after",
+            ":root:not([data-theme=\"light\"])",
+            ".card:hover .card-title",
+            "nav[aria-label] ul li a",
+            ".tmux-pane .pane-content .tree-node",
+            "html[data-theme=\"dark\"] .btn-primary:focus-visible",
+            ".a > .b ~ .c + .d",
+            "li:nth-child(2n + 1) > span",
+        ];
+        let mut broken = Vec::new();
+        for sel in corpus {
+            let out = minify_css(&format!("{sel} {{color:red}}"));
+            let got = out.trim_end_matches("{color:red}");
+            let want: String = sel
+                .replace(" > ", ">")
+                .replace(" ~ ", "~")
+                .replace(" + ", "+")
+                .replace(", ", ",");
+            if got != want {
+                broken.push(format!(
+                    "`{sel}`\n      -> `{got}`\n      want `{want}`"
+                ));
+            }
+        }
+        assert!(
+            broken.is_empty(),
+            "theme selectors changed:\n  {}",
+            broken.join("\n  ")
+        );
+    }
+
+    #[test]
+    fn minify_css_preserves_every_descendant_combinator() {
+        let cases = [
+            ("#a *", "universal descendant"),
+            ("[data-x] [data-y]", "attribute then attribute"),
+            (":not(.a) .b", "functional pseudo then class"),
+            (".a :hover", "descendant pseudo-class"),
+            (".a ::before", "descendant pseudo-element"),
+            ("a[href] span", "attribute then element"),
+            ("li:nth-child(2) a", "functional pseudo then element"),
+            ("* html .a", "universal first"),
+            (".a .b", "class then class"),
+            (".a *:focus", "universal with pseudo"),
+        ];
+        let mut broken = Vec::new();
+        for (sel, label) in cases {
+            let out = minify_css(&format!("{sel} {{color:red}}"));
+            let got = out.trim_end_matches("{color:red}");
+            if got != sel {
+                broken.push(format!("{label}: `{sel}` -> `{got}`"));
+            }
+        }
+        assert!(
+            broken.is_empty(),
+            "these selectors did not survive minification:\n  {}",
+            broken.join("\n  ")
+        );
+    }
+
+    /// A descendant combinator before the universal selector is a
+    /// space that carries meaning. Dropping it turns `#btn *` into
+    /// `#btn*`, which parses as garbage and matches nothing — the rule
+    /// is not tightened, it is discarded.
+    ///
+    /// Three published themes override the search widget with exactly
+    /// this shape, and all three overrides were being thrown away: the
+    /// widget kept the generator's own text colour and failed AAA
+    /// contrast against the theme's own surface. Nothing errored; the
+    /// rule simply stopped existing.
+    #[test]
+    fn minify_css_keeps_the_space_before_a_universal_selector() {
+        let out = minify_css("#btn, #btn * { color: red !important; }");
+        assert!(
+            out.contains("#btn *"),
+            "the descendant combinator must survive: {out}"
+        );
+        assert!(
+            !out.contains("#btn*"),
+            "must not produce the selector-eating form: {out}"
+        );
+    }
+
+    /// The same character inside `calc()` needs no space, but keeping
+    /// one is valid and costs two bytes — far cheaper than the class of
+    /// bug above.
+    #[test]
+    fn minify_css_leaves_calc_with_a_star_valid() {
+        let out = minify_css(".a { width: calc(2px * 3); }");
+        assert!(
+            out.contains("calc(2px * 3)") || out.contains("calc(2px*3)"),
+            "calc must stay valid either way: {out}"
+        );
     }
 
     /// Minifying twice must equal minifying once.

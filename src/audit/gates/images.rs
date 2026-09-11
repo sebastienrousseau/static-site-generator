@@ -97,11 +97,18 @@ impl AuditGate for ImagesGate {
                             .with_path(rel.clone()),
                         );
                     }
+                    // A vector source is already the resolution-independent
+                    // format; a raster sibling would be a downgrade, so asking
+                    // for one produces a warning nothing can ever clear.
+                    let is_vector = candidate
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .is_some_and(|e| e.eq_ignore_ascii_case("svg"));
                     // Check for sibling .webp / .avif
                     let stem = candidate.with_extension("");
                     let has_webp = stem.with_extension("webp").exists();
                     let has_avif = stem.with_extension("avif").exists();
-                    if !has_webp && !has_avif {
+                    if !is_vector && !has_webp && !has_avif {
                         findings.push(
                             Finding::new(
                                 NAME,
@@ -256,6 +263,36 @@ mod tests {
         };
         let f = ImagesGate.run(&s, &AuditOptions::default());
         assert!(f.iter().any(|x| x.code.as_deref() == Some("IMG-NO-MODERN")));
+    }
+
+    #[test]
+    fn svg_is_not_asked_for_a_raster_sibling() {
+        // An SVG is already resolution-independent; a .webp or .avif sibling
+        // would be a downgrade, not a modern format. Asking for one made the
+        // theme suite's logo a permanent warning nothing could clear.
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        std::fs::write(
+            root.join("logo.svg"),
+            b"<svg xmlns='http://www.w3.org/2000/svg'/>",
+        )
+        .unwrap();
+        let html_path = root.join("page.html");
+        std::fs::write(
+            &html_path,
+            r#"<html><body><img src="logo.svg" alt="l" width="1" height="1"></body></html>"#,
+        )
+        .unwrap();
+        std::mem::forget(tmp);
+        let s = Site {
+            root,
+            html_files: vec![html_path],
+        };
+        let f = ImagesGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("IMG-NO-MODERN")),
+            "an SVG should not be asked for a raster sibling: {f:?}"
+        );
     }
 
     #[test]
