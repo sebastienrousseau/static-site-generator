@@ -458,7 +458,7 @@ fn sha256_hex(data: &[u8]) -> String {
 /// Otherwise the innermost entry says what opened the block: an at-rule
 /// prelude (`false` here — its content is rules) or a selector (`true` —
 /// its content is declarations).
-fn in_value_context(block_stack: &[bool]) -> bool {
+const fn in_value_context(block_stack: &[bool]) -> bool {
     matches!(block_stack.last(), Some(false))
 }
 

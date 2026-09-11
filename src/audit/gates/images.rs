@@ -272,7 +272,11 @@ mod tests {
         // theme suite's logo a permanent warning nothing could clear.
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path().to_path_buf();
-        std::fs::write(root.join("logo.svg"), b"<svg xmlns='http://www.w3.org/2000/svg'/>").unwrap();
+        std::fs::write(
+            root.join("logo.svg"),
+            b"<svg xmlns='http://www.w3.org/2000/svg'/>",
+        )
+        .unwrap();
         let html_path = root.join("page.html");
         std::fs::write(
             &html_path,
