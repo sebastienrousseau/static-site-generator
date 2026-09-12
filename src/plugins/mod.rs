@@ -14,6 +14,7 @@ pub mod i18n;
 pub mod image_plugin;
 pub mod islands;
 pub mod isr_manifest;
+pub mod listings;
 pub mod llm;
 pub mod llm_cache;
 pub mod markdown_ext;

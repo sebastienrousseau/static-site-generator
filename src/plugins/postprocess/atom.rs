@@ -397,6 +397,7 @@ mod tests {
     fn make_atom_ctx(site_dir: &Path) -> PluginContext {
         crate::test_support::init_logger();
         let config = crate::cmd::SsgConfig {
+            listings: Vec::new(),
             base_url: "https://example.com".to_string(),
             site_name: "Test Site".to_string(),
             site_title: "Test Site".to_string(),
@@ -1346,6 +1347,7 @@ mod tests {
 
         // Use a config with empty site_name
         let config = crate::cmd::SsgConfig {
+            listings: Vec::new(),
             base_url: "https://example.com".to_string(),
             site_name: String::new(),
             site_title: String::new(),
@@ -1570,6 +1572,7 @@ mod tests {
         fs::write(page_dir.join("index.meta.json"), json).unwrap();
 
         let config = crate::cmd::SsgConfig {
+            listings: Vec::new(),
             base_url: "https://example.com".to_string(),
             site_name: "Test".to_string(),
             site_title: "Test".to_string(),

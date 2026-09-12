@@ -153,6 +153,7 @@ pub fn default_config() -> &'static Arc<SsgConfig> {
     DEFAULT_CONFIG.get_or_init(|| {
         Arc::new(SsgConfig {
             site_name: DEFAULT_SITE_NAME.to_string(),
+            listings: Vec::new(),
             content_dir: PathBuf::from("content"),
             output_dir: PathBuf::from("public"),
             template_dir: PathBuf::from("templates"),

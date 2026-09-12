@@ -95,6 +95,51 @@ site_description = "Thoughts and tutorials"
 language = "en"
 ```
 
+## Listings
+
+A listing is a named, filtered, paginated view of your dated pages, with
+its own URL space. Without any, a site gets what it always got: every
+dated page at `/page/N/`, newest first.
+
+```toml
+[[listings]]
+name     = "archive"        # /archive/ and /archive/page/N/
+title    = "Archive"
+per_page = 20
+
+[[listings]]
+name     = "rust"
+title    = "Writing about Rust"
+tag      = "rust"
+after    = "2026-01-01"
+by_year  = true             # also /rust/2026/, /rust/2025/, …
+```
+
+| Field | Effect |
+|---|---|
+| `name` | URL segment and directory. Required. |
+| `title` | Heading. Defaults to `name`. |
+| `per_page` | Items per page. Defaults to the plugin's setting. |
+| `tag`, `category`, `topic` | Only pages carrying that term. Case-insensitive. |
+| `language` | Only pages in that language. |
+| `after`, `before` | Date bounds, inclusive, `YYYY-MM-DD`. |
+| `by_year` | Also emit `/{name}/{year}/` for each year present. |
+
+Filters are optional and combine with AND, so a listing with none of them
+is every dated page under a name you chose. Page 1 is written at
+`/{name}/`, not `/{name}/page/1/`.
+
+A listing matching no pages writes nothing and says so on the console —
+an empty directory is a poor way to discover a typo in a filter. An
+unknown field in a `[[listings]]` section is an error rather than being
+ignored, for the same reason: a silently dropped filter produces a
+listing that looks right and lists the wrong pages.
+
+There is deliberately no custom-predicate field. A predicate is code, and
+a configuration file that grows an expression language has usually taken
+a wrong turn; a site that needs one can write a plugin, which is the
+supported way to run code during a build.
+
 ## Next Steps
 
 - [Content](content.md) — frontmatter and Markdown authoring

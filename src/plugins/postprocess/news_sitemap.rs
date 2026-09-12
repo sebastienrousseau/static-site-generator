@@ -183,6 +183,7 @@ mod tests {
     fn make_atom_ctx(site_dir: &Path) -> PluginContext {
         crate::test_support::init_logger();
         let config = crate::cmd::SsgConfig {
+            listings: Vec::new(),
             base_url: "https://example.com".to_string(),
             site_name: "Test Site".to_string(),
             site_title: "Test Site".to_string(),

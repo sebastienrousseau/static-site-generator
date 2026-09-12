@@ -764,7 +764,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 </details>
 
 <details>
-<summary><b>All 68 modules</b></summary>
+<summary><b>All 69 modules</b></summary>
 
 | Module | Purpose |
 | :--- | :--- |
@@ -804,6 +804,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | `stream` | High-performance streaming file processor |
 | `streaming` | Bounded-memory batch compiler for large sites (`--max-memory` budget) |
 | `taxonomy` | Tag and category index generation |
+| `listings` | Named, filtered, paginated listings |
 | `topic_clusters` | Curated pillar-page metadata for topics |
 | `template_engine` | `MiniJinja` templating engine integration |
 | `template_plugin` | `MiniJinja` template rendering plugin |

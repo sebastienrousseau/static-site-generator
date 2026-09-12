@@ -37,6 +37,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `topic_clusters` was previously undocumented despite being read; it is
   now in the front-matter table with the rest.
 
+- **Named, filtered, paginated listings (#587).** Pagination produced one
+  sequence: every dated page, newest first, at `/page/N/`. No name, no
+  subset. A site with a decade of posts, three languages and a dozen tags
+  could not browse any of that.
+
+  ```toml
+  [[listings]]
+  name     = "rust"
+  title    = "Writing about Rust"
+  tag      = "rust"
+  after    = "2026-01-01"
+  by_year  = true
+  ```
+
+  Filters — `tag`, `category`, `topic`, `language`, `after`, `before` —
+  are each optional and combine with AND, so a listing with none is every
+  dated page under a name you chose. Term matching is case-insensitive.
+  Page 1 is written at `/{name}/` rather than `/{name}/page/1/`, and
+  `by_year` adds `/{name}/{year}/`.
+
+  Sidecars are read once and filtered per listing, not re-read per page
+  per listing, which is the difference between a build and a coffee break
+  on a ten-thousand-page corpus.
+
+  A listing matching nothing writes nothing and says so; an unknown field
+  in a section is an error. Both are the same judgement: a silently
+  dropped filter produces a listing that looks right and lists the wrong
+  pages. There is no custom-predicate field — a predicate is code, and
+  sites needing one can write a plugin.
+
 - **Topic pages render cards and carry structured data (#587).** The
   taxonomy carried `(title, url)` per page, which is all a bulleted list
   needs and all a card cannot be built from — by render time the sidecar

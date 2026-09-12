@@ -40,6 +40,7 @@ use ssg::postprocess::{
 
 fn base_cfg(agents: Option<AgentsConfig>) -> SsgConfig {
     SsgConfig {
+        listings: Vec::new(),
         site_name: "AgenticSite".to_string(),
         site_title: "Agentic Site".to_string(),
         site_description: "Site for agentic-discovery testing".to_string(),
