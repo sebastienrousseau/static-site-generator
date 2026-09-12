@@ -1983,9 +1983,9 @@ pub fn bench_plugins_agent_surfaces(c: &mut Criterion) {
             black_box(TaxonomyTerm {
                 name: "rust".into(),
                 slug: "rust".into(),
-                pages: vec![(
-                    "Alpha".into(),
-                    "https://example.com/alpha.html".into(),
+                pages: vec![ssg::taxonomy::PageRef::new(
+                    "Alpha",
+                    "https://example.com/alpha.html",
                 )],
             })
         });

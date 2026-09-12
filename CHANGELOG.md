@@ -37,6 +37,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `topic_clusters` was previously undocumented despite being read; it is
   now in the front-matter table with the rest.
 
+- **Topic pages render cards and carry structured data (#587).** The
+  taxonomy carried `(title, url)` per page, which is all a bulleted list
+  needs and all a card cannot be built from — by render time the sidecar
+  holding the rest had been walked past. Pages now carry `description`,
+  `date` and `banner` through as well.
+
+  A page that declares a description or a banner renders as a card; one
+  that declares neither renders as a link, as before. Both forms mix on a
+  page, because whether a card is possible belongs to the page rather
+  than the topic. The hub does the same with curated topics.
+
+  Topic pages also emit `CollectionPage`, `ItemList` and
+  `BreadcrumbList`: what the page is, what is on it and in what order,
+  and where it sits. Tag and category pages emit none of it — they are
+  keyword indexes, not collections.
+
+  All of it renders from the bundled templates, so a theme overrides the
+  markup in the usual way.
+
 ### Fixed
 
 - **Head injections were duplicated into `<body>`.** Twelve plugins add

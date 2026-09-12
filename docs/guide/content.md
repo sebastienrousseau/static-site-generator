@@ -74,6 +74,25 @@ order  = ["quantum-safe-banking-index", "securing-the-ledger"]
 | `banner` | An image at the top of the page. |
 | `order` | Pages that should lead, in this order. Everything else follows, in the order it already had. |
 
+#### What a topic page renders
+
+A page is shown as a **card** when it declares a `description` or a
+`banner`, and as a plain link when it declares neither. The two forms mix
+on one page, because whether a card is possible belongs to the page, not
+the topic. `date` is shown on the card when present.
+
+Topic pages also carry structured data — `CollectionPage` describing the
+page, `ItemList` describing its members in order, and `BreadcrumbList`
+placing it under the hub. Tag and category pages do not: they are keyword
+indexes rather than curated collections.
+
+The hub at `/topics/` shows a card for any topic with a `lede` or
+`banner`, and a link with a count for the rest.
+
+All of it comes from the bundled templates, which a theme overrides in
+the usual way — `archive.html` for a topic page, `taxonomy_index.html`
+for the hub.
+
 The file is looked for beside `content/`, then inside it. It is entirely
 optional: without it, topic pages render exactly as they do today.
 

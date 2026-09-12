@@ -122,15 +122,19 @@ pub fn warn_unknown(clusters: &TopicClusters, known: &[String]) {
 /// Everything else keeps the order it already had. A named slug that is
 /// not present is skipped rather than inserted, so a stale entry costs
 /// nothing.
-pub fn apply_order(order: &[String], pages: &mut Vec<(String, String)>) {
+pub fn apply_order<T>(
+    order: &[String],
+    pages: &mut Vec<T>,
+    url_of: impl Fn(&T) -> &str,
+) {
     if order.is_empty() {
         return;
     }
-    let mut leading: Vec<(String, String)> = Vec::new();
+    let mut leading: Vec<T> = Vec::new();
     for want in order {
         if let Some(pos) = pages
             .iter()
-            .position(|(_, url)| url_slug(url) == want.as_str())
+            .position(|p| url_slug(url_of(p)) == want.as_str())
         {
             leading.push(pages.remove(pos));
         }
@@ -223,7 +227,7 @@ mod tests {
             ("B".to_string(), "/posts/b/".to_string()),
             ("C".to_string(), "/posts/c/".to_string()),
         ];
-        apply_order(&["c".to_string(), "a".to_string()], &mut pages);
+        apply_order(&["c".to_string(), "a".to_string()], &mut pages, |p| &p.1);
         let order: Vec<&str> = pages.iter().map(|(t, _)| t.as_str()).collect();
         assert_eq!(order, ["C", "A", "B"]);
     }
@@ -236,7 +240,9 @@ mod tests {
             ("A".to_string(), "/posts/a/".to_string()),
             ("B".to_string(), "/posts/b/".to_string()),
         ];
-        apply_order(&["gone".to_string(), "b".to_string()], &mut pages);
+        apply_order(&["gone".to_string(), "b".to_string()], &mut pages, |p| {
+            &p.1
+        });
         let order: Vec<&str> = pages.iter().map(|(t, _)| t.as_str()).collect();
         assert_eq!(order, ["B", "A"]);
     }
@@ -249,7 +255,7 @@ mod tests {
                 ("A".to_string(), "/a.html".to_string()),
                 ("C".to_string(), url.to_string()),
             ];
-            apply_order(&["c".to_string()], &mut pages);
+            apply_order(&["c".to_string()], &mut pages, |p| &p.1);
             assert_eq!(
                 pages.first().map(|(t, _)| t.as_str()),
                 Some("C"),
@@ -264,7 +270,7 @@ mod tests {
             ("A".to_string(), "/posts/a/".to_string()),
             ("B".to_string(), "/posts/b/".to_string()),
         ];
-        apply_order(&[], &mut pages);
+        apply_order(&[], &mut pages, |p| &p.1);
         let order: Vec<&str> = pages.iter().map(|(t, _)| t.as_str()).collect();
         assert_eq!(order, ["A", "B"]);
     }
