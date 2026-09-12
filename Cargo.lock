@@ -3477,6 +3477,7 @@ dependencies = [
  "sha2",
  "ssg-a11y",
  "ssg-core",
+ "ssg-i18n",
  "ssg-rpc",
  "ssg-search",
  "ssg-wasm",
@@ -3521,6 +3522,13 @@ version = "0.0.62"
 dependencies = [
  "ssg",
  "tempfile",
+]
+
+[[package]]
+name = "ssg-i18n"
+version = "0.0.62"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

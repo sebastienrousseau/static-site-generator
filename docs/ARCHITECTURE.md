@@ -53,6 +53,7 @@ lives in its own workspace member:
 | `crates/ssg-core` | Platform-independent compilation pipeline; no filesystem assumptions, so it also builds for `wasm32` |
 | `crates/ssg-a11y` | Standalone WCAG 2.2 AA checker, usable without the rest of SSG |
 | `crates/ssg-search` | Browser-native vector semantic search |
+| `crates/ssg-i18n` | Locale negotiation, hreflang and URL-prefix strategy — pure logic with no filesystem or plugin dependency, so other tools can reuse it |
 | `crates/ssg-wasm` | WebAssembly bindings, size-gated by `make wasm-size` |
 | `crates/ssg-rpc` | Edge RPC layer |
 | `crates/ssg-rpc-macro` | Proc-macro implementing `#[ssg_rpc]` |

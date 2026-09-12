@@ -1,0 +1,19 @@
+[package]
+name = "ssg-i18n"
+version = "0.0.62"
+edition = "2021"
+rust-version = "1.88.0"
+license = "MIT OR Apache-2.0"
+description = "Locale negotiation, hreflang and language-switcher generation for multi-locale static sites — framework-agnostic."
+repository = "https://github.com/sebastienrousseau/static-site-generator"
+homepage = "https://github.com/sebastienrousseau/static-site-generator"
+documentation = "https://docs.rs/ssg-i18n"
+keywords = ["i18n", "hreflang", "locale", "static-site", "html"]
+categories = ["internationalization", "web-programming"]
+readme = "README.md"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+
+[lints]
+workspace = true

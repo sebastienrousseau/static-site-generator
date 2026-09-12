@@ -86,6 +86,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   All of it renders from the bundled templates, so a theme overrides the
   markup in the usual way.
 
+### Changed
+
+- **`ssg-i18n` is its own crate (#588).** Locale negotiation, hreflang
+  link building, URL-prefix strategy and language-switcher markup were
+  pure functions of their arguments living inside a plugin, which meant
+  nothing outside ssg could use them and nothing inside ssg could test
+  them without a site. They now live in
+  [`ssg-i18n`](https://crates.io/crates/ssg-i18n), alongside `ssg-a11y`
+  and `ssg-search`, with no dependency on ssg itself — no `Plugin`, no
+  `SsgError`, no file I/O.
+
+  This is a move, not a rewrite: the implementations are unchanged and
+  `ssg::i18n` re-exports every item, so existing code keeps compiling
+  and no build output changes. What stayed in ssg is everything that
+  walks or writes the filesystem — locale detection, page collection,
+  sitemap emission and the `Plugin` implementation that drives them.
+
 ### Fixed
 
 - **Head injections were duplicated into `<body>`.** Twelve plugins add
