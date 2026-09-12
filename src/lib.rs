@@ -154,6 +154,7 @@ pub use crate::plugins_group::i18n;
 pub use crate::plugins_group::image_plugin;
 pub use crate::plugins_group::islands;
 pub use crate::plugins_group::isr_manifest;
+pub use crate::plugins_group::listings;
 pub use crate::plugins_group::llm;
 pub use crate::plugins_group::llm_cache;
 pub use crate::plugins_group::markdown_ext;

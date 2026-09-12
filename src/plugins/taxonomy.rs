@@ -2301,7 +2301,8 @@ mod tests {
         assert!(page.contains(">Bare</a>"), "bare page still listed: {page}");
     }
 
-    /// #587: topic pages carry CollectionPage, ItemList and BreadcrumbList.
+    /// #587: topic pages carry `CollectionPage`, `ItemList` and
+    /// `BreadcrumbList`.
     #[test]
     fn topic_pages_emit_structured_data() {
         let (_tmp, site, meta, ctx) = make_layout();

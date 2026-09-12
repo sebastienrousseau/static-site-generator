@@ -221,7 +221,7 @@ fn inject_island_loader(path: &Path) -> Result<(), SsgError> {
     let script =
         "\n<script type=\"module\" src=\"/_islands/ssg-island.js\"></script>\n";
 
-    let output = inject_before_body_close_or_append(&html, &script);
+    let output = inject_before_body_close_or_append(&html, script);
 
     fs::write(path, output).with_path(path)?;
     Ok(())

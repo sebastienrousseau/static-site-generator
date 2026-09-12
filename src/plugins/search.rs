@@ -761,7 +761,7 @@ fn inject_search_ui(path: &Path, script: &str) -> Result<(), SsgError> {
         return Ok(()); // Already injected
     }
 
-    let injected = inject_before_body_close_or_append(&html, &script);
+    let injected = inject_before_body_close_or_append(&html, script);
 
     fs::write(path, injected).with_path(path)?;
     Ok(())
