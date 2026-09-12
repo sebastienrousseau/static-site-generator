@@ -814,7 +814,8 @@ impl<'a> TaxonomyRenderer<'a> {
              <title>{taxonomy_title}: {term}{suffix}</title></head>\n\
              <body>\n<main>\n<h1>{taxonomy_title}: {term}</h1>\n<ul>\n"
         );
-        for (title, url) in pages {
+        for page in pages {
+            let (title, url) = (&page.title, &page.url);
             out.push_str(&format!("<li><a href=\"{url}\">{title}</a></li>\n"));
         }
         out.push_str("</ul>\n</main>\n</body>\n</html>\n");
@@ -850,8 +851,14 @@ impl<'a> TaxonomyRenderer<'a> {
         );
         for (term, pages) in sorted_terms {
             let slug = slugify(term);
+            // Mirror the `templates` path: a curated title replaces the
+            // term where it is displayed, without moving the URL (#587).
+            let label = clusters
+                .and_then(|c| c.get(slug.as_str()))
+                .and_then(|c| c.title.as_deref())
+                .unwrap_or(term.as_str());
             out.push_str(&format!(
-                "<li><a href=\"/{taxonomy_name}/{slug}/\">{term}</a> ({})</li>\n",
+                "<li><a href=\"/{taxonomy_name}/{slug}/\">{label}</a> ({})</li>\n",
                 pages.len()
             ));
         }
@@ -1028,6 +1035,9 @@ fn topic_jsonld(
     })
 }
 
+// Only the `templates` renderer builds a JSON context; the fallback
+// shim writes HTML directly.
+#[cfg(feature = "templates")]
 fn pages_to_json(pages: &[PageRef]) -> Vec<serde_json::Value> {
     pages
         .iter()
@@ -2218,6 +2228,10 @@ mod tests {
     /// saying what the topic is, or which page should lead — so this
     /// asserts all three arrive, and that the pages the curation does not
     /// name keep the order they had.
+    // Cards, ledes and JSON-LD come from the MiniJinja renderer; the
+    // `not(templates)` shim emits a plain list, so these assert a
+    // configuration that only exists with the feature on.
+    #[cfg(feature = "templates")]
     #[test]
     fn curated_topic_metadata_reaches_the_pillar_page() {
         let (tmp, site, meta, ctx) = make_layout();
@@ -2270,6 +2284,10 @@ mod tests {
     /// The taxonomy used to carry `(title, url)` and nothing else, so a
     /// card was impossible however the template was written — the data had
     /// already been walked past by render time.
+    // Cards, ledes and JSON-LD come from the MiniJinja renderer; the
+    // `not(templates)` shim emits a plain list, so these assert a
+    // configuration that only exists with the feature on.
+    #[cfg(feature = "templates")]
     #[test]
     fn pages_with_card_data_render_as_cards() {
         let (_tmp, site, meta, ctx) = make_layout();
@@ -2303,6 +2321,10 @@ mod tests {
 
     /// #587: topic pages carry `CollectionPage`, `ItemList` and
     /// `BreadcrumbList`.
+    // Cards, ledes and JSON-LD come from the MiniJinja renderer; the
+    // `not(templates)` shim emits a plain list, so these assert a
+    // configuration that only exists with the feature on.
+    #[cfg(feature = "templates")]
     #[test]
     fn topic_pages_emit_structured_data() {
         let (_tmp, site, meta, ctx) = make_layout();
@@ -2354,6 +2376,10 @@ mod tests {
     }
 
     /// #587: the hub shows what a topic is, not just its slug.
+    // Cards, ledes and JSON-LD come from the MiniJinja renderer; the
+    // `not(templates)` shim emits a plain list, so these assert a
+    // configuration that only exists with the feature on.
+    #[cfg(feature = "templates")]
     #[test]
     fn the_hub_renders_curated_topics_as_cards() {
         let (tmp, site, meta, ctx) = make_layout();
@@ -2387,6 +2413,10 @@ mod tests {
     }
 
     /// Without a data file nothing changes — the feature can only add.
+    // Cards, ledes and JSON-LD come from the MiniJinja renderer; the
+    // `not(templates)` shim emits a plain list, so these assert a
+    // configuration that only exists with the feature on.
+    #[cfg(feature = "templates")]
     #[test]
     fn topics_without_curation_render_exactly_as_before() {
         let (_tmp, site, meta, ctx) = make_layout();
@@ -3279,6 +3309,90 @@ mod tests {
             let renderer = TaxonomyRenderer::new(&base);
             assert_eq!(renderer.lang(), "en");
             assert_eq!(renderer.canonical("/tags/rust/"), "");
+        }
+
+        /// The per-page type went from `(String, String)` to [`PageRef`]
+        /// for #587. This renderer destructured the tuple, so it stopped
+        /// compiling — under `--all-features` nothing noticed, because
+        /// this whole `impl` is gated out.
+        #[test]
+        fn term_page_links_every_page_by_title_and_url() {
+            let (_tmp, _site, _meta, base) = make_layout();
+            let ctx = cfg_ctx(&base);
+            let renderer = TaxonomyRenderer::new(&ctx);
+            let pages = vec![
+                PageRef::new("First Post", "/posts/first/"),
+                PageRef::new("Second Post", "/posts/second/"),
+            ];
+
+            let html = renderer
+                .render_term_page(
+                    TaxonomyKind::Tag,
+                    "tags",
+                    "Tags",
+                    "rust",
+                    "rust",
+                    &pages,
+                    None,
+                )
+                .expect("term page renders");
+
+            for page in &pages {
+                assert!(
+                    html.contains(&format!(
+                        "<a href=\"{}\">{}</a>",
+                        page.url, page.title
+                    )),
+                    "{} missing from:\n{html}",
+                    page.title
+                );
+            }
+        }
+
+        /// Curated titles (#587) reached the hub only through the
+        /// `templates` renderer; this one took `clusters` and ignored it,
+        /// so a no-default-features build silently published raw terms.
+        #[test]
+        fn index_page_prefers_a_curated_title_over_the_raw_term() {
+            let (_tmp, _site, _meta, base) = make_layout();
+            let ctx = cfg_ctx(&base);
+            let renderer = TaxonomyRenderer::new(&ctx);
+            let pages = vec![PageRef::new("A Post", "/posts/a/")];
+            let term = "post-quantum-cryptography".to_string();
+            let sorted = vec![(&term, &pages)];
+
+            let mut clusters = TopicClusters::new();
+            let _ = clusters.insert(
+                "post-quantum-cryptography".to_string(),
+                TopicCluster {
+                    title: Some("Post-Quantum Cryptography".to_string()),
+                    ..TopicCluster::default()
+                },
+            );
+
+            let curated = renderer
+                .render_index_page("topics", "Topics", &sorted, Some(&clusters))
+                .expect("index renders");
+            assert!(
+                curated.contains(">Post-Quantum Cryptography</a>"),
+                "curated title missing from:\n{curated}"
+            );
+
+            // The URL is keyed on the slug, not the display title, so
+            // curation must not move the page.
+            assert!(
+                curated.contains("/topics/post-quantum-cryptography/"),
+                "curation moved the URL:\n{curated}"
+            );
+
+            // Without a cluster the raw term is still what shows.
+            let bare = renderer
+                .render_index_page("topics", "Topics", &sorted, None)
+                .expect("index renders");
+            assert!(
+                bare.contains(">post-quantum-cryptography</a>"),
+                "raw term missing from:\n{bare}"
+            );
         }
     }
 }
