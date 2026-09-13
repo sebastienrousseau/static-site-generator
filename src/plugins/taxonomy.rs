@@ -48,18 +48,61 @@
 
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
+use crate::plugins_group::topic_clusters::{TopicCluster, TopicClusters};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
 };
 
-/// A mapping from taxonomy term to a list of (title, URL) pairs.
-type TaxonomyMap = HashMap<String, Vec<(String, String)>>;
+/// One page as a taxonomy lists it.
+///
+/// This was a `(title, url)` pair, which is all a bulleted list needs. A
+/// card needs more — a date to sort and show, a description to read, an
+/// image to look at — and none of it can be recovered at render time,
+/// because the sidecar that held it has already been walked past. The
+/// fields beyond `title` and `url` are all optional: a page that
+/// declares none still lists, exactly as it did before.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, Default)]
+pub struct PageRef {
+    /// Display title.
+    pub title: String,
+    /// Resolved, prefix-aware URL.
+    pub url: String,
+    /// Front-matter `description`, for the card body and JSON-LD.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Front-matter `date`, as authored.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
+    /// Front-matter `banner`, the card's image.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub banner: Option<String>,
+}
+
+impl PageRef {
+    /// A page with nothing but a title and a URL — what every taxonomy
+    /// carried before cards existed.
+    ///
+    /// The collector fills every field from the sidecar; this is for
+    /// callers building a [`TaxonomyTerm`] by hand, where the card fields
+    /// are not available and are not wanted.
+    #[must_use]
+    pub fn new(title: impl Into<String>, url: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+            url: url.into(),
+            ..Self::default()
+        }
+    }
+}
+
+/// A mapping from taxonomy term to the pages carrying it.
+type TaxonomyMap = HashMap<String, Vec<PageRef>>;
 
 /// One taxonomy term after slug merging: display spelling, URL slug and the
-/// member pages listed on it, as `(title, url)` pairs.
-type MergedTerm = (String, String, Vec<(String, String)>);
+/// member pages listed on it.
+type MergedTerm = (String, String, Vec<PageRef>);
 
 /// A taxonomy term with its associated pages.
 #[derive(Debug, Clone)]
@@ -68,8 +111,8 @@ pub struct TaxonomyTerm {
     pub name: String,
     /// The URL slug (e.g. "rust", "web").
     pub slug: String,
-    /// Pages with this term: (title, url).
-    pub pages: Vec<(String, String)>,
+    /// Pages carrying this term.
+    pub pages: Vec<PageRef>,
 }
 
 // =====================================================================
@@ -158,6 +201,18 @@ impl Plugin for TaxonomyPlugin {
         // tags, categories, and topics.
         let renderer = TaxonomyRenderer::new(ctx);
 
+        // Curated pillar-page metadata for the `topics` taxonomy (#587).
+        // Empty unless the site ships `_data/topics.toml`, and a site that
+        // does not builds exactly as before.
+        let clusters =
+            crate::plugins_group::topic_clusters::load(&ctx.content_dir);
+        if !clusters.is_empty() {
+            let known: Vec<String> = topics.keys().cloned().collect();
+            crate::plugins_group::topic_clusters::warn_unknown(
+                &clusters, &known,
+            );
+        }
+
         // A multi-locale site gets one taxonomy tree per locale. Without
         // this every locale's pages share a single index, so an
         // English-language tag page lists French pages beside English ones
@@ -231,6 +286,7 @@ impl Plugin for TaxonomyPlugin {
                         scoped,
                         kind,
                         &scoped_renderer,
+                        topic_clusters_for(name, &clusters),
                     )?;
                     log::info!(
                         "[taxonomy] Generated {} {name} page(s) for {locale}",
@@ -245,6 +301,7 @@ impl Plugin for TaxonomyPlugin {
                     map,
                     kind,
                     &renderer,
+                    topic_clusters_for(name, &clusters),
                 )?;
                 log::info!("[taxonomy] Generated {} {name} page(s)", map.len());
             }
@@ -391,7 +448,8 @@ impl<'a> TaxonomyRenderer<'a> {
         taxonomy_title: &str,
         term: &str,
         slug: &str,
-        pages: &[(String, String)],
+        pages: &[PageRef],
+        cluster: Option<&TopicCluster>,
     ) -> Result<String, SsgError> {
         let tmpl =
             self.env.get_template(kind.template_name()).map_err(|e| {
@@ -415,6 +473,45 @@ impl<'a> TaxonomyRenderer<'a> {
             "slug".to_string(),
             serde_json::Value::String(slug.to_string()),
         );
+        // Structured data, for topics only. Tags and categories are
+        // keyword indexes; a topic page is a curated collection, which is
+        // what `CollectionPage` and `ItemList` exist to describe.
+        if taxonomy_name == "topics" {
+            let base_url =
+                self.ctx.config.as_ref().map_or("", |c| c.base_url.as_str());
+            let page_url = format!(
+                "{}/{taxonomy_name}/{slug}/",
+                self.locale_path_segment()
+            );
+            let jsonld = topic_jsonld(
+                base_url,
+                taxonomy_title,
+                term,
+                &page_url,
+                cluster.and_then(|c| c.lede.as_deref()),
+                pages,
+            );
+            let _ = ctx_map.insert(
+                "jsonld".to_string(),
+                serde_json::Value::String(jsonld.to_string()),
+            );
+        }
+
+        // Curated pillar-page copy (#587). Both are absent unless
+        // `_data/topics.toml` describes this term, and a template that
+        // does not mention them renders exactly as it did before.
+        if let Some(lede) = cluster.and_then(|c| c.lede.as_deref()) {
+            let _ = ctx_map.insert(
+                "lede".to_string(),
+                serde_json::Value::String(lede.to_string()),
+            );
+        }
+        if let Some(banner) = cluster.and_then(|c| c.banner.as_deref()) {
+            let _ = ctx_map.insert(
+                "banner".to_string(),
+                serde_json::Value::String(banner.to_string()),
+            );
+        }
         let _ = ctx_map.insert(
             "taxonomy_name".to_string(),
             serde_json::Value::String(taxonomy_name.to_string()),
@@ -466,7 +563,8 @@ impl<'a> TaxonomyRenderer<'a> {
         &self,
         taxonomy_name: &str,
         taxonomy_title: &str,
-        sorted_terms: &[(&String, &Vec<(String, String)>)],
+        sorted_terms: &[(&String, &Vec<PageRef>)],
+        clusters: Option<&TopicClusters>,
     ) -> Result<String, SsgError> {
         let tmpl =
             self.env.get_template("taxonomy_index.html").map_err(|e| {
@@ -523,6 +621,23 @@ impl<'a> TaxonomyRenderer<'a> {
                         pages.len(),
                     )),
                 );
+                // Curated copy for the hub card, when the topic has any
+                // (#587). A hub of bare slugs tells a reader nothing about
+                // which topic is worth opening.
+                let cluster =
+                    clusters.and_then(|c| c.get(slugify(term).as_str()));
+                for (key, value) in [
+                    ("title", cluster.and_then(|c| c.title.as_deref())),
+                    ("lede", cluster.and_then(|c| c.lede.as_deref())),
+                    ("banner", cluster.and_then(|c| c.banner.as_deref())),
+                ] {
+                    if let Some(value) = value {
+                        let _ = obj.insert(
+                            key.to_string(),
+                            serde_json::Value::String(value.to_string()),
+                        );
+                    }
+                }
                 serde_json::Value::Object(obj)
             })
             .collect();
@@ -678,7 +793,8 @@ impl<'a> TaxonomyRenderer<'a> {
         taxonomy_title: &str,
         term: &str,
         slug: &str,
-        pages: &[(String, String)],
+        pages: &[PageRef],
+        _cluster: Option<&TopicCluster>,
     ) -> Result<String, SsgError> {
         let lang = self.lang();
         let canonical = self.canonical(&format!("/{taxonomy_name}/{slug}/"));
@@ -698,7 +814,8 @@ impl<'a> TaxonomyRenderer<'a> {
              <title>{taxonomy_title}: {term}{suffix}</title></head>\n\
              <body>\n<main>\n<h1>{taxonomy_title}: {term}</h1>\n<ul>\n"
         );
-        for (title, url) in pages {
+        for page in pages {
+            let (title, url) = (&page.title, &page.url);
             out.push_str(&format!("<li><a href=\"{url}\">{title}</a></li>\n"));
         }
         out.push_str("</ul>\n</main>\n</body>\n</html>\n");
@@ -709,7 +826,8 @@ impl<'a> TaxonomyRenderer<'a> {
         &self,
         taxonomy_name: &str,
         taxonomy_title: &str,
-        sorted_terms: &[(&String, &Vec<(String, String)>)],
+        sorted_terms: &[(&String, &Vec<PageRef>)],
+        clusters: Option<&TopicClusters>,
     ) -> Result<String, SsgError> {
         let lang = self.lang();
         let canonical = self.canonical(&format!("/{taxonomy_name}/"));
@@ -733,8 +851,14 @@ impl<'a> TaxonomyRenderer<'a> {
         );
         for (term, pages) in sorted_terms {
             let slug = slugify(term);
+            // Mirror the `templates` path: a curated title replaces the
+            // term where it is displayed, without moving the URL (#587).
+            let label = clusters
+                .and_then(|c| c.get(slug.as_str()))
+                .and_then(|c| c.title.as_deref())
+                .unwrap_or(term.as_str());
             out.push_str(&format!(
-                "<li><a href=\"/{taxonomy_name}/{slug}/\">{term}</a> ({})</li>\n",
+                "<li><a href=\"/{taxonomy_name}/{slug}/\">{label}</a> ({})</li>\n",
                 pages.len()
             ));
         }
@@ -830,48 +954,116 @@ fn resolve_user_template_dir(ctx: &PluginContext) -> Option<PathBuf> {
 /// Converts a list of (title, url) pairs into JSON page objects with
 /// `title` and `url` keys, suitable for template iteration.
 #[cfg(feature = "templates")]
-fn pages_to_json(pages: &[(String, String)]) -> Vec<serde_json::Value> {
+/// Structured data for a topic page: what it is, what it lists, and where
+/// it sits.
+///
+/// Three types, because they answer three different questions and search
+/// engines read them separately. `CollectionPage` says this page is a
+/// collection rather than an article; `ItemList` says what is in it and in
+/// what order, which is the whole point of a curated topic; and
+/// `BreadcrumbList` says where it sits, so a result can be shown as
+/// Home → Topics → Payments instead of a bare URL.
+///
+/// URLs are absolute where a `base_url` is configured, because consumers of
+/// structured data cannot resolve a site-relative path. Without one the
+/// relative form is emitted rather than a fabricated origin.
+fn topic_jsonld(
+    base_url: &str,
+    taxonomy_title: &str,
+    term: &str,
+    page_url: &str,
+    lede: Option<&str>,
+    pages: &[PageRef],
+) -> serde_json::Value {
+    let base = base_url.trim_end_matches('/');
+    let abs = |path: &str| -> String {
+        if base.is_empty() || path.starts_with("http") {
+            path.to_string()
+        } else {
+            format!("{base}{path}")
+        }
+    };
+
+    let items: Vec<serde_json::Value> = pages
+        .iter()
+        .enumerate()
+        .map(|(i, p)| {
+            serde_json::json!({
+                "@type": "ListItem",
+                "position": i + 1,
+                "url": abs(&p.url),
+                "name": p.title,
+            })
+        })
+        .collect();
+
+    let mut collection = serde_json::json!({
+        "@type": "CollectionPage",
+        "name": term,
+        "url": abs(page_url),
+        "mainEntity": {
+            "@type": "ItemList",
+            "numberOfItems": pages.len(),
+            "itemListElement": items,
+        },
+    });
+    if let Some(lede) = lede {
+        if let Some(obj) = collection.as_object_mut() {
+            let _ = obj.insert(
+                "description".to_string(),
+                serde_json::Value::String(lede.to_string()),
+            );
+        }
+    }
+
+    // The topics hub is the parent of every topic page; `page_url` ends in
+    // the term slug, so trimming one segment reaches it.
+    let hub = page_url.trim_end_matches('/');
+    let hub = hub.rsplit_once('/').map_or("/", |(head, _)| head);
+    let breadcrumbs = serde_json::json!({
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": abs("/")},
+            {"@type": "ListItem", "position": 2, "name": taxonomy_title, "item": abs(&format!("{hub}/"))},
+            {"@type": "ListItem", "position": 3, "name": term, "item": abs(page_url)},
+        ],
+    });
+
+    serde_json::json!({
+        "@context": "https://schema.org",
+        "@graph": [collection, breadcrumbs],
+    })
+}
+
+// Only the `templates` renderer builds a JSON context; the fallback
+// shim writes HTML directly.
+#[cfg(feature = "templates")]
+fn pages_to_json(pages: &[PageRef]) -> Vec<serde_json::Value> {
     pages
         .iter()
-        .map(|(title, url)| {
-            let mut obj = serde_json::Map::new();
-            let _ = obj.insert(
-                "title".to_string(),
-                serde_json::Value::String(title.clone()),
-            );
-            let _ = obj.insert(
-                "url".to_string(),
-                serde_json::Value::String(url.clone()),
-            );
-            serde_json::Value::Object(obj)
-        })
+        .map(|p| serde_json::to_value(p).unwrap_or(serde_json::Value::Null))
         .collect()
 }
 
 /// Extracts string terms from a JSON value (array of strings or comma-separated string) into the given map.
 fn extract_terms_from_value(
     value: &serde_json::Value,
-    map: &mut HashMap<String, Vec<(String, String)>>,
-    title: &str,
-    url: &str,
+    map: &mut TaxonomyMap,
+    page: &PageRef,
     allow_string: bool,
 ) {
     if let Some(arr) = value.as_array() {
         for item in arr {
             if let Some(s) = item.as_str() {
                 for term in ssg_core::split_terms(s) {
-                    map.entry(term)
-                        .or_default()
-                        .push((title.to_string(), url.to_string()));
+                    map.entry(term).or_default().push(page.clone());
                 }
             }
         }
     } else if allow_string {
         if let Some(s) = value.as_str() {
             for term in ssg_core::split_terms(s) {
-                map.entry(term)
-                    .or_default()
-                    .push((title.to_string(), url.to_string()));
+                map.entry(term).or_default().push(page.clone());
             }
         }
     }
@@ -906,7 +1098,7 @@ fn split_map_by_locale(
     let mut out: BTreeMap<String, TaxonomyMap> = BTreeMap::new();
     for (term, entries) in map {
         for entry in entries {
-            let (_, url) = entry;
+            let url = entry.url.as_str();
             let rest = url.strip_prefix(url_prefix).unwrap_or(url);
             let seg =
                 rest.trim_start_matches('/').split('/').next().unwrap_or("");
@@ -965,29 +1157,35 @@ fn collect_taxonomy_entries(
             format!("{url_prefix}/{stem}.html")
         };
 
+        // Everything a card needs, read once. A field the page does not
+        // declare stays `None` and the template omits it; nothing here is
+        // required, and a page with only a title still lists.
+        let field = |key: &str| -> Option<String> {
+            meta.get(key)
+                .and_then(serde_json::Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(ToOwned::to_owned)
+        };
+        let page = PageRef {
+            title: title.clone(),
+            url: url.clone(),
+            description: field("description"),
+            date: field("date"),
+            banner: field("banner"),
+        };
+
         // Both the array (`tags: [a, b]`) and comma-separated string
         // (`tags: "a, b"`) frontmatter shapes are accepted — the
         // bundled examples use the string form (#586 port 5).
         if let Some(tag_arr) = meta.get("tags") {
-            extract_terms_from_value(tag_arr, &mut tags, &title, &url, true);
+            extract_terms_from_value(tag_arr, &mut tags, &page, true);
         }
         if let Some(cat_arr) = meta.get("categories") {
-            extract_terms_from_value(
-                cat_arr,
-                &mut categories,
-                &title,
-                &url,
-                true,
-            );
+            extract_terms_from_value(cat_arr, &mut categories, &page, true);
         }
         if let Some(topic_arr) = meta.get("topic_clusters") {
-            extract_terms_from_value(
-                topic_arr,
-                &mut topics,
-                &title,
-                &url,
-                true,
-            );
+            extract_terms_from_value(topic_arr, &mut topics, &page, true);
         }
     }
 
@@ -1038,9 +1236,7 @@ fn write_taxonomy_page(out_file: &Path, html: &str) -> Result<(), SsgError> {
 /// first term in a group supplies the display spelling.
 ///
 /// Returns `(display term, slug, member pages)` per group.
-fn merge_terms_by_slug(
-    terms: &HashMap<String, Vec<(String, String)>>,
-) -> Vec<MergedTerm> {
+fn merge_terms_by_slug(terms: &TaxonomyMap) -> Vec<MergedTerm> {
     let mut ordered: Vec<_> = terms.iter().collect();
     ordered.sort_by(|(a, _), (b, _)| {
         a.to_lowercase()
@@ -1052,7 +1248,7 @@ fn merge_terms_by_slug(
     let mut index: BTreeMap<String, usize> = BTreeMap::new();
     // Membership only — dedupe across merged spellings without changing the
     // order members are listed in.
-    let mut members: Vec<HashSet<(String, String)>> = Vec::new();
+    let mut members: Vec<HashSet<PageRef>> = Vec::new();
 
     for (term, pages) in ordered {
         let slug = slugify(term);
@@ -1082,9 +1278,9 @@ fn merge_terms_by_slug(
     // by (url, title) is a total order over a set already deduplicated by
     // that pair, so the result is stable everywhere.
     for entry in &mut out {
-        entry
-            .2
-            .sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)));
+        entry.2.sort_by(|a, b| {
+            a.url.cmp(&b.url).then_with(|| a.title.cmp(&b.title))
+        });
     }
 
     out
@@ -1095,9 +1291,10 @@ fn generate_taxonomy_pages(
     site_dir: &Path,
     taxonomy_name: &str,
     taxonomy_title: &str,
-    terms: &HashMap<String, Vec<(String, String)>>,
+    terms: &TaxonomyMap,
     kind: TaxonomyKind,
     renderer: &TaxonomyRenderer<'_>,
+    clusters: Option<&TopicClusters>,
 ) -> Result<(), SsgError> {
     generate_taxonomy_pages_at(
         &site_dir.join(taxonomy_name),
@@ -1106,19 +1303,33 @@ fn generate_taxonomy_pages(
         terms,
         kind,
         renderer,
+        clusters,
     )
 }
 
 /// As [`generate_taxonomy_pages`], but writes into an explicit directory
 /// so a multi-locale site can place each locale's tree under its own
 /// prefix (`fr/tags/`) instead of sharing one at the site root.
+/// Curated metadata applies to the `topics` taxonomy and nothing else.
+///
+/// Tags and categories are derived vocabulary — there is no editorial
+/// copy to attach to them, and a `[tags]` section in the data file would
+/// be a mistake rather than a feature.
+fn topic_clusters_for<'a>(
+    taxonomy_name: &str,
+    clusters: &'a TopicClusters,
+) -> Option<&'a TopicClusters> {
+    (taxonomy_name == "topics" && !clusters.is_empty()).then_some(clusters)
+}
+
 fn generate_taxonomy_pages_at(
     tax_dir: &Path,
     taxonomy_name: &str,
     taxonomy_title: &str,
-    terms: &HashMap<String, Vec<(String, String)>>,
+    terms: &TaxonomyMap,
     kind: TaxonomyKind,
     renderer: &TaxonomyRenderer<'_>,
+    clusters: Option<&TopicClusters>,
 ) -> Result<(), SsgError> {
     let tax_dir = tax_dir.to_path_buf();
     fs::create_dir_all(&tax_dir).with_path(&tax_dir)?;
@@ -1130,20 +1341,49 @@ fn generate_taxonomy_pages_at(
         let term_dir = tax_dir.join(slug);
         fs::create_dir_all(&term_dir).with_path(&term_dir)?;
 
+        // Curated metadata for this term, when `_data/topics.toml`
+        // describes it (#587). Absent for every other taxonomy, and for
+        // any topic nobody has written a pillar page for.
+        let cluster = clusters.and_then(|c| c.get(slug.as_str()));
+
+        // A curated `order` leads; everything else keeps the order the
+        // taxonomy produced. Only cloned when there is an order to apply.
+        let reordered;
+        let pages = match cluster {
+            Some(c) if !c.order.is_empty() => {
+                let mut owned = pages.clone();
+                crate::plugins_group::topic_clusters::apply_order(
+                    &c.order,
+                    &mut owned,
+                    |p| p.url.as_str(),
+                );
+                reordered = owned;
+                &reordered
+            }
+            _ => pages,
+        };
+
+        // A curated title replaces the term as displayed, not as slugged,
+        // so URLs do not move when someone edits the copy.
+        let display_term = cluster
+            .and_then(|c| c.title.as_deref())
+            .unwrap_or(term.as_str());
+
         let term_html = renderer.render_term_page(
             kind,
             taxonomy_name,
             taxonomy_title,
-            term,
+            display_term,
             slug,
             pages,
+            cluster,
         )?;
         let out_file = term_dir.join("index.html");
         write_taxonomy_page(&out_file, &term_html)?;
     }
 
     // Taxonomy index page.
-    let sorted_terms: Vec<(&String, &Vec<(String, String)>)> = merged
+    let sorted_terms: Vec<(&String, &Vec<PageRef>)> = merged
         .iter()
         .map(|(term, _, pages)| (term, pages))
         .collect();
@@ -1151,6 +1391,7 @@ fn generate_taxonomy_pages_at(
         taxonomy_name,
         taxonomy_title,
         &sorted_terms,
+        clusters,
     )?;
     let out_index = tax_dir.join("index.html");
     write_taxonomy_page(&out_index, &index_html)?;
@@ -1980,6 +2221,223 @@ mod tests {
         );
     }
 
+    /// #587: curated pillar-page metadata reaches the rendered page.
+    ///
+    /// ssg already derives `/topics/{slug}/` from front matter. What it
+    /// cannot derive is the title a human would choose, the paragraph
+    /// saying what the topic is, or which page should lead — so this
+    /// asserts all three arrive, and that the pages the curation does not
+    /// name keep the order they had.
+    // Cards, ledes and JSON-LD come from the MiniJinja renderer; the
+    // `not(templates)` shim emits a plain list, so these assert a
+    // configuration that only exists with the feature on.
+    #[cfg(feature = "templates")]
+    #[test]
+    fn curated_topic_metadata_reaches_the_pillar_page() {
+        let (tmp, site, meta, ctx) = make_layout();
+        for (name, title) in [("a", "Alpha"), ("b", "Bravo"), ("c", "Charlie")]
+        {
+            fs::write(
+                meta.join(format!("{name}.meta.json")),
+                format!(
+                    r#"{{"title": "{title}", "topic_clusters": "payments", "permalink": "/posts/{name}/"}}"#
+                ),
+            )
+            .unwrap();
+        }
+        let data = tmp.path().join("_data");
+        fs::create_dir_all(&data).unwrap();
+        fs::write(
+            data.join("topics.toml"),
+            concat!(
+                "[payments]\n",
+                "title = \"Payments, end to end\"\n",
+                "lede = \"What moves money and what it costs.\"\n",
+                "order = [\"c\"]\n",
+            ),
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let page = fs::read_to_string(site.join("topics/payments/index.html"))
+            .expect("the pillar page was written");
+
+        assert!(
+            page.contains("Payments, end to end"),
+            "curated title is missing:\n{page}"
+        );
+        assert!(
+            page.contains("What moves money and what it costs."),
+            "curated lede is missing:\n{page}"
+        );
+
+        // Charlie is curated to lead; Alpha and Bravo keep their order.
+        let c = page.find("Charlie").expect("Charlie listed");
+        let a = page.find("Alpha").expect("Alpha listed");
+        let b = page.find("Bravo").expect("Bravo listed");
+        assert!(c < a && a < b, "curated order not applied:\n{page}");
+    }
+
+    /// #587: a page that carries card data is rendered as a card.
+    ///
+    /// The taxonomy used to carry `(title, url)` and nothing else, so a
+    /// card was impossible however the template was written — the data had
+    /// already been walked past by render time.
+    // Cards, ledes and JSON-LD come from the MiniJinja renderer; the
+    // `not(templates)` shim emits a plain list, so these assert a
+    // configuration that only exists with the feature on.
+    #[cfg(feature = "templates")]
+    #[test]
+    fn pages_with_card_data_render_as_cards() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("rich.meta.json"),
+            r#"{"title": "Rich", "topic_clusters": "payments",
+                "description": "What moves money.",
+                "date": "2026-04-01",
+                "banner": "/img/rich.webp"}"#,
+        )
+        .unwrap();
+        fs::write(
+            meta.join("bare.meta.json"),
+            r#"{"title": "Bare", "topic_clusters": "payments"}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let page = fs::read_to_string(site.join("topics/payments/index.html"))
+            .expect("page written");
+
+        assert!(page.contains("What moves money."), "description: {page}");
+        assert!(page.contains("/img/rich.webp"), "banner: {page}");
+        assert!(
+            page.contains(r#"<time datetime="2026-04-01">"#),
+            "date: {page}"
+        );
+        // A page with none of it is still listed, as a plain link.
+        assert!(page.contains(">Bare</a>"), "bare page still listed: {page}");
+    }
+
+    /// #587: topic pages carry `CollectionPage`, `ItemList` and
+    /// `BreadcrumbList`.
+    // Cards, ledes and JSON-LD come from the MiniJinja renderer; the
+    // `not(templates)` shim emits a plain list, so these assert a
+    // configuration that only exists with the feature on.
+    #[cfg(feature = "templates")]
+    #[test]
+    fn topic_pages_emit_structured_data() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "topic_clusters": "payments"}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let page = fs::read_to_string(site.join("topics/payments/index.html"))
+            .expect("page written");
+
+        let start = page
+            .find(r#"<script type="application/ld+json">"#)
+            .expect("a JSON-LD block");
+        let body = &page[start..];
+        let json = &body[body.find('{').expect("json starts")
+            ..=body.rfind('}').expect("json ends")];
+        let parsed: serde_json::Value =
+            serde_json::from_str(json).expect("JSON-LD must parse");
+
+        let graph = parsed["@graph"].as_array().expect("a @graph");
+        let types: Vec<&str> =
+            graph.iter().filter_map(|n| n["@type"].as_str()).collect();
+        assert!(types.contains(&"CollectionPage"), "{types:?}");
+        assert!(types.contains(&"BreadcrumbList"), "{types:?}");
+        assert_eq!(graph[0]["mainEntity"]["@type"].as_str(), Some("ItemList"));
+        assert_eq!(graph[0]["mainEntity"]["numberOfItems"], 1);
+    }
+
+    /// Tags and categories are keyword indexes, not collections.
+    #[test]
+    fn tag_pages_carry_no_structured_data() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "tags": "rust"}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let page = fs::read_to_string(site.join("tags/rust/index.html"))
+            .expect("page written");
+        assert!(
+            !page.contains("application/ld+json"),
+            "tag pages stay as they were: {page}"
+        );
+    }
+
+    /// #587: the hub shows what a topic is, not just its slug.
+    // Cards, ledes and JSON-LD come from the MiniJinja renderer; the
+    // `not(templates)` shim emits a plain list, so these assert a
+    // configuration that only exists with the feature on.
+    #[cfg(feature = "templates")]
+    #[test]
+    fn the_hub_renders_curated_topics_as_cards() {
+        let (tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "topic_clusters": "payments"}"#,
+        )
+        .unwrap();
+        let data = tmp.path().join("_data");
+        fs::create_dir_all(&data).unwrap();
+        fs::write(
+            data.join("topics.toml"),
+            concat!(
+                "[payments]\n",
+                "title = \"Payments, end to end\"\n",
+                "lede = \"What moves money and what it costs.\"\n",
+            ),
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let hub = fs::read_to_string(site.join("topics/index.html"))
+            .expect("hub written");
+
+        assert!(hub.contains("Payments, end to end"), "title: {hub}");
+        assert!(
+            hub.contains("What moves money and what it costs."),
+            "lede: {hub}"
+        );
+        assert!(hub.contains("taxonomy-card"), "rendered as a card: {hub}");
+    }
+
+    /// Without a data file nothing changes — the feature can only add.
+    // Cards, ledes and JSON-LD come from the MiniJinja renderer; the
+    // `not(templates)` shim emits a plain list, so these assert a
+    // configuration that only exists with the feature on.
+    #[cfg(feature = "templates")]
+    #[test]
+    fn topics_without_curation_render_exactly_as_before() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "topic_clusters": "payments"}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let page = fs::read_to_string(site.join("topics/payments/index.html"))
+            .expect("page written");
+        assert!(
+            page.contains(r#"<span class="term-name">payments</span>"#),
+            "the term renders as written, with no curated title: {page}"
+        );
+        assert!(!page.contains("class=\"lede\""), "no lede: {page}");
+        assert!(!page.contains("taxonomy-banner"), "no banner: {page}");
+    }
+
     #[test]
     fn term_pages_omit_og_image_when_not_configured() {
         // Default config has `og_image: None` — the tag/index gates
@@ -2265,7 +2723,7 @@ mod tests {
         let term = TaxonomyTerm {
             name: "Rust".to_string(),
             slug: "rust".to_string(),
-            pages: vec![("Hello".to_string(), "/hello.html".to_string())],
+            pages: vec![PageRef::new("Hello", "/hello.html")],
         };
         let copy = term;
         assert_eq!(copy.name, "Rust");
@@ -2282,7 +2740,7 @@ mod tests {
         let mut terms = HashMap::new();
         let _ = terms.insert(
             "rust".to_string(),
-            vec![("Title".to_string(), "/hello.html".to_string())],
+            vec![PageRef::new("Title", "/hello.html")],
         );
 
         let ctx =
@@ -2295,6 +2753,7 @@ mod tests {
             &terms,
             TaxonomyKind::Tag,
             &renderer,
+            None,
         );
         assert!(res.is_err());
         let err = res.unwrap_err();
@@ -2351,8 +2810,8 @@ mod tests {
         let _ = map.insert(
             "editorial".to_string(),
             vec![
-                ("About".to_string(), "/atlas/about/".to_string()),
-                ("À propos".to_string(), "/atlas/fr/a-propos/".to_string()),
+                PageRef::new("About", "/atlas/about/"),
+                PageRef::new("À propos", "/atlas/fr/a-propos/"),
             ],
         );
         let locales = vec!["en".to_string(), "fr".to_string()];
@@ -2360,9 +2819,9 @@ mod tests {
 
         assert_eq!(out.len(), 2, "one map per locale: {out:?}");
         assert_eq!(out["en"]["editorial"].len(), 1);
-        assert_eq!(out["en"]["editorial"][0].0, "About");
+        assert_eq!(out["en"]["editorial"][0].title, "About");
         assert_eq!(out["fr"]["editorial"].len(), 1);
-        assert_eq!(out["fr"]["editorial"][0].0, "À propos");
+        assert_eq!(out["fr"]["editorial"][0].title, "À propos");
     }
 
     /// A page whose first segment is not a locale belongs to the default
@@ -2372,7 +2831,7 @@ mod tests {
         let mut map: TaxonomyMap = HashMap::new();
         let _ = map.insert(
             "method".to_string(),
-            vec![("Papers".to_string(), "/atlas/papers/".to_string())],
+            vec![PageRef::new("Papers", "/atlas/papers/")],
         );
         let locales = vec!["en".to_string(), "fr".to_string()];
         let out = split_map_by_locale(&map, &locales, "en", "/atlas");
@@ -2387,7 +2846,7 @@ mod tests {
         let mut map: TaxonomyMap = HashMap::new();
         let _ = map.insert(
             "t".to_string(),
-            vec![("EN dir".to_string(), "/atlas/en/thing/".to_string())],
+            vec![PageRef::new("EN dir", "/atlas/en/thing/")],
         );
         let locales = vec!["en".to_string(), "fr".to_string()];
         let out = split_map_by_locale(&map, &locales, "en", "/atlas");
@@ -2732,26 +3191,29 @@ mod tests {
 
     #[test]
     fn extract_terms_string_ignored_when_strings_disallowed() {
-        let mut map: HashMap<String, Vec<(String, String)>> = HashMap::new();
+        let mut map: TaxonomyMap = HashMap::new();
         let value = serde_json::json!("rust, web");
-        extract_terms_from_value(&value, &mut map, "T", "/t.html", false);
+        let page = PageRef::new("T", "/t.html");
+        extract_terms_from_value(&value, &mut map, &page, false);
         assert!(map.is_empty());
     }
 
     #[test]
     fn extract_terms_array_skips_whitespace_only_parts() {
-        let mut map: HashMap<String, Vec<(String, String)>> = HashMap::new();
+        let mut map: TaxonomyMap = HashMap::new();
         let value = serde_json::json!(["ok", " , "]);
-        extract_terms_from_value(&value, &mut map, "T", "/t.html", true);
+        let page = PageRef::new("T", "/t.html");
+        extract_terms_from_value(&value, &mut map, &page, true);
         assert_eq!(map.len(), 1);
         assert!(map.contains_key("ok"));
     }
 
     #[test]
     fn extract_terms_string_skips_empty_parts() {
-        let mut map: HashMap<String, Vec<(String, String)>> = HashMap::new();
+        let mut map: TaxonomyMap = HashMap::new();
         let value = serde_json::json!("a,,b");
-        extract_terms_from_value(&value, &mut map, "T", "/t.html", true);
+        let page = PageRef::new("T", "/t.html");
+        extract_terms_from_value(&value, &mut map, &page, true);
         assert_eq!(map.len(), 2);
     }
 
@@ -2847,6 +3309,90 @@ mod tests {
             let renderer = TaxonomyRenderer::new(&base);
             assert_eq!(renderer.lang(), "en");
             assert_eq!(renderer.canonical("/tags/rust/"), "");
+        }
+
+        /// The per-page type went from `(String, String)` to [`PageRef`]
+        /// for #587. This renderer destructured the tuple, so it stopped
+        /// compiling — under `--all-features` nothing noticed, because
+        /// this whole `impl` is gated out.
+        #[test]
+        fn term_page_links_every_page_by_title_and_url() {
+            let (_tmp, _site, _meta, base) = make_layout();
+            let ctx = cfg_ctx(&base);
+            let renderer = TaxonomyRenderer::new(&ctx);
+            let pages = vec![
+                PageRef::new("First Post", "/posts/first/"),
+                PageRef::new("Second Post", "/posts/second/"),
+            ];
+
+            let html = renderer
+                .render_term_page(
+                    TaxonomyKind::Tag,
+                    "tags",
+                    "Tags",
+                    "rust",
+                    "rust",
+                    &pages,
+                    None,
+                )
+                .expect("term page renders");
+
+            for page in &pages {
+                assert!(
+                    html.contains(&format!(
+                        "<a href=\"{}\">{}</a>",
+                        page.url, page.title
+                    )),
+                    "{} missing from:\n{html}",
+                    page.title
+                );
+            }
+        }
+
+        /// Curated titles (#587) reached the hub only through the
+        /// `templates` renderer; this one took `clusters` and ignored it,
+        /// so a no-default-features build silently published raw terms.
+        #[test]
+        fn index_page_prefers_a_curated_title_over_the_raw_term() {
+            let (_tmp, _site, _meta, base) = make_layout();
+            let ctx = cfg_ctx(&base);
+            let renderer = TaxonomyRenderer::new(&ctx);
+            let pages = vec![PageRef::new("A Post", "/posts/a/")];
+            let term = "post-quantum-cryptography".to_string();
+            let sorted = vec![(&term, &pages)];
+
+            let mut clusters = TopicClusters::new();
+            let _ = clusters.insert(
+                "post-quantum-cryptography".to_string(),
+                TopicCluster {
+                    title: Some("Post-Quantum Cryptography".to_string()),
+                    ..TopicCluster::default()
+                },
+            );
+
+            let curated = renderer
+                .render_index_page("topics", "Topics", &sorted, Some(&clusters))
+                .expect("index renders");
+            assert!(
+                curated.contains(">Post-Quantum Cryptography</a>"),
+                "curated title missing from:\n{curated}"
+            );
+
+            // The URL is keyed on the slug, not the display title, so
+            // curation must not move the page.
+            assert!(
+                curated.contains("/topics/post-quantum-cryptography/"),
+                "curation moved the URL:\n{curated}"
+            );
+
+            // Without a cluster the raw term is still what shows.
+            let bare = renderer
+                .render_index_page("topics", "Topics", &sorted, None)
+                .expect("index renders");
+            assert!(
+                bare.contains(">post-quantum-cryptography</a>"),
+                "raw term missing from:\n{bare}"
+            );
         }
     }
 }

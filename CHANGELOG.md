@@ -9,6 +9,118 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Curated topic pages (#587).** ssg already derives `/topics/{slug}/`
+  from each page's `topic_clusters:` front matter. What it could not
+  derive is editorial judgement, so `_data/topics.toml` now supplies it:
+
+  ```toml
+  [post-quantum-cryptography]
+  title  = "Post-Quantum Cryptography"
+  lede   = "Lattice-based cryptography and the harvest-now-decrypt-later threat."
+  banner = "/images/pqc.webp"
+  order  = ["quantum-safe-banking-index", "securing-the-ledger"]
+  ```
+
+  `title` replaces the term where it is displayed, without moving any
+  URL; `lede` and `banner` render above the page list; `order` names the
+  pages that should lead, and everything else follows in the order it
+  already had. Every field is optional and the file itself is optional —
+  without it, topic pages render exactly as before.
+
+  Neither kind of drift fails a build: a slug in `order` that has left
+  the topic is skipped, and a `[section]` naming a topic no page carries
+  is reported on stderr and ignored. Curation and content move apart, and
+  a stale line in a data file is not a reason to stop shipping.
+
+  `topic_clusters` was previously undocumented despite being read; it is
+  now in the front-matter table with the rest.
+
+- **Named, filtered, paginated listings (#587).** Pagination produced one
+  sequence: every dated page, newest first, at `/page/N/`. No name, no
+  subset. A site with a decade of posts, three languages and a dozen tags
+  could not browse any of that.
+
+  ```toml
+  [[listings]]
+  name     = "rust"
+  title    = "Writing about Rust"
+  tag      = "rust"
+  after    = "2026-01-01"
+  by_year  = true
+  ```
+
+  Filters — `tag`, `category`, `topic`, `language`, `after`, `before` —
+  are each optional and combine with AND, so a listing with none is every
+  dated page under a name you chose. Term matching is case-insensitive.
+  Page 1 is written at `/{name}/` rather than `/{name}/page/1/`, and
+  `by_year` adds `/{name}/{year}/`.
+
+  Sidecars are read once and filtered per listing, not re-read per page
+  per listing, which is the difference between a build and a coffee break
+  on a ten-thousand-page corpus.
+
+  A listing matching nothing writes nothing and says so; an unknown field
+  in a section is an error. Both are the same judgement: a silently
+  dropped filter produces a listing that looks right and lists the wrong
+  pages. There is no custom-predicate field — a predicate is code, and
+  sites needing one can write a plugin.
+
+- **Topic pages render cards and carry structured data (#587).** The
+  taxonomy carried `(title, url)` per page, which is all a bulleted list
+  needs and all a card cannot be built from — by render time the sidecar
+  holding the rest had been walked past. Pages now carry `description`,
+  `date` and `banner` through as well.
+
+  A page that declares a description or a banner renders as a card; one
+  that declares neither renders as a link, as before. Both forms mix on a
+  page, because whether a card is possible belongs to the page rather
+  than the topic. The hub does the same with curated topics.
+
+  Topic pages also emit `CollectionPage`, `ItemList` and
+  `BreadcrumbList`: what the page is, what is on it and in what order,
+  and where it sits. Tag and category pages emit none of it — they are
+  keyword indexes, not collections.
+
+  All of it renders from the bundled templates, so a theme overrides the
+  markup in the usual way.
+
+### Changed
+
+- **`ssg-i18n` is its own crate (#588).** Locale negotiation, hreflang
+  link building, URL-prefix strategy and language-switcher markup were
+  pure functions of their arguments living inside a plugin, which meant
+  nothing outside ssg could use them and nothing inside ssg could test
+  them without a site. They now live in
+  [`ssg-i18n`](https://crates.io/crates/ssg-i18n), alongside `ssg-a11y`
+  and `ssg-search`, with no dependency on ssg itself — no `Plugin`, no
+  `SsgError`, no file I/O.
+
+  This is a move, not a rewrite: the implementations are unchanged and
+  `ssg::i18n` re-exports every item, so existing code keeps compiling
+  and no build output changes. What stayed in ssg is everything that
+  walks or writes the filesystem — locale detection, page collection,
+  sitemap emission and the `Plugin` implementation that drives them.
+
+### Fixed
+
+- **Head injections were duplicated into `<body>`.** Twelve plugins add
+  something to `<head>` through `inject_before_head_close`, which matched
+  *every* `<head>` in the document. A page can carry a second, nested one:
+  the generator wraps an already-complete document in a layout, so `<main>`
+  holds a whole `<!DOCTYPE html>…<head>…</head>…` of its own. Every payload
+  was therefore injected twice, with the second copy landing inside
+  `<body>` — the syntax-highlighting stylesheet, the SBOM link, and five
+  Open Graph meta elements among them. Duplicate canonical links are worse
+  than useless; a search engine may honour neither.
+
+  The helper now injects into the first `</head>` in document order, which
+  is the document's own. Across the eight bundled examples this removes
+  9,475 bytes of duplicated head content, roughly 1 KB a page. Themes are
+  unaffected: none of the 73 pages in the theme suite carries a nested
+  document, and their output is byte-identical.
+
 ## [0.0.62] - 2026-09-11
 
 Minification becomes ssg's own code, and six bugs that reached every site
@@ -577,8 +689,10 @@ A one-line fix for a defect shipped in 0.0.52.
   variable as a *value*, and its default bool parser accepts only
   `"true"`/`"false"`, so the conventional form failed outright:
 
-      error: invalid value '1' for '--no-tag-pages'
-        [possible values: true, false]
+  ```text
+  error: invalid value '1' for '--no-tag-pages'
+    [possible values: true, false]
+  ```
 
   The flag form was unaffected, which is exactly why 0.0.52 shipped this way:
   `--no-tag-pages` was tested thoroughly and the environment variable

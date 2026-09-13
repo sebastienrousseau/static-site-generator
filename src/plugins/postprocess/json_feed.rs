@@ -422,6 +422,7 @@ mod tests {
     fn make_ctx(site_dir: &Path) -> PluginContext {
         crate::test_support::init_logger();
         let config = crate::cmd::SsgConfig {
+            listings: Vec::new(),
             base_url: "https://example.com".to_string(),
             site_name: "Test Site".to_string(),
             site_title: "Test Site".to_string(),
@@ -778,6 +779,7 @@ mod tests {
         use crate::i18n::I18nConfig;
         let tmp = tempdir().unwrap();
         let config = crate::cmd::SsgConfig {
+            listings: Vec::new(),
             base_url: "https://example.com".to_string(),
             site_name: "S".to_string(),
             site_title: "S".to_string(),
@@ -881,6 +883,7 @@ mod tests {
         write_meta_sidecar(tmp.path(), "p", &meta);
 
         let config = crate::cmd::SsgConfig {
+            listings: Vec::new(),
             base_url: String::new(),
             site_name: "S".to_string(),
             site_title: "S".to_string(),
@@ -941,6 +944,7 @@ mod tests {
 
         crate::test_support::init_logger();
         let config = crate::cmd::SsgConfig {
+            listings: Vec::new(),
             base_url: "https://example.com".to_string(),
             site_name: "Test Site".to_string(),
             site_title: "Test Site".to_string(),
@@ -1019,6 +1023,7 @@ mod tests {
         language: &str,
     ) -> PluginContext {
         let config = crate::cmd::SsgConfig {
+            listings: Vec::new(),
             base_url: String::new(),
             site_name: "S".to_string(),
             site_title: String::new(),

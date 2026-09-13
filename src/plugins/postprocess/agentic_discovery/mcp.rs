@@ -382,6 +382,7 @@ mod tests {
 
     fn cfg() -> SsgConfig {
         SsgConfig {
+            listings: Vec::new(),
             site_name: "Example".to_string(),
             site_title: "Example Site".to_string(),
             site_description: "A demo".to_string(),
@@ -805,6 +806,7 @@ mod fault_tests {
 
     fn cfg() -> SsgConfig {
         SsgConfig {
+            listings: Vec::new(),
             site_name: "Example".to_string(),
             site_title: "Example Site".to_string(),
             site_description: "A demo".to_string(),

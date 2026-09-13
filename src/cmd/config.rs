@@ -288,6 +288,12 @@ pub struct SsgConfig {
     /// Optional i18n configuration for multi-locale sites.
     #[serde(default)]
     pub i18n: Option<crate::i18n::I18nConfig>,
+    /// Named, filtered, paginated listings (#587).
+    ///
+    /// Absent means none, which is the behaviour every site had before:
+    /// `/page/N/` over every dated page and nothing else.
+    #[serde(default)]
+    pub listings: Vec<crate::plugins_group::listings::ListingConfig>,
     /// Optional CDN prefix for markdown images.
     #[serde(default)]
     pub cdn_prefix: Option<String>,

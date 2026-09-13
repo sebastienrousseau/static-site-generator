@@ -220,8 +220,8 @@ graph TD
 
 | Metric | Value |
 | :--- | :--- |
-| **Source** | 143,000+ lines across 9 workspace crates (`ssg`, `ssg-core`, `ssg-a11y`, `ssg-search`, `ssg-mcp`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`, and the unpublished `ssg-heap-probe`) |
-| **Test suite** | 3,668 unit tests (`cargo test --lib`) + 58 integration test targets |
+| **Source** | 143,000+ lines across 10 workspace crates (`ssg`, `ssg-core`, `ssg-a11y`, `ssg-i18n`, `ssg-search`, `ssg-mcp`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`, and the unpublished `ssg-heap-probe`) |
+| **Test suite** | 3,668 unit tests (`cargo test --lib`) + 59 integration test targets |
 | **Coverage** | 98% region, 98% line, 98% function (CI-gated); measured 99.31 / 99.29 / 99.24 |
 | **Plugin pipeline** | 32 plugins, Rayon-parallelised |
 | **Audit gates** | 15 (WCAG 2.2 AAA, JSON-LD, hreflang, lang consistency, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity) |
@@ -764,7 +764,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 </details>
 
 <details>
-<summary><b>All 67 modules</b></summary>
+<summary><b>All 69 modules</b></summary>
 
 | Module | Purpose |
 | :--- | :--- |
@@ -804,6 +804,8 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | `stream` | High-performance streaming file processor |
 | `streaming` | Bounded-memory batch compiler for large sites (`--max-memory` budget) |
 | `taxonomy` | Tag and category index generation |
+| `listings` | Named, filtered, paginated listings |
+| `topic_clusters` | Curated pillar-page metadata for topics |
 | `template_engine` | `MiniJinja` templating engine integration |
 | `template_plugin` | `MiniJinja` template rendering plugin |
 | `theme` | Resolves a theme name to its layout directory, for `theme =` / `--theme` |

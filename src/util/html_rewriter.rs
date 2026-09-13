@@ -26,7 +26,8 @@
 use crate::error::SsgError;
 use lol_html::html_content::TextChunk;
 use lol_html::{
-    rewrite_str, ElementContentHandlers, RewriteStrSettings, Selector,
+    element, end_tag, rewrite_str, ElementContentHandlers, RewriteStrSettings,
+    Selector,
 };
 use std::borrow::Cow;
 
@@ -91,6 +92,103 @@ pub fn rewrite_html<'h>(
 ///
 /// # Errors
 ///
+/// Appends `payload` immediately before the document's `</body>` end tag.
+///
+/// The counterpart to [`crate::util::head_dom::inject_before_head_close`],
+/// and added for the same reason: five call sites across `islands`,
+/// `view_transitions` and `search` were splicing at `html.rfind("</body>")`.
+/// A byte search cannot tell the document's end tag from the characters
+/// `</body>` sitting inside a comment, a script string or a `<pre>` block,
+/// and when it picks the wrong one the payload lands somewhere inert with
+/// nothing reporting it (ssg#570).
+///
+/// Only the first `</body>` in document order is used, so a page carrying a
+/// nested document — the generator wraps an already-complete document in a
+/// layout — gets one copy, in its own body, rather than one per match.
+///
+/// Returns the input unchanged when the document has no `<body>` or when the
+/// rewrite fails, so callers keep whatever fallback they had.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::util::html_rewriter::inject_before_body_close;
+/// let html = "<html><body><p>hi</p></body></html>";
+/// let out = inject_before_body_close(html, "<script src=\"x.js\"></script>");
+/// assert!(out.contains("</script></body>"));
+/// ```
+#[must_use]
+pub fn inject_before_body_close(html: &str, payload: &str) -> String {
+    if payload.is_empty() {
+        return html.to_string();
+    }
+
+    let payload_owned = payload.to_string();
+    let injected = std::rc::Rc::new(std::cell::Cell::new(false));
+    let injected_cb = std::rc::Rc::clone(&injected);
+    // Nesting depth at the moment each `<body>` opens. The outermost is the
+    // document's own, and it is the one that must carry the payload.
+    //
+    // This is where `<body>` differs from `<head>`, and the difference is
+    // easy to get backwards: an outer `<head>` closes *before* a nested
+    // document begins, so "first end tag" is the document's own. An outer
+    // `<body>` closes *after* the nested one, so "first end tag" is the
+    // nested document's — injecting there puts the payload inside the
+    // embedded page instead of the real one.
+    let depth = std::rc::Rc::new(std::cell::Cell::new(0usize));
+    let depth_cb = std::rc::Rc::clone(&depth);
+
+    let handler = element!("body", move |el| {
+        let pl = payload_owned.clone();
+        let cb = std::rc::Rc::clone(&injected_cb);
+        let d = std::rc::Rc::clone(&depth_cb);
+        let opened_at = d.get();
+        d.set(opened_at + 1);
+        let _ = el.on_end_tag(end_tag!(move |end| {
+            d.set(d.get().saturating_sub(1));
+            if opened_at == 0 && !cb.get() {
+                end.before(&pl, lol_html::html_content::ContentType::Html);
+                cb.set(true);
+            }
+            Ok(())
+        }));
+        Ok(())
+    });
+
+    let out =
+        rewrite_html(html, vec![handler]).unwrap_or_else(|_| html.to_string());
+
+    if injected.get() {
+        out
+    } else {
+        html.to_string()
+    }
+}
+
+/// Injects `payload` before `</body>`, appending it when there is none.
+///
+/// Six call sites across `islands`, `view_transitions` and `search` each
+/// wrote this by hand as `rfind("</body>")` with an append fallback. The
+/// fallback matters — HTML allows the end tag to be omitted, and the parser
+/// fires no handler then — so it is stated once here rather than six times.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::util::html_rewriter::inject_before_body_close_or_append;
+/// let out = inject_before_body_close_or_append("<html><body><p>x", "<i>y</i>");
+/// assert!(out.ends_with("<i>y</i>"), "no </body>, so appended: {out}");
+/// ```
+#[must_use]
+pub fn inject_before_body_close_or_append(html: &str, payload: &str) -> String {
+    let injected = inject_before_body_close(html, payload);
+    if injected == html {
+        format!("{html}{payload}")
+    } else {
+        injected
+    }
+}
+
 /// Returns [`SsgError::Io`] if `lol_html` fails to parse or rewrite.
 pub fn sort_attributes(html: &str) -> Result<String, SsgError> {
     use lol_html::html_content::ContentType;
@@ -336,6 +434,66 @@ pub fn collapse_whitespace(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    /// HTML allows `</body>` to be omitted. The parser fires no end-tag
+    /// handler then, so the helper returns its input and the caller's
+    /// fallback still runs — which is what makes converting the `rfind`
+    /// call sites safe rather than a silent behaviour change.
+    #[test]
+    fn body_injection_returns_input_when_the_end_tag_is_omitted() {
+        let html = "<html><body><p>x</p>";
+        assert_eq!(inject_before_body_close(html, "<i>p</i>"), html);
+    }
+
+    /// `rfind("</body>")` cannot tell the document's end tag from those
+    /// characters inside a script string, and the payload lands inside the
+    /// script where it is a syntax error rather than markup.
+    #[test]
+    fn body_injection_ignores_a_body_close_inside_a_script() {
+        let html = concat!(
+            "<html><body><p>hi</p>",
+            "<script>var s = \"</body>\";</script>",
+            "</body></html>"
+        );
+        let out = inject_before_body_close(html, "<span id=\"p\"></span>");
+
+        let payload = out.find("<span id=\"p\">").expect("payload present");
+        let script_end = out.find("</script>").expect("script survives");
+        assert!(
+            payload > script_end,
+            "payload was injected inside the script:\n{out}"
+        );
+        assert_eq!(out.matches("<span id=\"p\">").count(), 1);
+    }
+
+    /// A page can carry a nested document; only its own body takes the
+    /// payload.
+    #[test]
+    fn body_injection_targets_the_outermost_body() {
+        let html = concat!(
+            "<html><body><main>",
+            "<html><body>nested</body></html>",
+            "</main></body></html>"
+        );
+        let out = inject_before_body_close(html, "<i>x</i>");
+        assert_eq!(out.matches("<i>x</i>").count(), 1, "{out}");
+        // It must land in the page's own body, after the embedded document
+        // has closed — not inside it. The nested `</body>` comes first in
+        // document order, so "first end tag" would be the wrong one.
+        let payload = out.find("<i>x</i>").expect("payload");
+        let nested_close = out.find("nested</body>").expect("nested body");
+        assert!(
+            payload > nested_close,
+            "payload landed inside the embedded document:\n{out}"
+        );
+    }
+
+    /// No `<body>` at all: the caller keeps whatever fallback it had.
+    #[test]
+    fn body_injection_returns_input_when_there_is_no_body() {
+        let html = "<html><head><title>T</title></head></html>";
+        assert_eq!(inject_before_body_close(html, "<i>x</i>"), html);
+    }
     /// Attribute values may legitimately contain `<`, `>` and quotes.
     /// A scanner looking for those characters mangles them; a parser
     /// does not. This is the case that makes the difference.

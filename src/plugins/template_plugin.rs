@@ -403,6 +403,7 @@ mod tests {
 
     fn make_config(root: &Path) -> SsgConfig {
         SsgConfig {
+            listings: Vec::new(),
             site_name: "Test".to_string(),
             site_title: "Test Site".to_string(),
             site_description: "Desc".to_string(),
@@ -592,6 +593,7 @@ mod tests {
         });
 
         let config = SsgConfig {
+            listings: Vec::new(),
             site_name: "Test".to_string(),
             site_title: "Test Site".to_string(),
             site_description: "Desc".to_string(),

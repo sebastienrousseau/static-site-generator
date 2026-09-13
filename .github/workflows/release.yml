@@ -698,7 +698,7 @@ jobs:
 
       - name: Publish workspace to crates.io (dep order)
         # `cargo publish -p ssg` fails if ssg-core / ssg-rpc-macro /
-        # ssg-rpc / ssg-search / ssg-a11y at the matching version don't
+        # ssg-rpc / ssg-search / ssg-a11y / ssg-i18n at the matching version don't
         # already exist on crates.io (path deps are verified against
         # the registry). Publish them first, in dependency order:
         #
@@ -707,6 +707,7 @@ jobs:
         #   ssg-rpc          (depends on ssg-rpc-macro)
         #   ssg-search       (no internal deps)
         #   ssg-a11y         (no internal deps)
+        #   ssg-i18n         (no internal deps)
         #   ssg-mcp          (depends on ssg-rpc, so it follows it)
         #   ssg             (depends on all of the above)
         #
@@ -769,7 +770,7 @@ jobs:
             return 1
           }
 
-          for c in ssg-core ssg-rpc-macro ssg-rpc ssg-search ssg-a11y ssg-mcp; do
+          for c in ssg-core ssg-rpc-macro ssg-rpc ssg-search ssg-a11y ssg-i18n ssg-mcp; do
             publish "$c" "crates/$c/Cargo.toml" --no-verify
           done
 

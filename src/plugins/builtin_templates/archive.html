@@ -4,14 +4,46 @@
 {% block title %}{{ taxonomy_title }}{% if site.title %} — {{ site.title }}{% endif %}{% endblock %}
 
 {% block content %}
+{# Emitted for topic pages only; `| safe` because this is already JSON the
+   generator serialised, not text to escape. #}
+{% if jsonld %}<script type="application/ld+json">{{ jsonld | safe }}</script>{% endif %}
 <article class="taxonomy-page taxonomy-archive">
   <header>
+    {# `banner` and `lede` come from _data/topics.toml (#587) and are
+       absent unless the site curates this topic. #}
+    {% if banner %}
+    <img class="taxonomy-banner" src="{{ banner }}" alt="" width="1440" height="398" loading="lazy" decoding="async" />
+    {% endif %}
     <h1>{{ taxonomy_title }}: <span class="term-name">{{ term }}</span></h1>
+    {% if lede %}
+    <p class="lede">{{ lede }}</p>
+    {% endif %}
     <p class="taxonomy-meta">{{ posts | length }} page{% if posts | length != 1 %}s{% endif %}.</p>
   </header>
+  {# A page that carries a description or an image is shown as a card; one
+     that carries neither is a link, as it always was. The two forms can mix
+     on a page, because whether a card is possible is a property of the page
+     rather than of the topic. Themes override this template wholesale. #}
   <ul class="taxonomy-page-list">
     {% for post in posts %}
+    {% if post.description or post.banner %}
+    <li class="taxonomy-card">
+      <article class="card">
+        {% if post.banner %}
+        <a class="card-media" href="{{ post.url | safe }}" tabindex="-1" aria-hidden="true">
+          <img src="{{ post.banner | safe }}" alt="" loading="lazy" decoding="async" width="600" height="600" />
+        </a>
+        {% endif %}
+        <div class="card-body">
+          <h2 class="card-title"><a href="{{ post.url | safe }}">{{ post.title }}</a></h2>
+          {% if post.date %}<p class="card-date"><time datetime="{{ post.date }}">{{ post.date }}</time></p>{% endif %}
+          {% if post.description %}<p class="card-description">{{ post.description }}</p>{% endif %}
+        </div>
+      </article>
+    </li>
+    {% else %}
     <li><a href="{{ post.url | safe }}">{{ post.title }}</a></li>
+    {% endif %}
     {% endfor %}
   </ul>
 </article>

@@ -50,6 +50,7 @@ const PUBLISHED_MEMBERS: &[&str] = &[
     "ssg-rpc",
     "ssg-search",
     "ssg-a11y",
+    "ssg-i18n",
     // Added to release.yml's publish loop without being added here, so it
     // was published with no version gate: this test compares the two lists
     // precisely to catch that, and did.

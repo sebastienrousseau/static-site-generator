@@ -8,8 +8,9 @@
 
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
+use crate::plugins_group::listings::ListingConfig;
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     fs,
     path::{Path, PathBuf},
 };
@@ -18,11 +19,21 @@ use std::{
 const DEFAULT_PER_PAGE: usize = 10;
 
 /// Page metadata for pagination.
+///
+/// The terms and language are here so a named listing can filter on them
+/// (#587). They are read in the same pass as the title and date: a
+/// listing that re-read every sidecar per page would do it once per page
+/// per listing, which on a ten-thousand-page corpus is the difference
+/// between a build and a coffee break.
 #[derive(Debug, Clone)]
 struct PageEntry {
     title: String,
     url: String,
     date: String,
+    tags: Vec<String>,
+    categories: Vec<String>,
+    topics: Vec<String>,
+    language: Option<String>,
 }
 
 /// Plugin that generates paginated listing pages.
@@ -88,6 +99,53 @@ impl Plugin for PaginationPlugin {
             b.date.cmp(&a.date).then_with(|| a.url.cmp(&b.url))
         });
 
+        // Named listings (#587). Each is a filtered view of the same
+        // entries, which were read once — a listing that re-read the
+        // sidecars would do so once per listing, per page.
+        let listings = ctx
+            .config
+            .as_ref()
+            .map_or::<&[ListingConfig], _>(&[], |c| c.listings.as_slice());
+        for listing in listings {
+            if listing.name.trim().is_empty() {
+                log::warn!("[listings] a listing with no name was skipped");
+                continue;
+            }
+            let selected: Vec<PageEntry> = entries
+                .iter()
+                .filter(|e| entry_matches(e, listing))
+                .cloned()
+                .collect();
+            if selected.is_empty() {
+                // A listing that matches nothing is usually a filter
+                // typo, and an empty directory is a worse way to find
+                // out than a line on the console.
+                log::warn!(
+                    "[listings] '{}' matched no pages; nothing written",
+                    listing.name
+                );
+                continue;
+            }
+            let pages = write_listing(
+                &ctx.site_dir,
+                listing,
+                &selected,
+                self.per_page,
+            )?;
+            let years = if listing.by_year {
+                write_year_archives(&ctx.site_dir, listing, &selected)?
+            } else {
+                0
+            };
+            log::info!(
+                "[listings] '{}': {} page(s), {} year archive(s), {} entries",
+                listing.name,
+                pages,
+                years,
+                selected.len()
+            );
+        }
+
         let total_pages = entries.len().div_ceil(self.per_page);
         if total_pages <= 1 {
             return Ok(());
@@ -115,6 +173,103 @@ impl Plugin for PaginationPlugin {
         );
         Ok(())
     }
+}
+
+/// Whether `entry` belongs in `listing`.
+///
+/// Filters combine with AND, and each is skipped when absent, so a
+/// listing with none of them matches every dated page. Term matching is
+/// case-insensitive: `tag = "Rust"` and `tags: "rust"` are the same tag
+/// to a reader, and a listing that silently missed half its pages over
+/// capitalisation would be a poor way to find that out.
+fn entry_matches(entry: &PageEntry, listing: &ListingConfig) -> bool {
+    let has = |terms: &[String], want: &Option<String>| -> bool {
+        want.as_ref()
+            .is_none_or(|w| terms.iter().any(|t| t.eq_ignore_ascii_case(w)))
+    };
+
+    has(&entry.tags, &listing.tag)
+        && has(&entry.categories, &listing.category)
+        && has(&entry.topics, &listing.topic)
+        && listing.language.as_ref().is_none_or(|want| {
+            entry
+                .language
+                .as_ref()
+                .is_some_and(|l| l.eq_ignore_ascii_case(want))
+        })
+        // Dates are `YYYY-MM-DD`, which compares correctly as a string.
+        // A page whose date is malformed sorts where its text puts it
+        // rather than being dropped, which is the same latitude the rest
+        // of the pipeline gives it.
+        && listing.after.as_ref().is_none_or(|a| entry.date >= *a)
+        && listing.before.as_ref().is_none_or(|b| entry.date <= *b)
+}
+
+/// Writes one listing: page 1 at `/{name}/`, the rest at `/{name}/page/N/`.
+///
+/// Unlike the site-wide pagination, page 1 is written here. There is no
+/// pre-existing index at `/{name}/` to defer to — the listing is the only
+/// thing that knows the directory exists.
+fn write_listing(
+    site_dir: &Path,
+    listing: &ListingConfig,
+    entries: &[PageEntry],
+    default_per_page: usize,
+) -> Result<usize, SsgError> {
+    if entries.is_empty() {
+        return Ok(0);
+    }
+    let per_page = listing
+        .per_page
+        .filter(|n| *n > 0)
+        .unwrap_or(default_per_page);
+    let total_pages = entries.len().div_ceil(per_page);
+    let dir = site_dir.join(&listing.name);
+
+    for page_num in 1..=total_pages {
+        let start = (page_num - 1) * per_page;
+        let end = (start + per_page).min(entries.len());
+        let target = if page_num == 1 {
+            dir.clone()
+        } else {
+            dir.join("page").join(page_num.to_string())
+        };
+        write_listing_page(
+            &target,
+            listing,
+            page_num,
+            total_pages,
+            &entries[start..end],
+        )?;
+    }
+    Ok(total_pages)
+}
+
+/// Groups entries by the year in their date and writes `/{name}/{year}/`.
+///
+/// The year is the first four characters of the date, which is what
+/// `YYYY-MM-DD` guarantees; anything shorter is skipped rather than
+/// producing a `/archive//` directory.
+fn write_year_archives(
+    site_dir: &Path,
+    listing: &ListingConfig,
+    entries: &[PageEntry],
+) -> Result<usize, SsgError> {
+    let mut by_year: BTreeMap<&str, Vec<PageEntry>> = BTreeMap::new();
+    for entry in entries {
+        if entry.date.len() >= 4 {
+            by_year
+                .entry(&entry.date[..4])
+                .or_default()
+                .push(entry.clone());
+        }
+    }
+    let count = by_year.len();
+    for (year, group) in by_year {
+        let target = site_dir.join(&listing.name).join(year);
+        write_listing_page(&target, listing, 1, 1, &group)?;
+    }
+    Ok(count)
 }
 
 /// Collects page entries with dates from sidecar JSON files.
@@ -164,7 +319,37 @@ fn parse_page_entry(
         .with_extension("html");
     let url = format!("/{}", rel.to_string_lossy().replace('\\', "/"));
 
-    Some(PageEntry { title, url, date })
+    // Both front-matter shapes, as everywhere else: `tags: [a, b]` and
+    // `tags: "a, b"`.
+    let terms = |key: &str| -> Vec<String> {
+        meta.get(key).map_or_else(Vec::new, |v| {
+            v.as_array().map_or_else(
+                || {
+                    v.as_str()
+                        .map_or_else(Vec::new, |s| ssg_core::split_terms(s))
+                },
+                |arr| {
+                    arr.iter()
+                        .filter_map(serde_json::Value::as_str)
+                        .flat_map(ssg_core::split_terms)
+                        .collect()
+                },
+            )
+        })
+    };
+
+    Some(PageEntry {
+        title,
+        url,
+        date,
+        tags: terms("tags"),
+        categories: terms("categories"),
+        topics: terms("topic_clusters"),
+        language: meta
+            .get("language")
+            .and_then(serde_json::Value::as_str)
+            .map(ToOwned::to_owned),
+    })
 }
 
 /// Writes a single pagination page to disk.
@@ -219,6 +404,93 @@ fn write_pagination_page(
     Ok(())
 }
 
+/// Writes one page of a named listing to `dir/index.html`.
+///
+/// Titles and dates are escaped: they come from front matter, and a
+/// title containing `<` would otherwise close the anchor and swallow the
+/// rest of the list.
+fn write_listing_page(
+    dir: &Path,
+    listing: &ListingConfig,
+    page_num: usize,
+    total_pages: usize,
+    entries: &[PageEntry],
+) -> Result<(), SsgError> {
+    fs::create_dir_all(dir).with_path(dir)?;
+
+    let base = format!("/{}", listing.name);
+    let page_url = |n: usize| -> String {
+        if n == 1 {
+            format!("{base}/")
+        } else {
+            format!("{base}/page/{n}/")
+        }
+    };
+
+    let title = escape_html(listing.display_title());
+    let heading = if total_pages > 1 {
+        format!("{title} — page {page_num} of {total_pages}")
+    } else {
+        title.clone()
+    };
+
+    let mut html = format!(
+        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\
+         <meta charset=\"utf-8\">\
+         <title>{heading}</title></head>\n\
+         <body>\n<main>\n\
+         <h1>{heading}</h1>\n<ul>\n",
+    );
+    for entry in entries {
+        html.push_str(&format!(
+            "<li><a href=\"{}\">{}</a> <time datetime=\"{}\">{}</time></li>\n",
+            escape_html(&entry.url),
+            escape_html(&entry.title),
+            escape_html(&entry.date),
+            escape_html(&entry.date),
+        ));
+    }
+    html.push_str("</ul>\n");
+
+    if total_pages > 1 {
+        html.push_str("<nav aria-label=\"Pagination\">\n");
+        if page_num > 1 {
+            html.push_str(&format!(
+                "<a href=\"{}\" rel=\"prev\">&larr; Previous</a>\n",
+                page_url(page_num - 1)
+            ));
+        }
+        if page_num < total_pages {
+            html.push_str(&format!(
+                "<a href=\"{}\" rel=\"next\">Next &rarr;</a>\n",
+                page_url(page_num + 1)
+            ));
+        }
+        html.push_str("</nav>\n");
+    }
+    html.push_str("</main>\n</body>\n</html>\n");
+
+    let out_file = dir.join("index.html");
+    fs::write(&out_file, html).with_path(&out_file)?;
+    Ok(())
+}
+
+/// Minimal HTML text/attribute escaping for generated listings.
+fn escape_html(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
 fn collect_json_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files(dir, "json")
 }
@@ -248,6 +520,226 @@ mod tests {
         fs::create_dir_all(&meta).expect("mkdir meta");
         let ctx = PluginContext::new(dir.path(), &build, &site, dir.path());
         (dir, site, meta, ctx)
+    }
+
+    /// A layout whose config carries the given listings (#587).
+    fn layout_with_listings(
+        listings: Vec<ListingConfig>,
+    ) -> (TempDir, PathBuf, PathBuf, PluginContext) {
+        init_logger();
+        let dir = tempdir().expect("create tempdir");
+        let site = dir.path().join("site");
+        let build = dir.path().join("build");
+        let meta = build.join(".meta");
+        fs::create_dir_all(&site).expect("mkdir site");
+        fs::create_dir_all(&meta).expect("mkdir meta");
+        let mut cfg = crate::cmd::default_config().as_ref().clone();
+        cfg.listings = listings;
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            &build,
+            &site,
+            dir.path(),
+            cfg,
+        );
+        (dir, site, meta, ctx)
+    }
+
+    /// A sidecar with terms and a language, for listing filters.
+    fn write_rich_sidecar(
+        meta: &Path,
+        name: &str,
+        title: &str,
+        date: &str,
+        extra: &str,
+    ) {
+        let json = format!(
+            r#"{{"title": "{title}", "date": "{date}"{}{extra}}}"#,
+            if extra.is_empty() { "" } else { ", " }
+        );
+        fs::write(meta.join(format!("{name}.meta.json")), json)
+            .expect("write sidecar");
+    }
+
+    #[test]
+    fn a_named_listing_writes_page_one_at_its_own_path() {
+        let (_d, site, meta, ctx) = layout_with_listings(vec![ListingConfig {
+            name: "archive".to_string(),
+            title: Some("Archive".to_string()),
+            ..ListingConfig::default()
+        }]);
+        write_sidecar(&meta, "a", "Alpha", "2026-01-01");
+
+        PaginationPlugin::default().after_compile(&ctx).unwrap();
+
+        let page = fs::read_to_string(site.join("archive/index.html"))
+            .expect("page 1 is written at the listing root");
+        assert!(page.contains("Archive"), "{page}");
+        assert!(page.contains("Alpha"), "{page}");
+    }
+
+    #[test]
+    fn a_listing_paginates_at_its_own_per_page() {
+        let (_d, site, meta, ctx) = layout_with_listings(vec![ListingConfig {
+            name: "archive".to_string(),
+            per_page: Some(2),
+            ..ListingConfig::default()
+        }]);
+        for i in 1..=5 {
+            write_sidecar(
+                &meta,
+                &format!("p{i}"),
+                &format!("P{i}"),
+                &format!("2026-01-0{i}"),
+            );
+        }
+
+        PaginationPlugin::default().after_compile(&ctx).unwrap();
+
+        assert!(site.join("archive/index.html").exists());
+        assert!(site.join("archive/page/2/index.html").exists());
+        assert!(site.join("archive/page/3/index.html").exists());
+        assert!(
+            !site.join("archive/page/4/index.html").exists(),
+            "5 entries at 2 per page is 3 pages"
+        );
+        let p2 =
+            fs::read_to_string(site.join("archive/page/2/index.html")).unwrap();
+        assert!(
+            p2.contains(r#"href="/archive/""#),
+            "prev goes to page 1: {p2}"
+        );
+        assert!(p2.contains(r#"href="/archive/page/3/""#), "next: {p2}");
+    }
+
+    #[test]
+    fn filters_select_the_pages_and_combine_with_and() {
+        let (_d, site, meta, ctx) = layout_with_listings(vec![ListingConfig {
+            name: "rust-2026".to_string(),
+            tag: Some("rust".to_string()),
+            after: Some("2026-01-01".to_string()),
+            ..ListingConfig::default()
+        }]);
+        write_rich_sidecar(
+            &meta,
+            "a",
+            "Match",
+            "2026-06-01",
+            r#""tags": "rust""#,
+        );
+        write_rich_sidecar(
+            &meta,
+            "b",
+            "WrongTag",
+            "2026-06-01",
+            r#""tags": "go""#,
+        );
+        write_rich_sidecar(
+            &meta,
+            "c",
+            "TooOld",
+            "2025-06-01",
+            r#""tags": "rust""#,
+        );
+
+        PaginationPlugin::default().after_compile(&ctx).unwrap();
+
+        let page =
+            fs::read_to_string(site.join("rust-2026/index.html")).unwrap();
+        assert!(page.contains("Match"), "{page}");
+        assert!(!page.contains("WrongTag"), "tag filter: {page}");
+        assert!(!page.contains("TooOld"), "date filter: {page}");
+    }
+
+    /// `tag = "Rust"` and `tags: "rust"` are the same tag to a reader.
+    #[test]
+    fn term_filters_ignore_case() {
+        let (_d, site, meta, ctx) = layout_with_listings(vec![ListingConfig {
+            name: "r".to_string(),
+            tag: Some("Rust".to_string()),
+            ..ListingConfig::default()
+        }]);
+        write_rich_sidecar(
+            &meta,
+            "a",
+            "Alpha",
+            "2026-01-01",
+            r#""tags": "rust""#,
+        );
+
+        PaginationPlugin::default().after_compile(&ctx).unwrap();
+        assert!(fs::read_to_string(site.join("r/index.html"))
+            .unwrap()
+            .contains("Alpha"));
+    }
+
+    #[test]
+    fn by_year_writes_one_archive_per_year() {
+        let (_d, site, meta, ctx) = layout_with_listings(vec![ListingConfig {
+            name: "archive".to_string(),
+            by_year: true,
+            ..ListingConfig::default()
+        }]);
+        write_sidecar(&meta, "a", "Old", "2025-03-01");
+        write_sidecar(&meta, "b", "New", "2026-03-01");
+
+        PaginationPlugin::default().after_compile(&ctx).unwrap();
+
+        let y2025 =
+            fs::read_to_string(site.join("archive/2025/index.html")).unwrap();
+        assert!(y2025.contains("Old") && !y2025.contains("New"), "{y2025}");
+        let y2026 =
+            fs::read_to_string(site.join("archive/2026/index.html")).unwrap();
+        assert!(y2026.contains("New") && !y2026.contains("Old"), "{y2026}");
+    }
+
+    /// A filter that matches nothing writes nothing — and says so.
+    #[test]
+    fn a_listing_matching_nothing_writes_no_directory() {
+        let (_d, site, meta, ctx) = layout_with_listings(vec![ListingConfig {
+            name: "ghost".to_string(),
+            tag: Some("nonexistent".to_string()),
+            ..ListingConfig::default()
+        }]);
+        write_sidecar(&meta, "a", "Alpha", "2026-01-01");
+
+        PaginationPlugin::default().after_compile(&ctx).unwrap();
+        assert!(!site.join("ghost").exists(), "no empty listing directory");
+    }
+
+    /// Front-matter text reaches the page as text, not as markup.
+    #[test]
+    fn titles_are_escaped_in_generated_listings() {
+        let (_d, site, meta, ctx) = layout_with_listings(vec![ListingConfig {
+            name: "archive".to_string(),
+            ..ListingConfig::default()
+        }]);
+        write_sidecar(&meta, "a", "A <b>bold</b> title", "2026-01-01");
+
+        PaginationPlugin::default().after_compile(&ctx).unwrap();
+        let page = fs::read_to_string(site.join("archive/index.html")).unwrap();
+        assert!(page.contains("&lt;b&gt;bold&lt;/b&gt;"), "{page}");
+        assert!(!page.contains("<b>bold</b>"), "{page}");
+    }
+
+    /// Sites with no listings configured behave exactly as before.
+    #[test]
+    fn no_listings_configured_writes_no_listing_directories() {
+        let (_d, site, meta, ctx) = make_layout();
+        write_n_dated_posts(&meta, 25);
+
+        PaginationPlugin::default().after_compile(&ctx).unwrap();
+
+        assert!(
+            site.join("page/2/index.html").exists(),
+            "site-wide unchanged"
+        );
+        let dirs: Vec<_> = fs::read_dir(&site)
+            .unwrap()
+            .filter_map(Result::ok)
+            .map(|e| e.file_name().to_string_lossy().to_string())
+            .collect();
+        assert_eq!(dirs, vec!["page".to_string()], "only /page/: {dirs:?}");
     }
 
     /// Writes a sidecar JSON file shaped `{"title": ..., "date": ...}`.

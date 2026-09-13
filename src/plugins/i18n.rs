@@ -73,7 +73,58 @@
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use crate::util::head_dom::inject_before_head_close as inject_head;
-use serde::{Deserialize, Serialize};
+// The locale/URL/hreflang logic now lives in `ssg-i18n`, a leaf crate
+// with no knowledge of plugins or the filesystem (#588). Re-exported
+// below so `crate::i18n::I18nConfig` and the rest keep working.
+// Public before the move, so public after it: ssg's API is unchanged.
+/// Re-exports of items that were crate-private before #588.
+///
+/// They have to be `pub` in `ssg-i18n` to cross the crate boundary, but
+/// re-exporting them publicly here would widen ssg's API, which a
+/// mechanical move must not do. These `compile_fail` doctests are the
+/// assertion that it did not happen — if one of them ever compiles,
+/// something private has escaped:
+///
+/// ```compile_fail
+/// use ssg::i18n::build_url;
+/// ```
+///
+/// ```compile_fail
+/// use ssg::i18n::build_hreflang_links;
+/// ```
+///
+/// ```compile_fail
+/// use ssg::i18n::find_lang_switcher_element;
+/// ```
+///
+/// ```compile_fail
+/// use ssg::i18n::generate_lang_switcher_html_with_self_lang;
+/// ```
+///
+/// ```compile_fail
+/// use ssg::i18n::rewrite_ap_lang_items;
+/// ```
+///
+/// ```compile_fail
+/// use ssg::i18n::sidecar_candidates;
+/// ```
+///
+/// ```compile_fail
+/// use ssg::i18n::HREFLANG_MARKER;
+/// ```
+///
+/// ```compile_fail
+/// use ssg::i18n::LANG_SWITCHER_MARKER;
+/// ```
+pub(crate) use ssg_i18n::{
+    build_hreflang_links, build_url, find_lang_switcher_element,
+    generate_lang_switcher_html_with_self_lang, rewrite_ap_lang_items,
+    sidecar_candidates, HREFLANG_MARKER, LANG_SWITCHER_MARKER,
+};
+pub use ssg_i18n::{
+    generate_lang_switcher_html, negotiate_locale, parse_accept_language,
+    I18nConfig, UrlPrefixStrategy,
+};
 use std::{
     collections::{BTreeMap, HashMap},
     fs,
@@ -82,55 +133,6 @@ use std::{
 };
 
 // ── Configuration ────────────────────────────────────────────────────
-
-/// Strategy for constructing locale-specific URLs.
-///
-/// Marked `#[non_exhaustive]` so future strategies (e.g. query-string,
-/// custom plugin-driven mapping) can be added non-breakingly.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[derive(Default)]
-#[non_exhaustive]
-pub enum UrlPrefixStrategy {
-    /// Locale appears as a path prefix: `https://example.com/fr/about`
-    #[default]
-    SubPath,
-    /// Locale appears as a subdomain: `https://fr.example.com/about`
-    SubDomain,
-}
-
-/// Parsed `[i18n]` configuration section.
-///
-/// # Example (TOML)
-///
-/// ```toml
-/// [i18n]
-/// default_locale = "en"
-/// locales = ["en", "fr", "de"]
-/// url_prefix = "sub_path"
-/// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct I18nConfig {
-    /// The default / fallback locale (used for `x-default`).
-    pub default_locale: String,
-    /// All supported locales.
-    pub locales: Vec<String>,
-    /// How locale URLs are constructed.
-    #[serde(default)]
-    pub url_prefix: UrlPrefixStrategy,
-}
-
-impl Default for I18nConfig {
-    fn default() -> Self {
-        Self {
-            default_locale: "en".to_string(),
-            locales: vec!["en".to_string()],
-            url_prefix: UrlPrefixStrategy::default(),
-        }
-    }
-}
-
-// ── Plugin ───────────────────────────────────────────────────────────
 
 /// Cached locale matrix shared between `after_compile` and `transform_html`.
 ///
@@ -670,22 +672,6 @@ fn translation_key_for(sidecar_dir: &Path, site_rel: &str) -> Option<String> {
     None
 }
 
-/// Sidecar file names that could carry `site_rel`'s front matter, most
-/// likely first.
-fn sidecar_candidates(site_rel: &str) -> Vec<String> {
-    let Some(stem) = site_rel.strip_suffix(".html") else {
-        return Vec::new();
-    };
-    let mut out = Vec::with_capacity(2);
-    // `about/index.html` is compiled from `about.md` in the common
-    // case, and from `about/index.md` when both spellings exist.
-    if let Some(dir) = stem.strip_suffix("/index") {
-        out.push(format!("{dir}.meta.json"));
-    }
-    out.push(format!("{stem}.meta.json"));
-    out
-}
-
 /// Locates the front-matter sidecar directory, mirroring
 /// `template_plugin::resolve_sidecar_dir`: `<build>/.meta` while the
 /// build directory still exists, `<site>/.meta` after it has been
@@ -795,9 +781,6 @@ fn page_file_path(
 }
 
 // ── Hreflang injection ───────────────────────────────────────────────
-
-/// Sentinel substring used for idempotency checks.
-const HREFLANG_MARKER: &str = "rel=\"alternate\" hreflang=";
 
 /// Inject hreflang `<link>` tags into every HTML page that exists in at
 /// least two locales.
@@ -947,96 +930,6 @@ fn hreflang_labels(
     out
 }
 
-/// Rewrites existing ap-lang-item links in the page to point to the exact localized path
-fn rewrite_ap_lang_items(
-    html: &str,
-    locale_map: &BTreeMap<String, String>,
-    base: &str,
-    strategy: &UrlPrefixStrategy,
-    root_locale: Option<&str>,
-) -> String {
-    if !html.contains("ap-lang-item") {
-        return html.to_string();
-    }
-
-    let mut result = String::with_capacity(html.len());
-    let mut remaining = html;
-
-    while let Some(start_idx) = remaining.find("<a ") {
-        result.push_str(&remaining[..start_idx]);
-        let tag_content = &remaining[start_idx..];
-
-        let Some(end_idx) = tag_content.find('>') else {
-            result.push_str(remaining);
-            return result;
-        };
-
-        let tag_inner = &tag_content[..end_idx + 1];
-        let mut rewritten_tag = tag_inner.to_string();
-
-        if tag_inner.contains("ap-lang-item") {
-            let mut data_lang = None;
-            for quote in ['"', '\''] {
-                let pattern = format!("data-lang={quote}");
-                if let Some(pos) = tag_inner.find(&pattern) {
-                    let val_start = pos + pattern.len();
-                    if let Some(val_end) = tag_inner[val_start..].find(quote) {
-                        data_lang = Some(
-                            tag_inner[val_start..val_start + val_end]
-                                .trim()
-                                .to_string(),
-                        );
-                        break;
-                    }
-                }
-            }
-
-            if let Some(lang) = data_lang {
-                if let Some(rel_path) = locale_map.get(&lang) {
-                    let full_url =
-                        build_url(base, &lang, rel_path, strategy, root_locale);
-                    let new_href = if full_url.starts_with("http://")
-                        || full_url.starts_with("https://")
-                    {
-                        let after_scheme =
-                            full_url.split("://").nth(1).unwrap_or("");
-                        if let Some(slash_idx) = after_scheme.find('/') {
-                            after_scheme[slash_idx..].to_string()
-                        } else {
-                            "/".to_string()
-                        }
-                    } else {
-                        full_url
-                    };
-
-                    for quote in ['"', '\''] {
-                        let href_pattern = format!("href={quote}");
-                        if let Some(pos) = tag_inner.find(&href_pattern) {
-                            let val_start = pos + href_pattern.len();
-                            if let Some(val_end) =
-                                tag_inner[val_start..].find(quote)
-                            {
-                                let before = &rewritten_tag[..val_start];
-                                let after =
-                                    &rewritten_tag[val_start + val_end..];
-                                rewritten_tag =
-                                    format!("{before}{new_href}{after}");
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        result.push_str(&rewritten_tag);
-        remaining = &tag_content[end_idx + 1..];
-    }
-
-    result.push_str(remaining);
-    result
-}
-
 /// Replaces the `<!-- ssg:lang-switcher -->` marker with a full language
 /// switcher listing every available locale. Called by the i18n plugin
 /// only when multiple locales are present on disk.
@@ -1077,123 +970,6 @@ fn inject_lang_switcher(
         html.to_string()
     };
     out.replace(LANG_SWITCHER_MARKER, &switcher)
-}
-
-/// Marker comment embedded in templates where the language switcher
-/// should be injected. Kept invisible in single-locale sites.
-///
-/// Prefer the element form below. HTML minifiers strip comments, and
-/// `html-generator` minifies some pages during generation — before any
-/// plugin runs — so a comment marker on those pages is gone by the time
-/// this plugin looks for it. That is not a hypothetical: it silently
-/// removed the language switcher from every minified page.
-const LANG_SWITCHER_MARKER: &str = "<!-- ssg:lang-switcher -->";
-
-/// Attribute that marks an element as the language-switcher placeholder.
-/// Survives minification, because a minifier may reformat an element but
-/// will not delete it.
-const LANG_SWITCHER_ATTR: &str = "data-ssg-lang-switcher";
-
-/// Finds the placeholder element carrying [`LANG_SWITCHER_ATTR`] and
-/// returns its byte range, including the closing tag.
-///
-/// Deliberately not a regex: this crate has no regex dependency, and the
-/// shape being matched is a single empty element, not a grammar.
-fn find_lang_switcher_element(html: &str) -> Option<(usize, usize)> {
-    let attr_at = html.find(LANG_SWITCHER_ATTR)?;
-    // Walk back to the '<' that opens this element.
-    let start = html[..attr_at].rfind('<')?;
-    let name_start = start + 1;
-    let name_end = html[name_start..]
-        .find(|c: char| !c.is_ascii_alphanumeric())
-        .map(|i| name_start + i)?;
-    let name = &html[name_start..name_end];
-    if name.is_empty() {
-        return None;
-    }
-    // The attribute must belong to this tag, not to a later one.
-    let open_end = html[start..].find('>')? + start + 1;
-    if attr_at > open_end {
-        return None;
-    }
-    let close = format!("</{name}>");
-    let close_at = html[open_end..].find(&close)? + open_end;
-    // Only an *empty* placeholder is replaced; anything else is content.
-    if !html[open_end..close_at].trim().is_empty() {
-        return None;
-    }
-    Some((start, close_at + close.len()))
-}
-
-/// Build the hreflang `<link>` block for a single page.
-///
-/// `locale_map` gives each locale's OWN path for this logical page, so
-/// translated slugs (`/about/` ↔ `/fr/a-propos/`) resolve correctly;
-/// `labels` gives each locale's `hreflang` value (see
-/// [`hreflang_labels`]).
-///
-/// The `x-default` alternate is emitted only when the default locale
-/// actually serves the page — pointing it at a URL that does not exist
-/// is worse than omitting an optional signal.
-fn build_hreflang_links(
-    locale_map: &BTreeMap<String, String>,
-    labels: &BTreeMap<String, String>,
-    default_locale: &str,
-    base: &str,
-    strategy: &UrlPrefixStrategy,
-    root_locale: Option<&str>,
-) -> String {
-    let mut links = String::new();
-
-    for (locale, rel_path) in locale_map {
-        let href = build_url(base, locale, rel_path, strategy, root_locale);
-        let hreflang = labels.get(locale).unwrap_or(locale);
-        links.push_str(&format!(
-            "    <link rel=\"alternate\" hreflang=\"{hreflang}\" href=\"{href}\" />\n"
-        ));
-    }
-
-    if let Some(default_rel) = locale_map.get(default_locale) {
-        let default_href =
-            build_url(base, default_locale, default_rel, strategy, root_locale);
-        links.push_str(&format!(
-            "    <link rel=\"alternate\" hreflang=\"x-default\" href=\"{default_href}\" />\n"
-        ));
-    }
-
-    links
-}
-
-/// Construct a full URL for a given locale + relative path.
-///
-/// `root_locale`, when it names `locale`, suppresses the locale segment
-/// entirely: the root-hosted locale is served from `{base}/{rel_path}`
-/// under either strategy.
-fn build_url(
-    base: &str,
-    locale: &str,
-    rel_path: &str,
-    strategy: &UrlPrefixStrategy,
-    root_locale: Option<&str>,
-) -> String {
-    if root_locale == Some(locale) {
-        return format!("{base}/{rel_path}");
-    }
-    match strategy {
-        UrlPrefixStrategy::SubPath => {
-            format!("{base}/{locale}/{rel_path}")
-        }
-        UrlPrefixStrategy::SubDomain => {
-            // Replace scheme://host with scheme://locale.host
-            if let Some(idx) = base.find("://") {
-                let (scheme, rest) = base.split_at(idx + 3);
-                format!("{scheme}{locale}.{rest}/{rel_path}")
-            } else {
-                // Fallback: treat as sub-path.
-                format!("{base}/{locale}/{rel_path}")
-            }
-        }
-    }
 }
 
 /// Insert `links` just before the first `</head>` tag, if present.
@@ -1328,202 +1104,6 @@ fn resolved_page_lang_for(
 }
 
 // ── Accept-Language parsing ─────────────────────────────────────────
-
-/// Parses an Accept-Language header value into a sorted list of locale
-/// preferences (highest quality first).
-///
-/// Example: "fr-CH, fr;q=0.9, en;q=0.8, de;q=0.7, *;q=0.5"
-/// Returns: `["fr-CH", "fr", "en", "de", "*"]`
-///
-/// # Examples
-///
-/// ```rust
-/// use ssg::i18n::parse_accept_language;
-///
-/// let locales = parse_accept_language("fr;q=0.9, en");
-/// assert_eq!(locales[0], "en");
-/// assert_eq!(locales[1], "fr");
-/// ```
-#[must_use]
-pub fn parse_accept_language(header: &str) -> Vec<String> {
-    if header.trim().is_empty() {
-        return Vec::new();
-    }
-
-    let mut entries: Vec<(String, f64)> = header
-        .split(',')
-        .filter_map(|part| {
-            let part = part.trim();
-            if part.is_empty() {
-                return None;
-            }
-            let mut segments = part.splitn(2, ';');
-            let locale = segments.next()?.trim().to_string();
-            if locale.is_empty() {
-                return None;
-            }
-            let quality = segments
-                .next()
-                .and_then(|q| {
-                    let q = q.trim();
-                    q.strip_prefix("q=")
-                        .and_then(|v| v.trim().parse::<f64>().ok())
-                })
-                .unwrap_or(1.0);
-            Some((locale, quality))
-        })
-        .collect();
-
-    // Sort by quality descending; stable sort preserves order for equal quality.
-    entries.sort_by(|a, b| {
-        b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
-    });
-
-    entries.into_iter().map(|(locale, _)| locale).collect()
-}
-
-/// Given a list of preferred locales (from Accept-Language) and a list
-/// of available locales (directories on disk), returns the best match.
-///
-/// Matching rules:
-/// 1. Exact match (e.g., "fr-CH" matches "fr-CH")
-/// 2. Prefix match (e.g., "fr-CH" matches "fr")
-/// 3. Default locale fallback
-///
-/// # Examples
-///
-/// ```rust
-/// use ssg::i18n::negotiate_locale;
-///
-/// let pref = vec!["fr-CH".to_string(), "en".to_string()];
-/// let avail = vec!["en".to_string(), "fr".to_string()];
-/// assert_eq!(negotiate_locale(&pref, &avail, "en"), "fr");
-/// ```
-#[must_use]
-pub fn negotiate_locale(
-    preferred: &[String],
-    available: &[String],
-    default_locale: &str,
-) -> String {
-    let available_lower: Vec<String> =
-        available.iter().map(|l| l.to_lowercase()).collect();
-
-    for pref in preferred {
-        // Skip wildcard
-        if pref == "*" {
-            continue;
-        }
-        let pref_lower = pref.to_lowercase();
-
-        // Exact match
-        if let Some(idx) = available_lower.iter().position(|a| *a == pref_lower)
-        {
-            return available[idx].clone();
-        }
-
-        // Prefix match: preferred "fr-CH" matches available "fr"
-        let prefix = pref_lower.split('-').next().unwrap_or(&pref_lower);
-        if let Some(idx) = available_lower.iter().position(|a| *a == prefix) {
-            return available[idx].clone();
-        }
-    }
-
-    default_locale.to_string()
-}
-
-// ── Language switcher helper ─────────────────────────────────────────
-
-/// Generates an HTML snippet for a language switcher navigation.
-///
-/// This is a pure function that can be called from any plugin or template
-/// helper to produce a `<nav>` block with links to all locale variants
-/// of the current page.
-///
-/// # Arguments
-///
-/// * `locales` — All available locales.
-/// * `current_locale` — The locale of the page being rendered.
-/// * `current_path` — The relative path of the page (e.g. `about/index.html`).
-/// * `base_url` — The site base URL.
-/// * `strategy` — How locale URLs are constructed.
-///
-/// # Example
-///
-/// ```rust
-/// use ssg::i18n::{generate_lang_switcher_html, UrlPrefixStrategy};
-///
-/// let html = generate_lang_switcher_html(
-///     &["en".into(), "fr".into(), "de".into()],
-///     "en",
-///     "about/index.html",
-///     "https://example.com",
-///     &UrlPrefixStrategy::SubPath,
-/// );
-/// assert!(html.contains("lang=\"fr\""));
-/// ```
-#[must_use]
-pub fn generate_lang_switcher_html(
-    locales: &[String],
-    current_locale: &str,
-    current_path: &str,
-    base_url: &str,
-    strategy: &UrlPrefixStrategy,
-) -> String {
-    // Every locale serves the same path — the pre-`translation_key`
-    // assumption, kept for this public helper's callers.
-    let locale_map: BTreeMap<String, String> = locales
-        .iter()
-        .map(|l| (l.clone(), current_path.to_string()))
-        .collect();
-    let labels: BTreeMap<String, String> =
-        locales.iter().map(|l| (l.clone(), l.clone())).collect();
-    generate_lang_switcher_html_with_self_lang(
-        &locale_map,
-        &labels,
-        current_locale,
-        base_url,
-        strategy,
-        None,
-    )
-}
-
-/// Like [`generate_lang_switcher_html`] but taking the translation
-/// matrix row for the page, so each entry links to that locale's OWN
-/// (possibly translated) path rather than the current path under a
-/// different prefix.
-///
-/// `labels` supplies the `lang=`/`hreflang=` value for each locale —
-/// resolved through `seo::lang::resolve_page_lang` (spec A5, plan §2
-/// 1.5) so the switcher agrees with the page's other language sinks.
-fn generate_lang_switcher_html_with_self_lang(
-    locale_map: &BTreeMap<String, String>,
-    labels: &BTreeMap<String, String>,
-    current_locale: &str,
-    base_url: &str,
-    strategy: &UrlPrefixStrategy,
-    root_locale: Option<&str>,
-) -> String {
-    let base = base_url.trim_end_matches('/');
-    let mut html = String::from(
-        "<nav class=\"lang-switcher\" aria-label=\"Language\">\n  <ul>\n",
-    );
-
-    for (locale, rel_path) in locale_map {
-        let href = build_url(base, locale, rel_path, strategy, root_locale);
-        let lang_attr = labels.get(locale).unwrap_or(locale);
-        let aria = if locale == current_locale {
-            " aria-current=\"page\""
-        } else {
-            ""
-        };
-        html.push_str(&format!(
-            "    <li><a href=\"{href}\" lang=\"{lang_attr}\" hreflang=\"{lang_attr}\"{aria}>{locale}</a></li>\n"
-        ));
-    }
-
-    html.push_str("  </ul>\n</nav>\n");
-    html
-}
 
 // ── Tests ────────────────────────────────────────────────────────────
 

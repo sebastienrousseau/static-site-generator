@@ -8,9 +8,28 @@
   <header>
     <h1>{{ taxonomy_title }}</h1>
   </header>
+  {# A curated topic gets a card; an uncurated term stays a link with a
+     count, which is what every taxonomy hub was before. #}
   <ul class="taxonomy-term-list">
     {% for entry in terms %}
-    <li><a href="{{ url_prefix | safe }}/{{ taxonomy_name }}/{{ entry.slug }}/">{{ entry.name }}</a> ({{ entry.count }})</li>
+    {% if entry.lede or entry.banner %}
+    <li class="taxonomy-card">
+      <article class="card">
+        {% if entry.banner %}
+        <a class="card-media" href="{{ url_prefix | safe }}/{{ taxonomy_name }}/{{ entry.slug }}/" tabindex="-1" aria-hidden="true">
+          <img src="{{ entry.banner | safe }}" alt="" loading="lazy" decoding="async" width="600" height="600" />
+        </a>
+        {% endif %}
+        <div class="card-body">
+          <h2 class="card-title"><a href="{{ url_prefix | safe }}/{{ taxonomy_name }}/{{ entry.slug }}/">{{ entry.title or entry.name }}</a></h2>
+          {% if entry.lede %}<p class="card-description">{{ entry.lede }}</p>{% endif %}
+          <p class="card-count">{{ entry.count }} page{% if entry.count != 1 %}s{% endif %}</p>
+        </div>
+      </article>
+    </li>
+    {% else %}
+    <li><a href="{{ url_prefix | safe }}/{{ taxonomy_name }}/{{ entry.slug }}/">{{ entry.title or entry.name }}</a> ({{ entry.count }})</li>
+    {% endif %}
     {% endfor %}
   </ul>
 </article>

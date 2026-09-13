@@ -50,6 +50,7 @@ fn make_ctx(root: &Path, config: Option<SsgConfig>) -> PluginContext {
 /// else is harmless defaults so the test stays focused on lang.
 fn config_with_language(root: &Path, language: &str) -> SsgConfig {
     SsgConfig {
+        listings: Vec::new(),
         site_name: "Test Site".to_string(),
         site_title: "Test Title".to_string(),
         site_description: "Test description.".to_string(),
