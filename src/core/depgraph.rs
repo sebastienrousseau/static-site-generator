@@ -568,6 +568,52 @@ impl Diff {
 // Populate helpers: scan content + templates to build the edge set.
 // ---------------------------------------------------------------------
 
+/// Every data file a build reads, in both supported locations.
+///
+/// Two conventions are in play and both are live: `data/` beside the
+/// content directory, read by [`TemplateEngine::load_data_files`], and
+/// `_data/` for the topic-cluster curation file. A build reads them
+/// globally rather than per page, so they are collected once.
+///
+/// [`TemplateEngine::load_data_files`]: crate::template_engine::TemplateEngine::load_data_files
+fn data_files(content_dir: &Path) -> Vec<PathBuf> {
+    /// Extensions `load_data_files` actually parses. A `.md` sitting in
+    /// `data/` is not a data file and must not become an edge.
+    const DATA_EXTS: &[&str] = &["json", "toml", "yaml", "yml"];
+
+    let mut roots = Vec::new();
+    if let Some(parent) = content_dir.parent() {
+        roots.push(parent.join("data"));
+        roots.push(parent.join("_data"));
+    }
+    roots.push(content_dir.join("data"));
+    roots.push(content_dir.join("_data"));
+
+    let mut out = Vec::new();
+    for root in roots {
+        let Ok(entries) = fs::read_dir(&root) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            let ext = path
+                .extension()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_lowercase();
+            if DATA_EXTS.contains(&ext.as_str()) {
+                out.push(path);
+            }
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
 /// Reads every `.md` file under `content_dir` and every `.html` file
 /// under `template_dir`, recording:
 ///
@@ -634,6 +680,21 @@ pub fn populate(
                     graph.add_dep(md, &tpl);
                 }
             }
+        }
+    }
+
+    // Data files are read globally, not per page: a template can
+    // address `data.foo` from anywhere, and the topic curation file
+    // reshapes every topic page. So a change to one invalidates every
+    // page, and the edge set says so rather than leaving those pages
+    // looking clean.
+    let data = data_files(content_dir);
+    for df in &data {
+        if let Ok(bytes) = fs::read(df) {
+            graph.record_hash(df, &bytes);
+        }
+        for md in &md_files {
+            graph.add_dep(md, df);
         }
     }
 
@@ -1036,6 +1097,117 @@ mod tests {
     #[test]
     fn sha256_hex_distinguishes_inputs() {
         assert_ne!(DepGraph::sha256_hex(b"a"), DepGraph::sha256_hex(b"b"));
+    }
+
+    /// A change to a data file must invalidate every page.
+    ///
+    /// Data is read globally — a template can address `data.foo` from
+    /// anywhere — so there is no page that provably does not use it.
+    /// Before this edge existed, editing `data/site.toml` left every
+    /// page looking clean and an incremental build would have skipped
+    /// all of them.
+    #[test]
+    fn a_data_file_change_invalidates_every_page() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let template = dir.path().join("templates");
+        let build = dir.path().join("public");
+        let data = dir.path().join("data");
+        for d in [&content, &template, &data] {
+            fs::create_dir_all(d).unwrap();
+        }
+        write(
+            &content.join("index.md"),
+            "---\nlayout: \"page\"\n---\nbody",
+        );
+        write(
+            &content.join("about.md"),
+            "---\nlayout: \"page\"\n---\nbody",
+        );
+        write(
+            &template.join("page.html"),
+            "<html>{{ data.site.name }}</html>",
+        );
+        write(&data.join("site.toml"), "name = \"Example\"\n");
+
+        let mut graph = DepGraph::new();
+        populate(&mut graph, &content, &template, &build).unwrap();
+
+        let site_data = data.join("site.toml");
+        let hit = graph.invalidated(std::slice::from_ref(&site_data));
+        for page in [content.join("index.md"), content.join("about.md")] {
+            assert!(
+                hit.contains(&page),
+                "{} not invalidated by a data-file change",
+                page.display()
+            );
+        }
+    }
+
+    /// The topic curation file lives in `_data/`, not `data/`.
+    ///
+    /// It reshapes every topic page, so it is a dependency by the same
+    /// argument — and it would have been missed by a helper that only
+    /// knew the one convention.
+    #[test]
+    fn the_underscore_data_convention_is_tracked_too() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let template = dir.path().join("templates");
+        let build = dir.path().join("public");
+        let data = dir.path().join("_data");
+        for d in [&content, &template, &data] {
+            fs::create_dir_all(d).unwrap();
+        }
+        write(
+            &content.join("index.md"),
+            "---\nlayout: \"page\"\n---\nbody",
+        );
+        write(&template.join("page.html"), "<html></html>");
+        write(&data.join("topics.toml"), "[rust]\ntitle = \"Rust\"\n");
+
+        let mut graph = DepGraph::new();
+        populate(&mut graph, &content, &template, &build).unwrap();
+
+        let topics = data.join("topics.toml");
+        assert!(
+            graph
+                .invalidated(std::slice::from_ref(&topics))
+                .contains(&content.join("index.md")),
+            "_data/topics.toml is not tracked"
+        );
+    }
+
+    /// A stray file in `data/` that the loader cannot parse is not a
+    /// dependency, and must not become an edge.
+    #[test]
+    fn non_data_extensions_in_the_data_dir_are_ignored() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let template = dir.path().join("templates");
+        let build = dir.path().join("public");
+        let data = dir.path().join("data");
+        for d in [&content, &template, &data] {
+            fs::create_dir_all(d).unwrap();
+        }
+        write(
+            &content.join("index.md"),
+            "---\nlayout: \"page\"\n---\nbody",
+        );
+        write(&template.join("page.html"), "<html></html>");
+        write(&data.join("notes.md"), "not a data file");
+        write(&data.join("real.json"), "{}");
+
+        let mut graph = DepGraph::new();
+        populate(&mut graph, &content, &template, &build).unwrap();
+
+        let index = content.join("index.md");
+        let deps = graph.deps_for(&index).unwrap();
+        assert!(deps.contains(&data.join("real.json")), "json not tracked");
+        assert!(
+            !deps.contains(&data.join("notes.md")),
+            "a .md in data/ is not a data file"
+        );
     }
 
     #[test]
