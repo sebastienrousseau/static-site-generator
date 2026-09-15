@@ -4,7 +4,7 @@
 //! Logging infrastructure for the static site generator.
 
 use crate::error::SsgError;
-use log::{info, LevelFilter};
+use log::{debug, LevelFilter};
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -71,7 +71,9 @@ pub(crate) fn initialize_logging() -> Result<(), SsgError> {
     let installed = log::set_logger(&SimpleLogger).is_ok();
     apply_log_level(installed, level);
 
-    info!("Logging initialized at level: {log_level}");
+    // Diagnostic, not user-facing: a CLI should not announce its own
+    // logger on every run. Visible via SSG_LOG_LEVEL=debug.
+    debug!("Logging initialized at level: {log_level}");
     Ok(())
 }
 
