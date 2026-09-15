@@ -26,6 +26,13 @@
 //! Neither is a proof of correctness. They are proof that the thing is
 //! *reached* — which is the part that silently stops being true.
 
+// `clippy.toml` sets `allow-expect-in-tests`, but that only reaches code
+// clippy recognises as test code: `#[test]` functions and `#[cfg(test)]`
+// modules. Integration tests are separate crates compiled *without*
+// `--cfg test`, so module-level helpers like `all_workflows` below are
+// not covered. Every other suite in `tests/` carries this same header.
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use ssg::audit::{AuditConfig, AuditRunner};
 use ssg::cmd::SsgConfig;
 use ssg::plugin::PluginManager;

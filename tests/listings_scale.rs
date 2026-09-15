@@ -21,6 +21,12 @@
 //! (~10x), and the ratio assertion carries the algorithmic claim, which
 //! is the part that actually regresses.
 
+// `clippy.toml`'s `allow-expect-in-tests` only reaches `#[test]` functions
+// and `#[cfg(test)]` modules. This is an integration test crate, built
+// without `--cfg test`, so its module-level helpers need their own
+// header — as the other suites in `tests/` already carry.
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use ssg::listings::ListingConfig;
 use ssg::pagination::PaginationPlugin;
 use ssg::plugin::{Plugin, PluginContext};
