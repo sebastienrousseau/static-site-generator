@@ -156,6 +156,15 @@ impl TemplateEngine {
             "language".to_string(),
             serde_json::Value::String(resolved_lang.clone()),
         );
+        // Writing direction for the resolved language. Without it a
+        // template has no way to emit `dir` short of hardcoding a
+        // language list, and an Arabic or Hebrew page renders
+        // left-to-right.
+        let direction = crate::core_group::lang::text_direction(&resolved_lang);
+        let _ = page.insert(
+            "direction".to_string(),
+            serde_json::Value::String(direction.to_string()),
+        );
 
         // Build the full render context. `site.language` carries the
         // per-page resolved language so templates that emit
@@ -170,6 +179,10 @@ impl TemplateEngine {
             "language".to_string(),
             serde_json::Value::String(resolved_lang),
         );
+        let _ = site.insert(
+            "direction".to_string(),
+            serde_json::Value::String(direction.to_string()),
+        );
 
         let mut ctx = serde_json::Map::new();
         let _ = ctx.insert("page".to_string(), serde_json::Value::Object(page));
@@ -179,6 +192,16 @@ impl TemplateEngine {
         for (k, v) in &self.config.globals {
             let _ = ctx.insert(k.clone(), v.clone());
         }
+
+        // The bundled templates address `{{language}}` and
+        // `{{direction}}` bare rather than through `site.`, so both have
+        // to exist at top level. Inserted *after* the globals loop: a
+        // stale `direction` global must not shadow the value resolved
+        // for this page.
+        let _ = ctx.insert(
+            "direction".to_string(),
+            serde_json::Value::String(direction.to_string()),
+        );
 
         // Determine which template to use, fall back to page.html.
         // Single lookup per candidate — the successful `get_template`

@@ -221,7 +221,7 @@ graph TD
 | Metric | Value |
 | :--- | :--- |
 | **Source** | 143,000+ lines across 10 workspace crates (`ssg`, `ssg-core`, `ssg-a11y`, `ssg-i18n`, `ssg-search`, `ssg-mcp`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`, and the unpublished `ssg-heap-probe`) |
-| **Test suite** | 3,668 unit tests (`cargo test --lib`) + 60 integration test targets |
+| **Test suite** | 3,668 unit tests (`cargo test --lib`) + 61 integration test targets |
 | **Coverage** | 98% region, 98% line, 98% function (CI-gated); measured 99.31 / 99.29 / 99.24 |
 | **Plugin pipeline** | 32 plugins, Rayon-parallelised |
 | **Audit gates** | 15 (WCAG 2.2 AAA, JSON-LD, hreflang, lang consistency, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity) |
