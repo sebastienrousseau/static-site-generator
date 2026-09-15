@@ -881,6 +881,10 @@ criteria = "safe-to-deploy"
 version = "0.0.37"
 criteria = "safe-to-deploy"
 
+[[exemptions.noyalib]]
+version = "0.0.43"
+criteria = "safe-to-deploy"
+
 [[exemptions.num-bigint]]
 version = "0.4.8"
 criteria = "safe-to-deploy"
@@ -1618,7 +1622,7 @@ version = "2.0.119"
 criteria = "safe-to-deploy"
 
 [[exemptions.syn]]
-version = "3.0.4"
+version = "3.0.5"
 criteria = "safe-to-deploy"
 
 [[exemptions.synstructure]]
@@ -1698,7 +1702,7 @@ version = "2.7.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.toml]]
-version = "1.1.5+spec-1.1.0"
+version = "1.1.6+spec-1.1.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.toml_datetime]]
@@ -1790,7 +1794,7 @@ version = "0.2.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.uuid]]
-version = "1.26.0"
+version = "1.26.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.v_frame]]
