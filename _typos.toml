@@ -85,8 +85,9 @@ ture = "ture"
 
 # Non-English words that appear inside Rust source rather than in the
 # locale trees: readability-scoring fixtures in `src/plugins/llm.rs`
-# (French, Italian, Spanish) and the search widget's translated UI
-# labels in `src/plugins/search.rs` (Dutch). Correct as spelled.
+# (French, Italian, Spanish), the search widget's translated UI labels
+# in `src/plugins/search.rs` (Dutch), and the locale-matrix sample text
+# in `tests/locale_matrix.rs` (#465). Correct as spelled.
 ein = "ein"
 algorithmes = "algorithmes"
 strutture = "strutture"
@@ -95,3 +96,4 @@ requiere = "requiere"
 protocolos = "protocolos"
 computacional = "computacional"
 openen = "openen"
+frase = "frase"    # es/it/pt "sentence", not a misspelt "phrase"
