@@ -50,8 +50,12 @@ fn corpus(meta: &Path, n: usize) {
         let day = 1 + (i % 28);
         let tag = ["rust", "wasm", "security", "perf"][i % 4];
         let lang = ["en", "fr", "de"][i % 3];
+        // One of sixteen equal buckets. Sixteen listings filtered on these
+        // cover the corpus exactly once between them, so they write
+        // about as many pages in total as one unfiltered listing.
+        let bucket = i % 16;
         let json = format!(
-            r#"{{"title": "Post {i}", "date": "{year}-{month:02}-{day:02}", "tags": "{tag}", "language": "{lang}"}}"#
+            r#"{{"title": "Post {i}", "date": "{year}-{month:02}-{day:02}", "tags": "{tag}", "language": "{lang}", "category": "b{bucket}"}}"#
         );
         fs::write(meta.join(format!("post{i}.meta.json")), json)
             .expect("write sidecar");
@@ -77,25 +81,24 @@ fn one_listing() -> Vec<ListingConfig> {
     }]
 }
 
-fn eight_listings() -> Vec<ListingConfig> {
-    let mut out = one_listing();
-    for tag in ["rust", "wasm", "security", "perf"] {
-        out.push(ListingConfig {
-            name: tag.to_string(),
-            tag: Some(tag.to_string()),
+/// Sixteen listings that partition the corpus.
+///
+/// Each takes one sixteenth, so between them they write about as many
+/// pages as [`one_listing`] does. That matters: the first version of
+/// this test compared one unfiltered listing against eight *additional*
+/// ones, so the eight arm wrote far more pages. On macOS writes are
+/// cheap and the ratio stayed near 1; on Windows they dominate and it
+/// reached 2.1x on correct code. The metric was measuring write volume,
+/// not reads.
+fn many_listings() -> Vec<ListingConfig> {
+    (0..16)
+        .map(|b| ListingConfig {
+            name: format!("b{b}"),
+            category: Some(format!("b{b}")),
             per_page: Some(20),
             ..ListingConfig::default()
-        });
-    }
-    for lang in ["en", "fr", "de"] {
-        out.push(ListingConfig {
-            name: format!("lang-{lang}"),
-            language: Some(lang.to_string()),
-            per_page: Some(20),
-            ..ListingConfig::default()
-        });
-    }
-    out
+        })
+        .collect()
 }
 
 fn timed(dir: &TempDir, listings: Vec<ListingConfig>) -> Duration {
@@ -140,11 +143,11 @@ fn ten_thousand_items_stay_within_the_budget() {
     );
 }
 
-/// Eight listings over the same corpus must not cost eight times one.
+/// Sixteen listings over the same corpus must not cost sixteen times one.
 ///
 /// This is the "cached frontmatter" half of the claim, and unlike the
 /// wall-clock ceiling it fails loudly on the regression it describes:
-/// re-reading sidecars per listing turns this ratio into roughly 8.
+/// re-reading sidecars per listing turns this ratio into roughly 16.
 #[test]
 fn listing_count_does_not_multiply_the_work() {
     let dir = corpus_dir();
@@ -154,18 +157,24 @@ fn listing_count_does_not_multiply_the_work() {
     let _ = timed(&dir, one_listing());
 
     let one = timed(&dir, one_listing());
-    let eight = timed(&dir, eight_listings());
+    let many = timed(&dir, many_listings());
 
-    // The bound is calibrated against the regression, not guessed. With
-    // the shared read it measures ~0.85x; with a per-listing re-read of
-    // all 10,000 sidecars it measures ~3.5x. An earlier version of this
-    // test used 4.0 and so passed under the very regression it claims
-    // to catch.
-    let ratio = eight.as_secs_f64() / one.as_secs_f64().max(0.001);
-    println!("[scale] one={one:?} eight={eight:?} ratio={ratio:.2}x");
+    // The bound is calibrated by breaking the code, not guessed.
+    // Measured on this corpus with sixteen partitions:
+    //
+    //   shared read (correct)        ~0.90x
+    //   re-read per listing (broken) ~4.53x
+    //
+    // 2.5 sits between them with roughly 2.8x headroom over the correct
+    // value, which Windows needs: file writes there are expensive
+    // enough that an earlier version of this test — where the extra
+    // listings wrote extra pages rather than partitioning the same
+    // corpus — reached 2.1x on correct code and failed CI.
+    let ratio = many.as_secs_f64() / one.as_secs_f64().max(0.001);
+    println!("[scale] one={one:?} many={many:?} ratio={ratio:.2}x");
     assert!(
-        ratio < 2.0,
-        "eight listings took {eight:?} against {one:?} for one \
+        ratio < 2.5,
+        "sixteen listings took {many:?} against {one:?} for one \
          (ratio {ratio:.1}x) — sidecars look re-read per listing"
     );
 }
