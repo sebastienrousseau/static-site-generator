@@ -240,6 +240,10 @@ fn packaging_manifests_match_the_crate_version() {
         ("packaging/scoop/ssg.json", "\"version\""),
         ("packaging/winget/ssg.yaml", "PackageVersion"),
         ("packaging/arch/PKGBUILD", "pkgver"),
+        // Not an install channel, but it is version metadata the world
+        // reads: CITATION.cff shipped 0.0.62 through the 0.0.63 bump
+        // because nothing here looked at it.
+        ("CITATION.cff", "version:"),
     ];
 
     let mut checked = 0_usize;
@@ -250,10 +254,14 @@ fn packaging_manifests_match_the_crate_version() {
         let text = fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("read {rel}: {e}"));
 
+        // Anchored, not `contains`: CITATION.cff opens with
+        // `cff-version: 1.2.0`, which a `contains("version:")` match
+        // picks up instead of the real version line — and then the gate
+        // compares the wrong line and reports on the wrong thing.
         let line = text
             .lines()
-            .find(|l| l.contains(key))
-            .unwrap_or_else(|| panic!("{rel} has no line containing {key}"));
+            .find(|l| l.trim_start().starts_with(key))
+            .unwrap_or_else(|| panic!("{rel} has no line starting with {key}"));
 
         checked += 1;
         if !line.contains(version) {

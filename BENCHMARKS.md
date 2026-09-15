@@ -2,7 +2,7 @@
 
 # Benchmarks
 
-Reproducible performance methodology and CI gates for SSG **v0.0.62**.
+Reproducible performance methodology and CI gates for SSG **v0.0.63**.
 
 > **Figures last measured at v0.0.58.** The methodology and the CI gates
 > below apply to this release; the numbers under _Current_ were carried
@@ -149,7 +149,7 @@ Each row was measured on the same content corpus (`benches/corpus/small`,
 100 pages, full frontmatter). Wall-clock times are median-of-10 runs
 captured with [`hyperfine`](https://github.com/sharkdp/hyperfine).
 
-| Capability | SSG v0.0.62 | Hugo v0.155+ | Zola v0.20+ | Astro 6 | Eleventy 3 |
+| Capability | SSG v0.0.63 | Hugo v0.155+ | Zola v0.20+ | Astro 6 | Eleventy 3 |
 |---|---|---|---|---|---|
 | Language | Rust | Go | Rust | JS/TS | JS |
 | Runtime | None | None | None | Node 20+ | Node 20+ |
@@ -255,7 +255,7 @@ measurement.
 
 CI's coverage gate enforces the floors below (set in `ci.yml` `env`):
 
-| Metric | Floor | Current (v0.0.62) | Headroom |
+| Metric | Floor | Current (v0.0.63) | Headroom |
 |---|---:|---:|---:|
 | Regions | 98.0 % | 99.31 % | 1.31 |
 | Functions | 98.0 % | 99.24 % | 1.24 |

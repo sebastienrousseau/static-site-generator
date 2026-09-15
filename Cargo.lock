@@ -3034,9 +3034,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.43"
+version = "0.23.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0283386ce02abc0151e1761d08802dfe86c173b0b494af5cbc086574e453da06"
+checksum = "0d41d731c7d2f962d1ccc364cec258de3c0e93b38c2fb3ba97ac74513048d634"
 dependencies = [
  "log",
  "once_cell",
@@ -3450,7 +3450,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.62"
+version = "0.0.63"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -3496,7 +3496,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-a11y"
-version = "0.0.62"
+version = "0.0.63"
 dependencies = [
  "serde",
  "serde_json",
@@ -3504,7 +3504,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.0.62"
+version = "0.0.63"
 dependencies = [
  "log",
  "noyalib",
@@ -3518,7 +3518,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-heap-probe"
-version = "0.0.62"
+version = "0.0.63"
 dependencies = [
  "ssg",
  "tempfile",
@@ -3526,14 +3526,14 @@ dependencies = [
 
 [[package]]
 name = "ssg-i18n"
-version = "0.0.62"
+version = "0.0.63"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "ssg-mcp"
-version = "0.0.62"
+version = "0.0.63"
 dependencies = [
  "schemars",
  "serde",
@@ -3543,7 +3543,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc"
-version = "0.0.62"
+version = "0.0.63"
 dependencies = [
  "criterion",
  "inventory",
@@ -3556,7 +3556,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc-macro"
-version = "0.0.62"
+version = "0.0.63"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3565,7 +3565,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-search"
-version = "0.0.62"
+version = "0.0.63"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",
@@ -3579,7 +3579,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-wasm"
-version = "0.0.62"
+version = "0.0.63"
 dependencies = [
  "js-sys",
  "serde-wasm-bindgen",
@@ -3741,7 +3741,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
