@@ -324,6 +324,7 @@ mod tests {
             template_dir: std::path::PathBuf::from("templates"),
             theme: None,
             serve_dir: None,
+            #[cfg(feature = "i18n")]
             i18n: None,
             cdn_prefix: None,
             og_image: None,
@@ -995,6 +996,7 @@ mod tests {
             template_dir: std::path::PathBuf::from("t"),
             theme: None,
             serve_dir: None,
+            #[cfg(feature = "i18n")]
             i18n: None,
             cdn_prefix: None,
             og_image: None,

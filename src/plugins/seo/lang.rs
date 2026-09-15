@@ -172,13 +172,13 @@ fn locale_from_path(rel_path: &str, ctx: &PluginContext) -> Option<String> {
     let (first, _) = rel_path.trim_start_matches('/').split_once('/')?;
     let candidate = normalize_bcp47(first)?;
 
-    if let Some(i18n) = ctx.config.as_ref().and_then(|cfg| cfg.i18n.as_ref()) {
+    if let Some(declared) =
+        ctx.config.as_ref().and_then(|cfg| cfg.i18n_locale_set())
+    {
         // Strict: when locales are declared, only a declared locale
         // counts. An undeclared `de/` directory is not a locale page.
-        return i18n
-            .locales
+        return declared
             .iter()
-            .chain(std::iter::once(&i18n.default_locale))
             .filter_map(|loc| normalize_bcp47(loc))
             .find(|loc| *loc == candidate);
     }
@@ -221,6 +221,7 @@ fn normalize_bcp47(raw: &str) -> Option<String> {
 mod tests {
     use super::*;
     use crate::cmd::SsgConfig;
+    #[cfg(feature = "i18n")]
     use crate::i18n::I18nConfig;
     use std::path::PathBuf;
     use tempfile::tempdir;
@@ -241,8 +242,11 @@ mod tests {
             Path::new("templates"),
         );
         if language.is_some() || locales.is_some() {
+            #[cfg(not(feature = "i18n"))]
+            let _ = locales;
             ctx.config = Some(SsgConfig {
                 language: language.unwrap_or("").to_string(),
+                #[cfg(feature = "i18n")]
                 i18n: locales.map(|set| I18nConfig {
                     default_locale: set.first().map_or_else(
                         || "en".to_string(),
@@ -294,6 +298,7 @@ mod tests {
 
     // ── precedence: front matter ────────────────────────────────
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn frontmatter_language_wins_over_everything() {
         let dir = tempdir().unwrap();
@@ -312,6 +317,7 @@ mod tests {
         assert_eq!(lang, "fr");
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn frontmatter_hreflang_used_when_language_absent() {
         let dir = tempdir().unwrap();
@@ -329,6 +335,7 @@ mod tests {
         assert_eq!(lang, "en-GB", "hreflang should be normalised to BCP-47");
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn invalid_frontmatter_language_falls_through_to_path() {
         let dir = tempdir().unwrap();
@@ -348,6 +355,7 @@ mod tests {
 
     // ── precedence: locale path prefix ──────────────────────────
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn declared_locale_path_prefix_beats_html_lang_and_default() {
         // The A5 signature bug: /hi/… pages carried the site-wide
@@ -363,6 +371,7 @@ mod tests {
         assert_eq!(lang, "hi");
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn undeclared_prefix_is_not_a_locale_when_i18n_configured() {
         // `de/` exists on disk but is not declared → not a locale page.
@@ -567,6 +576,7 @@ mod tests {
         assert!(got.is_none());
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn empty_declared_locale_set_defaults_to_en() {
         // An `[i18n]` block with zero declared locales — the helper's

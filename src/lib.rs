@@ -149,6 +149,7 @@ pub use crate::plugins_group::audit as audit_plugin;
 pub use crate::plugins_group::csp;
 pub use crate::plugins_group::drafts;
 pub use crate::plugins_group::highlight;
+#[cfg(feature = "i18n")]
 pub use crate::plugins_group::i18n;
 #[cfg(feature = "image-optimization")]
 pub use crate::plugins_group::image_plugin;

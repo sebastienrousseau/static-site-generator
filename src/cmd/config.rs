@@ -286,6 +286,10 @@ pub struct SsgConfig {
     /// Language code for the site.
     pub language: String,
     /// Optional i18n configuration for multi-locale sites.
+    ///
+    /// Present only with the `i18n` feature (on by default): the type
+    /// comes from the `ssg-i18n` crate, which that feature pulls in.
+    #[cfg(feature = "i18n")]
     #[serde(default)]
     pub i18n: Option<crate::i18n::I18nConfig>,
     /// Named, filtered, paginated listings (#587).
@@ -358,6 +362,78 @@ impl Default for SsgConfig {
 }
 
 impl SsgConfig {
+    /// The configured locales, or empty when multi-locale support is
+    /// unavailable or unconfigured.
+    ///
+    /// The `i18n` feature is the only thing in the crate that knows
+    /// where these come from. Callers ask this instead of reaching for
+    /// the field, so disabling the feature does not scatter `cfg`
+    /// branches through every plugin that cares about locales.
+    // With `i18n` off this body is a bare `None`, which clippy would
+    // have as a `const fn` — but the feature-on body clones from
+    // `self`, so it can never be const. Scoped to the configuration
+    // that actually triggers it rather than allowed outright.
+    #[cfg_attr(not(feature = "i18n"), allow(clippy::missing_const_for_fn))]
+    #[must_use]
+    pub fn i18n_locales(&self) -> Vec<String> {
+        #[cfg(feature = "i18n")]
+        let locales = self
+            .i18n
+            .as_ref()
+            .map(|i| i.locales.clone())
+            .unwrap_or_default();
+        #[cfg(not(feature = "i18n"))]
+        let locales = Vec::new();
+        locales
+    }
+
+    /// Every declared locale including the default, or `None` when no
+    /// i18n configuration is reachable at all.
+    ///
+    /// The `None` case is load-bearing and distinct from an empty list:
+    /// callers use it to choose between strict matching against a
+    /// declared set and a heuristic. Collapsing the two would make an
+    /// undeclared `de/` directory look like a locale page.
+    // With `i18n` off this body is a bare `None`, which clippy would
+    // have as a `const fn` — but the feature-on body clones from
+    // `self`, so it can never be const. Scoped to the configuration
+    // that actually triggers it rather than allowed outright.
+    #[cfg_attr(not(feature = "i18n"), allow(clippy::missing_const_for_fn))]
+    #[must_use]
+    pub fn i18n_locale_set(&self) -> Option<Vec<String>> {
+        #[cfg(feature = "i18n")]
+        let declared = self.i18n.as_ref().map(|i| {
+            i.locales
+                .iter()
+                .chain(std::iter::once(&i.default_locale))
+                .cloned()
+                .collect()
+        });
+        #[cfg(not(feature = "i18n"))]
+        let declared = None;
+        declared
+    }
+
+    /// The configured default locale, or `None` when multi-locale
+    /// support is unavailable, unconfigured, or set to an empty string.
+    // With `i18n` off this body is a bare `None`, which clippy would
+    // have as a `const fn` — but the feature-on body clones from
+    // `self`, so it can never be const. Scoped to the configuration
+    // that actually triggers it rather than allowed outright.
+    #[cfg_attr(not(feature = "i18n"), allow(clippy::missing_const_for_fn))]
+    #[must_use]
+    pub fn i18n_default_locale(&self) -> Option<String> {
+        #[cfg(feature = "i18n")]
+        let default = self
+            .i18n
+            .as_ref()
+            .map(|i| i.default_locale.clone())
+            .filter(|l| !l.is_empty());
+        #[cfg(not(feature = "i18n"))]
+        let default = None;
+        default
+    }
+
     /// Applies command-line arguments to override defaults.
     fn override_with_cli(
         mut self,
@@ -917,6 +993,7 @@ impl SsgConfigBuilder {
     /// let cfg = SsgConfig::builder().i18n(None).build().unwrap();
     /// assert!(cfg.i18n.is_none());
     /// ```
+    #[cfg(feature = "i18n")]
     #[must_use]
     pub fn i18n(mut self, i18n: Option<crate::i18n::I18nConfig>) -> Self {
         self.config.i18n = i18n;
@@ -1377,6 +1454,7 @@ language = "en-GB"
     // SsgConfigBuilder::i18n / cdn_prefix
     // -----------------------------------------------------------------
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn builder_sets_i18n() {
         let i18n_cfg = crate::i18n::I18nConfig {

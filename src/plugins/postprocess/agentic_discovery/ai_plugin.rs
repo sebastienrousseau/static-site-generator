@@ -264,6 +264,7 @@ mod tests {
             template_dir: PathBuf::from("templates"),
             theme: None,
             serve_dir: None,
+            #[cfg(feature = "i18n")]
             i18n: None,
             cdn_prefix: None,
             og_image: None,
@@ -505,6 +506,7 @@ mod fault_tests {
             template_dir: std::path::PathBuf::from("templates"),
             theme: None,
             serve_dir: None,
+            #[cfg(feature = "i18n")]
             i18n: None,
             cdn_prefix: None,
             og_image: None,

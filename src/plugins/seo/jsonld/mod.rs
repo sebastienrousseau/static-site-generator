@@ -1052,6 +1052,7 @@ mod tests {
         assert!(after.contains(r#"{"@type":"X"}"#));
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn transform_html_skips_without_head_tag() {
         let dir = tempdir().unwrap();
@@ -1068,6 +1069,7 @@ mod tests {
 
     /// Context with a site `language` and declared `[i18n]` locales,
     /// rooted so that sidecars under `<dir>/build/.meta` are found.
+    #[cfg(feature = "i18n")]
     fn locale_ctx(
         dir: &Path,
         language: &str,
@@ -1103,6 +1105,7 @@ mod tests {
         v["inLanguage"].as_str().unwrap_or_default().to_string()
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn in_language_is_path_driven_on_locale_pages() {
         // The A5 signature bug: a /hi/… page whose template carries
@@ -1117,6 +1120,7 @@ mod tests {
         assert_eq!(injected_in_language(&out), "hi");
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn in_language_is_frontmatter_driven_when_sidecar_declares_language() {
         let dir = tempdir().unwrap();
@@ -1137,6 +1141,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn in_language_is_default_driven_on_default_locale_pages() {
         // en-GB site, page outside any locale prefix, template lang
@@ -1165,6 +1170,7 @@ mod tests {
         assert_eq!(injected_in_language(&out), "en");
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn in_language_validation_passes_on_locale_fixtures() {
         // Fixture pages for en, fr, hi and en-GB must build with zero
@@ -1632,6 +1638,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn locale_ctx_with_empty_locale_set_defaults_to_en() {
         // Zero declared locales: the helper's default-locale fallback

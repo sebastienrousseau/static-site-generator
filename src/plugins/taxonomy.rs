@@ -220,9 +220,9 @@ impl Plugin for TaxonomyPlugin {
         let (locales, default_locale) = ctx.config.as_ref().map_or_else(
             || (Vec::new(), String::new()),
             |c| {
-                c.i18n.as_ref().map_or_else(
-                    || (Vec::new(), String::new()),
-                    |i| (i.locales.clone(), i.default_locale.clone()),
+                (
+                    c.i18n_locales(),
+                    c.i18n_default_locale().unwrap_or_default(),
                 )
             },
         );
@@ -744,12 +744,12 @@ impl<'a> TaxonomyRenderer<'a> {
 }
 
 /// Fallback shim so the module still compiles when the `templates`
-/// feature is disabled. The MiniJinja crate is gated on that feature
+/// feature is disabled. The `MiniJinja` crate is gated on that feature
 /// in `Cargo.toml`; the shim falls back to a minimal escaped HTML
 /// renderer that still respects `site.language` and per-page metadata.
 #[cfg(not(feature = "templates"))]
 impl<'a> TaxonomyRenderer<'a> {
-    fn new(ctx: &'a PluginContext) -> Self {
+    const fn new(ctx: &'a PluginContext) -> Self {
         Self { ctx, locale: None }
     }
 
@@ -889,8 +889,7 @@ impl<'a> TaxonomyRenderer<'a> {
         self.ctx
             .config
             .as_ref()
-            .map(|c| c.language.clone())
-            .unwrap_or_else(|| "en".to_string())
+            .map_or_else(|| "en".to_string(), |c| c.language.clone())
     }
 
     /// Inline canonical link — taxonomy pages bypass the transform
