@@ -27,6 +27,8 @@
 - [Templates](guide/templates.md)
 - [Images](guide/images.md)
 - [Internationalisation](guide/i18n.md)
+- [Topics](guide/topics.md)
+- [Listings](guide/listings.md)
 
 # Capabilities
 
