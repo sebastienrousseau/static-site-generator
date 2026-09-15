@@ -618,6 +618,7 @@ mod tests {
         assert_eq!(first, second, "second run must not duplicate meta tags");
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     #[serial_test::parallel]
     fn after_compile_no_op_when_no_html_files() {
@@ -629,6 +630,7 @@ mod tests {
     // ── og:locale via resolve_page_lang (spec A5, plan §2 1.5) ──
 
     /// Context with a site `language` and declared `[i18n]` locales.
+    #[cfg(feature = "i18n")]
     fn locale_ctx(
         site: &Path,
         language: &str,
@@ -649,6 +651,7 @@ mod tests {
         c
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     #[serial_test::parallel]
     fn og_locale_is_path_driven_on_locale_pages() {
@@ -665,6 +668,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     #[serial_test::parallel]
     fn og_locale_is_default_driven_with_underscore_form() {
@@ -962,6 +966,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     #[serial_test::parallel]
     fn og_locale_with_empty_declared_locale_set_uses_site_language() {
