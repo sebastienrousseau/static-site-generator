@@ -1813,6 +1813,11 @@ pub fn bench_plugins_misc(c: &mut Criterion) {
     c.bench_function("postprocess::rss::RssAggregatePlugin (unit)", |b| {
         b.iter(|| black_box(ssg::postprocess::RssAggregatePlugin));
     });
+    // `postprocess::SbomPlugin` is a deprecated re-export of
+    // `sbom::SbomPlugin`, benched separately above. This suite's contract
+    // is to touch the whole public surface, deprecated items included, so
+    // it stays covered until the re-export is actually removed.
+    #[allow(deprecated)]
     c.bench_function("postprocess::sbom::SbomPlugin (unit)", |b| {
         b.iter(|| black_box(ssg::postprocess::SbomPlugin));
     });

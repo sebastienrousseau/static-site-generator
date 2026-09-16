@@ -9,6 +9,7 @@ pub mod audit;
 pub mod csp;
 pub mod drafts;
 pub mod highlight;
+#[cfg(feature = "i18n")]
 pub mod i18n;
 #[cfg(feature = "image-optimization")]
 pub mod image_plugin;

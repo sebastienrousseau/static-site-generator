@@ -61,6 +61,7 @@ fn config_with_language(root: &Path, language: &str) -> SsgConfig {
         template_dir: root.join("templates"),
         theme: None,
         serve_dir: None,
+        #[cfg(feature = "i18n")]
         i18n: None,
         cdn_prefix: None,
         og_image: None,

@@ -163,6 +163,7 @@ pub fn default_config() -> &'static Arc<SsgConfig> {
             site_title: DEFAULT_SITE_TITLE.to_string(),
             site_description: "A site built with SSG".to_string(),
             language: "en-GB".to_string(),
+            #[cfg(feature = "i18n")]
             i18n: None,
             cdn_prefix: None,
             og_image: None,
@@ -250,6 +251,7 @@ mod tests {
         });
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn default_config_returns_lazily_initialised_singleton() {
         let a = default_config();

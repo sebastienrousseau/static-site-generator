@@ -2,5 +2,10 @@
 # idiomatic in tests and benchmarks. Integration tests and benches are
 # separate crates, so lib.rs's `#![cfg_attr(test, allow(...))]` does not
 # reach them — allow the pattern in all test/bench contexts here instead.
+#
+# Caveat: these keys only apply where clippy recognises test code, i.e.
+# inside `#[test]` functions and `#[cfg(test)]` modules. An integration
+# test crate is built without `--cfg test`, so module-level helpers in
+# `tests/*.rs` still need their own `#![allow(...)]` header.
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true

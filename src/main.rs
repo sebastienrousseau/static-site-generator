@@ -8,16 +8,18 @@
 //! handle the core execution flow, including error handling.
 //!
 //! ## Core Behaviour
-//! - **Execution Flow**: Calls `run` from the `ssg` module to generate the site.
-//! - **Exit Status**: On success, outputs a fixed confirmation message. On failure, outputs an
-//!   error message and exits with a non-zero status code.
+//! - **Execution Flow**: Calls `run` from the `ssg` module, which parses
+//!   argv and dispatches the selected subcommand.
+//! - **Exit Status**: On success, prints nothing — each invocation reports
+//!   its own result, so only the site-producing ones announce a build. On
+//!   failure, prints `error: <cause>` to stderr and exits non-zero.
 //!
 //! ## Example Usage
 //! ```rust,no_run
 //! use ssg::run;
 //! // Just call `run` and handle success or error.
 //! match run() {
-//!     Ok(_) => println!("Site generated successfully."),
+//!     Ok(_) => {} // `run` reports its own completion
 //!     Err(e) => eprintln!("Error encountered: {}", e),
 //! }
 //! ```
@@ -27,16 +29,17 @@
 /// Delegates to [`ssg::run`] and maps the result to an exit code.
 ///
 /// ### Exit Codes
-/// - Returns `0` if site generation is successful.
+/// - Returns `0` on success, including for a bare `ssg` that only
+///   printed help.
 /// - Returns a non-zero status code if an error occurs.
 fn main() {
     match ssg::run() {
-        // stderr, not stdout: `ssg audit --sarif` streams machine-readable
-        // SARIF JSON on stdout, and a trailing status line corrupts it for
-        // strict parsers (CI redirects stdout straight into ssg-audit.sarif).
-        Ok(()) => eprintln!("Site generated successfully."),
+        // The completion line is emitted by `dispatch_invocation`, which
+        // knows whether the invocation actually produced a site. Printing
+        // it here claimed one for `check`, `audit` and `plugins` too.
+        Ok(()) => {}
         Err(e) => {
-            eprintln!("Program encountered an error: {e}");
+            eprintln!("error: {e}");
             std::process::exit(1);
         }
     }

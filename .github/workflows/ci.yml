@@ -112,6 +112,14 @@ jobs:
       - name: cargo clippy (lib — strict)
         run: cargo clippy --lib --all-features -- -D warnings
 
+      - name: cargo clippy (lib — no default features)
+        # `--all-features` never compiles a `#[cfg(not(feature = ...))]`
+        # branch, so the fallback paths were linted by nothing. The
+        # `not(feature = "templates")` taxonomy renderer accumulated
+        # three lints and, separately, three real defects that only the
+        # feature-powerset *check* caught — and a check is not a lint.
+        run: cargo clippy --lib --no-default-features -- -D warnings
+
       - name: cargo clippy (tests + examples)
         # Tests/examples allow `unwrap`/`expect` for brevity — see Cargo.toml
         # `[lints.clippy]` for the full allowance rationale.
@@ -382,7 +390,7 @@ jobs:
           fi
       - name: Upload SARIF to GitHub Code Scanning (#562)
         if: always()
-        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
         with:
           sarif_file: ssg-audit.sarif
           category: ssg-audit

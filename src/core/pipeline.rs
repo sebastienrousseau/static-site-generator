@@ -9,8 +9,10 @@ use crate::error::SsgError;
 use staticdatagen::compile;
 
 use crate::cmd::SsgConfig;
+#[cfg(feature = "i18n")]
+use crate::i18n;
 use crate::{
-    accessibility, ai, assets, content, csp, deploy, drafts, highlight, i18n,
+    accessibility, ai, assets, content, csp, deploy, drafts, highlight,
     islands, livereload, pagination, plugin, plugins as plugins_mod,
     postprocess, search, seo, shortcodes, streaming, taxonomy, walk,
 };
@@ -553,8 +555,7 @@ pub fn execute_build_pipeline_with(
         let locales = ctx
             .config
             .as_ref()
-            .and_then(|c| c.i18n.as_ref())
-            .map(|i| i.locales.clone())
+            .map(SsgConfig::i18n_locales)
             .unwrap_or_default();
         compile_site_with_locales(
             build_dir,
@@ -1037,6 +1038,7 @@ pub fn register_default_plugins(
     plugins.register(crate::image_plugin::ImageOptimizationPlugin::default());
 
     // I18n hreflang injection and per-locale sitemaps
+    #[cfg(feature = "i18n")]
     if let Some(ref i18n_cfg) = config.i18n {
         if i18n_cfg.locales.len() > 1 {
             plugins.register(i18n::I18nPlugin::new(i18n_cfg.clone()));
@@ -1707,6 +1709,7 @@ mod tests {
     // register_default_plugins — conditional registrations
     // -----------------------------------------------------------------
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn test_register_default_plugins_multi_locale_adds_i18n() {
         use crate::plugin::PluginManager;
@@ -1726,6 +1729,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn test_register_default_plugins_single_locale_skips_i18n() {
         use crate::plugin::PluginManager;

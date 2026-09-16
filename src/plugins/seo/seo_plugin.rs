@@ -10,7 +10,9 @@ use super::helpers::{
 use super::lang::resolve_page_lang;
 use crate::plugin::{Plugin, PluginContext};
 use crate::util::head_dom::inject_before_head_close;
+use crate::util::html_rewriter::rewrite_html;
 use anyhow::Result;
+use lol_html::element;
 use std::path::Path;
 
 /// Injects missing SEO meta tags into HTML files.
@@ -57,8 +59,9 @@ impl Plugin for SeoPlugin {
         // THIS page's front matter (never global config) before
         // falling back to what the rendered HTML provides.
         let social = resolve_social_meta(html, path, ctx);
-        inject_seo_tags_html(html, &lang, &social)
-            .map_err(|e| crate::error::SsgError::io(e, path))
+        let injected = inject_seo_tags_html(html, &lang, &social)
+            .map_err(|e| crate::error::SsgError::io(e, path))?;
+        Ok(apply_text_direction(&injected, &lang))
     }
 
     fn after_compile(
@@ -324,6 +327,39 @@ fn build_meta_description(html: &str, description: &str) -> Option<String> {
 /// Inject missing SEO meta tags into an HTML string, returning the
 /// modified HTML. `lang` is the resolved page language (spec A5);
 /// `social` is the page's resolved front-matter cascade (spec B8).
+/// Marks a right-to-left page as such on `<html>`.
+///
+/// `lang` alone does not set direction. A browser given
+/// `<html lang="ar">` still lays the page out left-to-right, so an
+/// Arabic or Hebrew site renders mirrored unless something says
+/// otherwise — and nothing in a build log reports it.
+///
+/// Two deliberate choices:
+///
+/// - **Only `rtl` is written.** Left-to-right is the HTML default, so
+///   stamping `dir="ltr"` onto every page of every site would add bytes
+///   to each one to say what was already true.
+/// - **`html:not([dir])`**, so an author who set `dir` themselves keeps
+///   it. Same rule as `th:not([scope])` in the HTML fixer.
+///
+/// This runs here rather than in a template variable because the
+/// bundled templates are rendered by `staticdatagen`, which substitutes
+/// `{{language}}` but knows nothing of direction — a `{{direction}}`
+/// placeholder there renders as `dir=""`, which is worse than absent.
+fn apply_text_direction(html: &str, lang: &str) -> String {
+    if crate::core_group::lang::text_direction(lang) != "rtl" {
+        return html.to_string();
+    }
+    rewrite_html(
+        html,
+        vec![element!("html:not([dir])", |el| {
+            el.set_attribute("dir", "rtl")?;
+            Ok(())
+        })],
+    )
+    .unwrap_or_else(|_| html.to_string())
+}
+
 fn inject_seo_tags_html(
     html: &str,
     lang: &str,
@@ -560,6 +596,45 @@ mod tests {
         );
     }
 
+    // ── text direction ─────────────────────────────────────────
+
+    /// `lang` alone does not set direction: a browser given
+    /// `<html lang="ar">` still lays the page out left-to-right.
+    #[test]
+    fn a_right_to_left_language_marks_the_html_element() {
+        let out = apply_text_direction(
+            r#"<html lang="ar"><head></head><body>x</body></html>"#,
+            "ar",
+        );
+        assert!(out.contains(r#"dir="rtl""#), "{out}");
+    }
+
+    #[test]
+    fn hebrew_with_a_region_subtag_is_still_right_to_left() {
+        let out =
+            apply_text_direction(r#"<html lang="he-IL"></html>"#, "he-IL");
+        assert!(out.contains(r#"dir="rtl""#), "{out}");
+    }
+
+    /// Left-to-right is the HTML default, so saying so on every page of
+    /// every site would add bytes to each one to state what was already
+    /// true.
+    #[test]
+    fn a_left_to_right_language_adds_nothing() {
+        let html = r#"<html lang="ja"><head></head><body>x</body></html>"#;
+        assert_eq!(apply_text_direction(html, "ja"), html);
+    }
+
+    /// An author who set `dir` themselves keeps it — the same rule the
+    /// HTML fixer applies to `th[scope]`.
+    #[test]
+    fn an_author_supplied_direction_is_never_overwritten() {
+        let out =
+            apply_text_direction(r#"<html lang="ar" dir="ltr"></html>"#, "ar");
+        assert!(out.contains(r#"dir="ltr""#), "{out}");
+        assert!(!out.contains(r#"dir="rtl""#), "{out}");
+    }
+
     // ── inject_seo_tags integration via after_compile ───────────
 
     #[test]
@@ -618,6 +693,7 @@ mod tests {
         assert_eq!(first, second, "second run must not duplicate meta tags");
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     #[serial_test::parallel]
     fn after_compile_no_op_when_no_html_files() {
@@ -629,6 +705,7 @@ mod tests {
     // ── og:locale via resolve_page_lang (spec A5, plan §2 1.5) ──
 
     /// Context with a site `language` and declared `[i18n]` locales.
+    #[cfg(feature = "i18n")]
     fn locale_ctx(
         site: &Path,
         language: &str,
@@ -649,6 +726,7 @@ mod tests {
         c
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     #[serial_test::parallel]
     fn og_locale_is_path_driven_on_locale_pages() {
@@ -665,6 +743,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     #[serial_test::parallel]
     fn og_locale_is_default_driven_with_underscore_form() {
@@ -962,6 +1041,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     #[serial_test::parallel]
     fn og_locale_with_empty_declared_locale_set_uses_site_language() {

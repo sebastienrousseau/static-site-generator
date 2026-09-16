@@ -96,6 +96,73 @@ pub(crate) fn resolve_render_lang(
 ///
 /// Byte-identical to `seo::lang::normalize_bcp47` — see the module
 /// docs' coordination note.
+/// Writing direction for a BCP-47 language tag: `"rtl"` or `"ltr"`.
+///
+/// Templates emit this as `<html lang="{{ site.language }}"
+/// dir="{{ site.direction }}">`. Without it an Arabic or Hebrew page
+/// renders left-to-right, which is not a subtle degradation — the
+/// layout is simply wrong, and nothing in a build log says so.
+///
+/// Resolution follows BCP-47 precedence: an explicit script subtag
+/// wins, because it is the thing that actually determines direction.
+/// `az-Arab` is right-to-left while plain `az` is not, and `ku-Latn` is
+/// left-to-right while `ku` alone is commonly Sorani and is not.
+/// Without a script subtag the base language decides.
+///
+/// # Examples
+///
+/// ```ignore
+/// assert_eq!(text_direction("ar"), "rtl");
+/// assert_eq!(text_direction("he-IL"), "rtl");
+/// assert_eq!(text_direction("az-Arab"), "rtl");
+/// assert_eq!(text_direction("az"), "ltr");
+/// assert_eq!(text_direction("ku-Latn"), "ltr");
+/// assert_eq!(text_direction("ja"), "ltr");
+/// ```
+#[must_use]
+pub(crate) fn text_direction(lang: &str) -> &'static str {
+    /// Scripts written right-to-left, by ISO 15924 subtag.
+    const RTL_SCRIPTS: &[&str] = &[
+        "adlm", "arab", "aran", "hebr", "mand", "nkoo", "rohg", "samr", "syrc",
+        "thaa", "yiii",
+    ];
+    /// Languages whose default script is right-to-left.
+    /// Deliberately excludes `ha` and plain `ku`. Both appear in a
+    /// widely-copied RTL list, and both are wrong for the common case:
+    /// modern Hausa is written in Latin (Boko), and plain `ku` is
+    /// Kurmanji, also Latin. CLDR treats both as left-to-right. Sorani
+    /// Kurdish is `ckb`, which is listed, and Ajami Hausa would be
+    /// `ha-Arab`, which the script rule above catches.
+    const RTL_LANGS: &[&str] = &[
+        "ar", "arc", "ckb", "dv", "fa", "he", "iw", "ji", "ks", "ps", "sd",
+        "ug", "ur", "yi",
+    ];
+
+    let lower = lang.trim().to_ascii_lowercase();
+    let mut parts = lower.split(['-', '_']).filter(|p| !p.is_empty());
+    let Some(base) = parts.next() else {
+        return "ltr";
+    };
+
+    // A script subtag is exactly four letters. It overrides the base
+    // language, in both directions.
+    for part in parts {
+        if part.len() == 4 && part.chars().all(|c| c.is_ascii_alphabetic()) {
+            return if RTL_SCRIPTS.contains(&part) {
+                "rtl"
+            } else {
+                "ltr"
+            };
+        }
+    }
+
+    if RTL_LANGS.contains(&base) {
+        "rtl"
+    } else {
+        "ltr"
+    }
+}
+
 pub(crate) fn normalize_bcp47(raw: &str) -> Option<String> {
     let cleaned = raw.trim().replace('_', "-");
     let mut parts = cleaned.split('-');
@@ -231,5 +298,69 @@ mod tests {
         let mut map = HashMap::new();
         let _ = map.insert("language".to_string(), serde_json::json!(42));
         assert_eq!(resolve_render_lang(&map, Some("de")), "de");
+    }
+
+    // ── text_direction ─────────────────────────────────────────
+
+    #[test]
+    fn right_to_left_languages_are_recognised() {
+        for tag in ["ar", "he", "fa", "ur", "ps", "sd", "ug", "yi", "dv", "ckb"]
+        {
+            assert_eq!(text_direction(tag), "rtl", "{tag} should be rtl");
+        }
+    }
+
+    #[test]
+    fn left_to_right_languages_are_the_default() {
+        for tag in ["en", "fr", "de", "es", "it", "pt", "ja", "zh", "ko", "ru"]
+        {
+            assert_eq!(text_direction(tag), "ltr", "{tag} should be ltr");
+        }
+    }
+
+    #[test]
+    fn a_region_subtag_does_not_change_direction() {
+        assert_eq!(text_direction("he-IL"), "rtl");
+        assert_eq!(text_direction("ar-EG"), "rtl");
+        assert_eq!(text_direction("en-GB"), "ltr");
+        assert_eq!(text_direction("zh-Hans-CN"), "ltr");
+    }
+
+    /// A script subtag decides, because it is the thing that actually
+    /// determines direction. Azerbaijani in Arabic script is
+    /// right-to-left; in Latin it is not.
+    #[test]
+    fn a_script_subtag_overrides_the_base_language() {
+        assert_eq!(text_direction("az-Arab"), "rtl");
+        assert_eq!(text_direction("az"), "ltr");
+        assert_eq!(text_direction("ha-Arab"), "rtl");
+        assert_eq!(text_direction("ku-Arab"), "rtl");
+        // ...and in the other direction too.
+        assert_eq!(text_direction("ar-Latn"), "ltr");
+        assert_eq!(text_direction("ckb-Latn"), "ltr");
+    }
+
+    /// Hausa and plain Kurmanji Kurdish appear in a widely-copied RTL
+    /// list and are wrong in it: modern Hausa is written in Latin
+    /// (Boko), and plain `ku` is Kurmanji, also Latin. CLDR treats both
+    /// as left-to-right.
+    #[test]
+    fn hausa_and_kurmanji_are_left_to_right() {
+        assert_eq!(text_direction("ha"), "ltr");
+        assert_eq!(text_direction("ku"), "ltr");
+    }
+
+    #[test]
+    fn direction_is_case_and_separator_insensitive() {
+        assert_eq!(text_direction("AR"), "rtl");
+        assert_eq!(text_direction("he_IL"), "rtl");
+        assert_eq!(text_direction("  ar  "), "rtl");
+    }
+
+    #[test]
+    fn an_empty_tag_falls_back_to_left_to_right() {
+        assert_eq!(text_direction(""), "ltr");
+        assert_eq!(text_direction("   "), "ltr");
+        assert_eq!(text_direction("-"), "ltr");
     }
 }

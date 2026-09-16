@@ -337,10 +337,8 @@ pub(super) fn build_item(
 /// then `config.language`, then `"en"`.
 pub(super) fn extract_default_locale(ctx: &PluginContext) -> String {
     if let Some(cfg) = ctx.config.as_ref() {
-        if let Some(ref i18n) = cfg.i18n {
-            if !i18n.default_locale.is_empty() {
-                return i18n.default_locale.clone();
-            }
+        if let Some(locale) = cfg.i18n_default_locale() {
+            return locale;
         }
         if !cfg.language.is_empty() {
             return cfg.language.clone();
@@ -353,8 +351,7 @@ pub(super) fn extract_default_locale(ctx: &PluginContext) -> String {
 pub(super) fn extract_known_locales(ctx: &PluginContext) -> Vec<String> {
     ctx.config
         .as_ref()
-        .and_then(|c| c.i18n.as_ref())
-        .map(|i| i.locales.clone())
+        .map(crate::cmd::SsgConfig::i18n_locales)
         .unwrap_or_default()
 }
 
@@ -433,6 +430,7 @@ mod tests {
             template_dir: std::path::PathBuf::from("templates"),
             theme: None,
             serve_dir: None,
+            #[cfg(feature = "i18n")]
             i18n: None,
             cdn_prefix: None,
             og_image: None,
@@ -774,8 +772,10 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn test_extract_default_locale_prefers_i18n() {
+        #[cfg(feature = "i18n")]
         use crate::i18n::I18nConfig;
         let tmp = tempdir().unwrap();
         let config = crate::cmd::SsgConfig {
@@ -894,6 +894,7 @@ mod tests {
             template_dir: std::path::PathBuf::from("t"),
             theme: None,
             serve_dir: None,
+            #[cfg(feature = "i18n")]
             i18n: None,
             cdn_prefix: None,
             og_image: None,
@@ -955,6 +956,7 @@ mod tests {
             template_dir: std::path::PathBuf::from("templates"),
             theme: None,
             serve_dir: None,
+            #[cfg(feature = "i18n")]
             i18n: None,
             cdn_prefix: None,
             og_image: None,
@@ -1004,6 +1006,7 @@ mod tests {
     // build_item: whitespace-only category yields no tags
     // -----------------------------------------------------------------
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn test_build_item_ignores_whitespace_only_category() {
         let mut meta = HashMap::new();
@@ -1017,6 +1020,7 @@ mod tests {
     // extract_default_locale fallbacks
     // -----------------------------------------------------------------
 
+    #[cfg(feature = "i18n")]
     fn ctx_with_locale(
         site_dir: &Path,
         default_locale: &str,
@@ -1057,6 +1061,7 @@ mod tests {
         )
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn test_extract_default_locale_empty_i18n_uses_language() {
         let tmp = tempdir().unwrap();
@@ -1064,6 +1069,7 @@ mod tests {
         assert_eq!(extract_default_locale(&ctx), "de");
     }
 
+    #[cfg(feature = "i18n")]
     #[test]
     fn test_extract_default_locale_all_empty_falls_back_to_en() {
         let tmp = tempdir().unwrap();

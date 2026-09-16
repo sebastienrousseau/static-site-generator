@@ -601,14 +601,34 @@ impl Cli {
                 _ => CliInvocation::Legacy,
             };
             Ok((inv, matches))
+        } else if args.len() <= 1 {
+            // Bare `ssg` with no arguments. Previously this fell through
+            // to the legacy parser and started a real build against the
+            // current working directory — so running `ssg` anywhere (a
+            // home directory, say) would try to generate a site there.
+            // A CLI with no arguments should describe itself, not act.
+            //
+            // Returning a `DisplayHelp` error lets `run_with_argv`
+            // delegate to `clap::Error::exit`, which prints help and
+            // exits 0. It also short-circuits *before* logging is
+            // initialised, so no INFO banner precedes the help text.
+            // Route through clap's own `--help` handling so the output
+            // is the canonical help on stdout, with no `error:` prefix
+            // and exit code 0 — identical to `ssg --help`.
+            Err(Self::subcommand_app()
+                .try_get_matches_from(["ssg", "--help"])
+                .err()
+                .unwrap_or_else(|| {
+                    // Unreachable in practice: `--help` always
+                    // short-circuits. Render help explicitly rather
+                    // than panicking if clap ever changes that.
+                    let mut app = Self::subcommand_app();
+                    let help = app.render_help();
+                    app.error(clap::error::ErrorKind::DisplayHelp, help)
+                }))
         } else {
-            // Legacy path. Only warn if the user actually passed flags
-            // — bare `ssg` is the documented default behaviour and
-            // shouldn't spam stderr (#527 AC5 talks about
-            // `ssg -s public -w`, not bare invocation).
-            if args.len() > 1 {
-                eprintln!("{LEGACY_DEPRECATION_WARNING}");
-            }
+            // Legacy path, with at least one flag present.
+            eprintln!("{LEGACY_DEPRECATION_WARNING}");
             let matches = Self::build().try_get_matches_from(&args)?;
             Ok((CliInvocation::Legacy, matches))
         }
@@ -868,9 +888,21 @@ mod tests {
     }
 
     #[test]
-    fn bare_invocation_routes_through_legacy_parser() {
-        let (inv, _m) = Cli::parse_and_dispatch(["ssg"]).unwrap();
-        assert_invocation(&inv, "Legacy");
+    fn bare_invocation_displays_help_instead_of_building() {
+        // Regression: bare `ssg` used to route through the legacy
+        // parser and start a real build against the current working
+        // directory. It must now describe itself and exit cleanly.
+        let err = Cli::parse_and_dispatch(["ssg"]).unwrap_err();
+        assert_eq!(err.kind(), clap::error::ErrorKind::DisplayHelp);
+        // `DisplayHelp` exits 0, so a bare invocation is not a failure.
+        assert_eq!(err.exit_code(), 0);
+        // The rendered help must actually carry the usage text rather
+        // than an empty message.
+        let rendered = err.to_string();
+        assert!(
+            rendered.contains("Usage"),
+            "help output missing usage line: {rendered}"
+        );
     }
 
     #[test]

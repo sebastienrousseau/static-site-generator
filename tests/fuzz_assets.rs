@@ -12,6 +12,12 @@
 //! looked fine in aggregate. These tests exist so the next such mistake fails
 //! in `cargo test` rather than being discovered by hand.
 
+// `clippy.toml`'s `allow-expect-in-tests` only reaches `#[test]` functions
+// and `#[cfg(test)]` modules. This is an integration test crate, built
+// without `--cfg test`, so its module-level helpers need their own
+// header — as the other suites in `tests/` already carry.
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;

@@ -98,10 +98,15 @@ path = "src/main.rs"                    # Path to the binary entry point
 # -----------------------------------------------------------------------------
 [features]
 # Optional features that can be enabled or disabled.
-default = ["templates", "image-optimization"]
+default = ["templates", "image-optimization", "i18n"]
 cli = []                                # Enable command-line interface support
 benchmark = ["tempfile"]                 # Enable benchmark-specific functionality
 templates = ["minijinja"]               # MiniJinja templating engine with inheritance, loops, conditionals
+# Multi-locale support: locale negotiation, hreflang, per-locale
+# sitemaps and the language switcher (#588). On by default, so nothing
+# changes for existing consumers; `--no-default-features` drops the
+# `ssg-i18n` dependency and the `[i18n]` config section with it.
+i18n = ["dep:ssg-i18n"]
 image-optimization = ["image", "ravif", "rgb"] # Image optimization with WebP + AVIF output and responsive srcset
 test-fault-injection = ["fail/failpoints"]   # Test-only fault injection for fs error paths
 # Marker feature for the AI / local-LLM content pipeline (`LlmPlugin`).
@@ -167,7 +172,7 @@ rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.63" }
-ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.63" }
+ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.63", optional = true }
 ssg-core = { path = "crates/ssg-core", version = "0.0.63" }
 ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.63" }
 ssg-search = { path = "crates/ssg-search", version = "0.0.63" }
@@ -243,7 +248,7 @@ frontmatter-gen = "0.0.11"
 # `ssg-core`'s frontmatter parser) — zero unsafe, no C deps, and
 # deliberately carries no dependency on the unmaintained `serde_yaml`
 # lineage `serde_yaml_ng` forked from.
-noyalib = "0.0.37"
+noyalib = "0.0.43"
 
 # Optional observability stack (issue #422). Both crates are
 # `optional = true` — they enter the build only when the `otel`

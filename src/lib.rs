@@ -55,7 +55,7 @@ use std::{
 use crate::cmd::{Cli, CliInvocation, SsgConfig};
 
 // Third-party imports
-use log::info;
+use log::{debug, info};
 
 /// Returns the current time as an ISO 8601 UTC string.
 ///
@@ -149,6 +149,7 @@ pub use crate::plugins_group::audit as audit_plugin;
 pub use crate::plugins_group::csp;
 pub use crate::plugins_group::drafts;
 pub use crate::plugins_group::highlight;
+#[cfg(feature = "i18n")]
 pub use crate::plugins_group::i18n;
 #[cfg(feature = "image-optimization")]
 pub use crate::plugins_group::image_plugin;
@@ -626,7 +627,9 @@ fn run_with_argv(argv: Vec<std::ffi::OsString>) -> Result<(), SsgError> {
     };
     let _ = otel::init_if_enabled(trace_flag);
 
-    info!("Starting site generation process");
+    // Startup chatter belongs at debug: this also fires for `audit`
+    // and `plugins list`, which generate no site at all.
+    debug!("Starting dispatch");
 
     dispatch_invocation(invocation, &matches)
 }
@@ -636,7 +639,9 @@ fn dispatch_invocation(
     invocation: CliInvocation,
     matches: &clap::ArgMatches,
 ) -> Result<(), SsgError> {
-    match invocation {
+    let announces_site = generates_site(&invocation);
+
+    let result = match invocation {
         CliInvocation::Legacy => run_legacy(matches),
         CliInvocation::Build => run_subcommand(matches, "build", false),
         CliInvocation::Dev => run_subcommand(matches, "dev", true),
@@ -646,6 +651,35 @@ fn dispatch_invocation(
         CliInvocation::Plugins { json, target } => {
             run_plugins(json, target.as_deref())
         }
+    };
+
+    // stderr, not stdout: `ssg audit --sarif` streams machine-readable
+    // SARIF JSON on stdout, and a trailing status line corrupts it.
+    if result.is_ok() && announces_site {
+        eprintln!("Site generated successfully.");
+    }
+    result
+}
+
+/// Whether `invocation` writes a site to disk, and may therefore claim
+/// one was generated.
+///
+/// `check`, `audit` and `plugins` produce no output directory and report
+/// their own results, so announcing a generated site for them is simply
+/// false. Split out from [`dispatch_invocation`] so the classification
+/// can be tested without running a build.
+const fn generates_site(invocation: &CliInvocation) -> bool {
+    match invocation {
+        CliInvocation::Legacy
+        | CliInvocation::Build
+        | CliInvocation::Dev
+        | CliInvocation::Deploy { .. } => true,
+        // Listed explicitly rather than via `_` so a new subcommand
+        // fails to compile here instead of silently defaulting to
+        // claiming it generated a site.
+        CliInvocation::Check
+        | CliInvocation::Audit
+        | CliInvocation::Plugins { .. } => false,
     }
 }
 
@@ -3840,6 +3874,52 @@ mod tests {
         // for an empty (no-schema, no-content) site.
         let result = dispatch_invocation(inv, &matches);
         assert!(result.is_ok(), "run_check failed: {result:?}");
+    }
+
+    #[test]
+    fn only_site_producing_invocations_claim_a_generated_site() {
+        // Regression: `main` announced "Site generated successfully."
+        // for every Ok result, so `ssg audit` and `ssg plugins list`
+        // claimed a site they never wrote.
+        for inv in [
+            CliInvocation::Legacy,
+            CliInvocation::Build,
+            CliInvocation::Dev,
+            CliInvocation::Deploy {
+                target: "none".to_string(),
+            },
+        ] {
+            assert!(
+                generates_site(&inv),
+                "{inv:?} writes a site and must report it"
+            );
+        }
+
+        for inv in [
+            CliInvocation::Check,
+            CliInvocation::Audit,
+            CliInvocation::Plugins {
+                json: false,
+                target: None,
+            },
+        ] {
+            assert!(
+                !generates_site(&inv),
+                "{inv:?} writes no site and must not claim one"
+            );
+        }
+    }
+
+    #[test]
+    fn deploy_claims_a_site_for_every_supported_target() {
+        // `Deploy` carries a field, so a `matches!` arm for it is easy
+        // to get wrong. Every target still builds a site first.
+        for target in cmd::DEPLOY_TARGETS {
+            let inv = CliInvocation::Deploy {
+                target: (*target).to_string(),
+            };
+            assert!(generates_site(&inv), "deploy --target {target}");
+        }
     }
 
     #[test]
