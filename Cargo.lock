@@ -2226,9 +2226,9 @@ dependencies = [
 
 [[package]]
 name = "noyalib"
-version = "0.0.43"
+version = "0.0.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55f03682003f288e23f94d8f6222de0dcf15c77329b5e42b2f37421243c1d373"
+checksum = "f307578cc6389d7c00bc284401ee1bff6d47c66c39debd8fc4db5b02892bc7a4"
 dependencies = [
  "hashbrown 0.17.1",
  "indexmap",
@@ -3479,7 +3479,7 @@ dependencies = [
  "lol_html",
  "minijinja",
  "notify",
- "noyalib 0.0.43",
+ "noyalib 0.0.44",
  "proptest",
  "pulldown-cmark",
  "ravif",
@@ -3522,7 +3522,7 @@ name = "ssg-core"
 version = "0.0.64"
 dependencies = [
  "log",
- "noyalib 0.0.43",
+ "noyalib 0.0.44",
  "pulldown-cmark",
  "serde",
  "serde_json",
