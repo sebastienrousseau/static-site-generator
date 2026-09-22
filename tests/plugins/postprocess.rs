@@ -11,5 +11,4 @@ mod html_fix;
 mod manifest;
 mod news_sitemap;
 mod rss;
-mod sbom;
 mod sitemap;

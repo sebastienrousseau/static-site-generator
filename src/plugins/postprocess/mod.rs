@@ -34,7 +34,6 @@ mod json_feed;
 mod manifest;
 mod news_sitemap;
 mod rss;
-mod sbom;
 mod sitemap;
 
 pub use agentic_discovery::{
@@ -50,6 +49,4 @@ pub use json_feed::JsonFeedPlugin;
 pub use manifest::ManifestFixPlugin;
 pub use news_sitemap::NewsSitemapFixPlugin;
 pub use rss::RssAggregatePlugin;
-#[allow(deprecated)]
-pub use sbom::SbomPlugin;
 pub use sitemap::SitemapFixPlugin;

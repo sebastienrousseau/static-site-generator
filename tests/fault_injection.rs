@@ -478,26 +478,6 @@ fn postprocess_fault_manifest_serialize_returns_err() {
 
 #[test]
 #[serial]
-fn postprocess_fault_sbom_serialize_returns_err() {
-    use ssg::postprocess::SbomPlugin;
-
-    let _guard = FailGuard("postprocess::sbom-serialize");
-    fail::cfg("postprocess::sbom-serialize", "return")
-        .expect("activate failpoint");
-
-    let dir = tempdir().expect("tempdir");
-    let ctx =
-        PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
-    let err = SbomPlugin
-        .after_compile(&ctx)
-        .expect_err("serialisation failpoint must propagate");
-    assert!(
-        format!("{err:?}").contains("injected: postprocess::sbom-serialize")
-    );
-}
-
-#[test]
-#[serial]
 fn postprocess_fault_json_feed_serialize_falls_back_to_compact() {
     use ssg::postprocess::JsonFeedPlugin;
 
