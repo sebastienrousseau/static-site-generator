@@ -103,8 +103,8 @@ user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
 [[publisher.staticdatagen]]
-version = "0.0.19"
-when = "2026-09-07"
+version = "0.0.20"
+when = "2026-09-30"
 trusted-publisher = "github:sebastienrousseau/staticdatagen"
 
 [[publisher.staticweaver]]
@@ -236,35 +236,11 @@ criteria = "safe-to-deploy"
 version = "0.1.6"
 notes = "Contains no unsafe code, no IO, no build.rs."
 
-[[audits.bytecodealliance.audits.cobs]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-version = "0.2.3"
-notes = "No `unsafe` code in the crate and no usage of `std`"
-
-[[audits.bytecodealliance.audits.cobs]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "0.2.3 -> 0.3.0"
-notes = "Nothing out of the ordinary, virtually no unsafe code."
-
 [[audits.bytecodealliance.audits.crossbeam-epoch]]
 who = "Alex Crichton <alex@alexcrichton.com>"
 criteria = "safe-to-deploy"
 delta = "0.9.18 -> 0.9.20"
 notes = "Minor updates, nothing out of place."
-
-[[audits.bytecodealliance.audits.embedded-io]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-version = "0.4.0"
-notes = "No `unsafe` code and only uses `std` in ways one would expect the crate to do so."
-
-[[audits.bytecodealliance.audits.embedded-io]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "0.4.0 -> 0.6.1"
-notes = "Major updates, but almost all safe code. Lots of pruning/deletions, nothing out of the ordrinary."
 
 [[audits.bytecodealliance.audits.foldhash]]
 who = "Alex Crichton <alex@alexcrichton.com>"
@@ -385,21 +361,6 @@ a few `unsafe` blocks related to utf-8 validation which are locally verifiable
 as correct and otherwise this crate is good to go.
 """
 
-[[audits.bytecodealliance.audits.postcard]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-version = "1.0.8"
-notes = """
-I've audited the unsafe code to do what it looks like it's doing. Otherwise the
-crate is a standard serializer/deserializer crate.
-"""
-
-[[audits.bytecodealliance.audits.postcard]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "1.0.8 -> 1.1.3"
-notes = "Substantial updates, but nothing out of the ordinary one would expect from a serialization crate. Minor `unsafe` updates, but nothing major from what was already there."
-
 [[audits.bytecodealliance.audits.semver]]
 who = "Pat Hickey <phickey@fastly.com>"
 criteria = "safe-to-deploy"
@@ -411,6 +372,12 @@ who = "Pat Hickey <phickey@fastly.com>"
 criteria = "safe-to-deploy"
 version = "0.1.4"
 notes = "I always really enjoy reading eliza's code, she left perfect comments at every use of unsafe."
+
+[[audits.bytecodealliance.audits.shlex]]
+who = "Alex Crichton <alex@alexcrichton.com>"
+criteria = "safe-to-deploy"
+version = "1.1.0"
+notes = "Only minor `unsafe` code blocks which look valid and otherwise does what it says on the tin."
 
 [[audits.bytecodealliance.audits.smallvec]]
 who = "Alex Crichton <alex@alexcrichton.com>"
@@ -691,20 +658,6 @@ criteria = "safe-to-run"
 version = "1.2.1"
 aggregated-from = "https://chromium.googlesource.com/chromiumos/third_party/rust_crates/+/refs/heads/main/cargo-vet/audits.toml?format=TEXT"
 
-[[audits.google.audits.unicode-linebreak]]
-who = "Lukasz Anforowicz <lukasza@chromium.org>"
-criteria = "safe-to-deploy"
-version = "0.1.5"
-notes = """
-Grepped for `-i cipher`, `-i crypto`, `'\bfs\b'``, `'\bnet\b'``, `'\bunsafe\b'``
-and there were no hits.
-
-Version `0.1.2` of this crate has been added to Chromium in
-https://source.chromium.org/chromium/chromium/src/+/591a0f30c5eac93b6a3d981c2714ffa4db28dbcb
-The CL description contains a link to a Google-internal document with audit details.
-"""
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
 [[audits.google.audits.winapi]]
 who = "danakj@chromium.org"
 criteria = "safe-to-run"
@@ -933,12 +886,6 @@ criteria = "safe-to-deploy"
 delta = "1.2.1 -> 1.2.2"
 
 [[audits.mozilla.audits.hashbrown]]
-who = "Mike Hommey <mh+mozilla@glandium.org>"
-criteria = "safe-to-deploy"
-version = "0.12.3"
-notes = "This version is used in rust's libstd, so effectively we're already trusting it"
-
-[[audits.mozilla.audits.hashbrown]]
 who = "Erich Gubler <erichdongubler@gmail.com>"
 criteria = "safe-to-deploy"
 delta = "0.15.2 -> 0.15.5"
@@ -973,34 +920,6 @@ who = "Ben Dean-Kawamura <bdk@mozilla.com>"
 criteria = "safe-to-deploy"
 delta = "2.11.4 -> 2.14.0"
 notes = "Mostly internal refactorings.  No new unsafe code."
-
-[[audits.mozilla.audits.itertools]]
-who = "Erich Gubler <erichdongubler@gmail.com>"
-criteria = "safe-to-deploy"
-delta = "0.14.0 -> 0.15.0"
-
-[[audits.mozilla.audits.linked-hash-map]]
-who = "Aria Beingessner <a.beingessner@gmail.com>"
-criteria = "safe-to-deploy"
-version = "0.5.4"
-notes = "I own this crate (I am contain-rs) and 0.5.4 passes miri. This code is very old and used by lots of people, so I'm pretty confident in it, even though it's in maintenance-mode and missing some nice-to-have APIs."
-
-[[audits.mozilla.audits.linked-hash-map]]
-who = "Alex Franchuk <afranchuk@mozilla.com>"
-criteria = "safe-to-deploy"
-delta = "0.5.4 -> 0.5.6"
-notes = "New unsafe code has debug assertions and meets invariants. All other changes are formatting-related."
-
-[[audits.mozilla.audits.matches]]
-who = "Bobby Holley <bobbyholley@gmail.com>"
-criteria = "safe-to-deploy"
-version = "0.1.9"
-notes = "This is a trivial crate."
-
-[[audits.mozilla.audits.matches]]
-who = "Mike Hommey <mh+mozilla@glandium.org>"
-criteria = "safe-to-deploy"
-delta = "0.1.9 -> 0.1.10"
 
 [[audits.mozilla.audits.num-derive]]
 who = "Josh Stone <jistone@redhat.com>"
@@ -1054,17 +973,6 @@ criteria = "safe-to-deploy"
 version = "0.1.1"
 notes = "This is a trivial crate."
 
-[[audits.mozilla.audits.seahash]]
-who = "Benjamin VanderSloot <bvandersloot@mozilla.com>"
-criteria = "safe-to-deploy"
-version = "4.1.0"
-notes = """
-Uses unsafe to compute a non-cryptographic hash over &[u8],
-grabbing u64s out of the buffer for XORs. Logic looks sound,
-careful not to read over the end of the buffer, and the unsafety
-is well contained.
-"""
-
 [[audits.mozilla.audits.semver]]
 who = "Ben Dean-Kawamura <bdk@mozilla.com>"
 criteria = "safe-to-deploy"
@@ -1093,11 +1001,18 @@ who = "Mark Hammond <mhammond@skippinet.com.au>"
 criteria = "safe-to-deploy"
 delta = "0.1.4 -> 0.1.7"
 
-[[audits.mozilla.audits.simdutf8]]
-who = "Henri Sivonen <hsivonen@hsivonen.fi>"
+[[audits.mozilla.audits.shlex]]
+who = "Max Inden <mail@max-inden.de>"
 criteria = "safe-to-deploy"
-version = "0.1.5"
-notes = "Confidence in correctness of the algorithm is based on fuzzing the SSE 4.2 and AVX2 implementations rather than working through the logic of the code. Audit of aarch64 and Wasm is by comparing the code with the SSE 4.2 case."
+delta = "1.1.0 -> 1.3.0"
+
+[[audits.mozilla.audits.shlex]]
+who = "Emilio Cobos Álvarez <emilio@crisal.io>"
+criteria = "safe-to-deploy"
+delta = "1.3.0 -> 2.0.1"
+notes = """
+Mostly removes some deprecated and unsound APIs.
+"""
 
 [[audits.mozilla.audits.smallvec]]
 who = "Erich Gubler <erichdongubler@gmail.com>"

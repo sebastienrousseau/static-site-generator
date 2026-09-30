@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (CodeQL cleartext-logging). The log line now carries only the page,
   the field and a failure category; `validate_iban`'s result is
   unchanged.
+- **yaml-rust and the Oniguruma C library are gone from the build.**
+  staticdatagen 0.0.20 no longer enables comrak's default features,
+  which had pulled in syntect's YAML loader (yaml-rust, unmaintained,
+  RUSTSEC-2024-0320), the `onig` C library and comrak's CLI. Syntax
+  highlighting is unchanged: it comes from mdx-gen's own syntect setup.
 
 ## [0.0.63] - 2026-09-15
 
