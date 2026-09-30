@@ -7,6 +7,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **A multi-byte character in an `<img>` tag no longer panics the SEO
+  pass.** `extract_first_content_image` capped its tag scan at 500 bytes
+  and sliced there; when byte 500 fell inside a multi-byte character
+  (a Tamil `alt`, three bytes a character) the build aborted with
+  `end byte index 500 is not a char boundary`. A short tag with no `>`
+  sliced past the end of the string the same way. The cap now steps
+  back to a character boundary. Found building a 28-locale site.
+- **`ssg --new NAME` no longer reports "Site generated successfully."**
+  It scaffolds a project and exits without building, so a script that
+  still passed a leftover `-n=docs` (a no-op before 0.0.63) saw success
+  with nothing in its output directory.
+
 ## [0.0.63] - 2026-09-15
 
 ### Added
