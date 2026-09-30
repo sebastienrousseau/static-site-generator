@@ -127,12 +127,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arraydeque"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d902e3d592a523def97af8f317b08ce16b7ab854c1985a0c671e6f15cebc236"
-
-[[package]]
 name = "arrayvec"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -431,15 +425,6 @@ name = "colorchoice"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
-
-[[package]]
-name = "colored"
-version = "3.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
-dependencies = [
- "windows-sys 0.61.2",
-]
 
 [[package]]
 name = "comrak"
@@ -994,25 +979,20 @@ dependencies = [
 
 [[package]]
 name = "frontmatter-gen"
-version = "0.0.6"
+version = "0.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05ce7e5bf87bc3550840886b912ccefd0ef5188e69e750b121e19168192445c8"
+checksum = "40c6973f70fa06e6f208238c470dc941684f282d169f39b0b6c6d946b612b167"
 dependencies = [
  "anyhow",
- "env_logger",
- "euxis-commons",
  "log",
- "noyalib 0.0.8",
+ "noyalib 0.0.37",
  "serde",
  "serde_json",
- "simple_logger",
- "tempfile",
  "thiserror",
  "time",
  "tokio",
  "toml",
  "uuid",
- "version_check",
 ]
 
 [[package]]
@@ -1128,15 +1108,6 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.16.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
-dependencies = [
- "foldhash 0.2.0",
-]
-
-[[package]]
-name = "hashbrown"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
@@ -1144,15 +1115,6 @@ dependencies = [
  "allocator-api2",
  "equivalent",
  "foldhash 0.2.0",
-]
-
-[[package]]
-name = "hashlink"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "824e001ac4f3012dd16a264bec811403a67ca9deb6c102fc5049b32c4574b35f"
-dependencies = [
- "hashbrown 0.16.1",
 ]
 
 [[package]]
@@ -1169,9 +1131,9 @@ checksum = "c9356095b4b41197bba32173600e1582792cda618f65d12f68e2e77d273413c5"
 
 [[package]]
 name = "html-generator"
-version = "0.0.10"
+version = "0.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4eb5000468c2e92e64cce2c8ca24585e66dfaa7d2e53de07289ff8f332cd49b3"
+checksum = "cc35c908f4e2441f19f16cfcb3997e695ca19f6afefcc482026825f0dc7acd73"
 dependencies = [
  "ammonia",
  "comrak 0.54.0",
@@ -1179,7 +1141,7 @@ dependencies = [
  "indexmap",
  "log",
  "mdx-gen",
- "noyalib 0.0.19",
+ "noyalib 0.0.37",
  "once_cell",
  "pulldown-latex",
  "regex",
@@ -1188,7 +1150,6 @@ dependencies = [
  "serde_json",
  "thiserror",
  "toml",
- "version_check",
 ]
 
 [[package]]
@@ -1599,6 +1560,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "libm"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
+
+[[package]]
 name = "linked-hash-map"
 version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1716,13 +1683,13 @@ checksum = "38d1115007560874e373613744c6fba374c17688327a71c1476d1a5954cc857b"
 
 [[package]]
 name = "metadata-gen"
-version = "0.0.6"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c8843b4135e8e03bf105fd877a39b1f0cc619686f6b9dc6a87d95b081bc2e4f"
+checksum = "fb8012cd9bbe565c1d6266379a6f04787ac0ad42de4be0a597869dc02815f3fe"
 dependencies = [
  "dtt",
- "noyalib 0.0.15",
- "quick-xml",
+ "noyalib 0.0.37",
+ "quick-xml 0.42.0",
  "regex",
  "serde",
  "serde_json",
@@ -1730,8 +1697,6 @@ dependencies = [
  "time",
  "tokio",
  "toml",
- "version_check",
- "yaml-rust2",
 ]
 
 [[package]]
@@ -1863,42 +1828,32 @@ dependencies = [
 
 [[package]]
 name = "noyalib"
-version = "0.0.8"
+version = "0.0.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14057395c16a4230575c6f86bfa074db87e8458626d3e56b20c2454334a7e50c"
+checksum = "a34cd8430232bb95a20123f8436824f20a724facdcbd1e5d3e21b9c7e4e5fc82"
 dependencies = [
+ "hashbrown 0.17.1",
  "indexmap",
+ "libm",
  "memchr",
  "rustc-hash",
- "serde",
+ "serde_core",
  "smallvec",
 ]
 
 [[package]]
 name = "noyalib"
-version = "0.0.15"
+version = "0.0.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9014fb34654ac4f54a4ff52d5207b1e4a764604fced568c3a1d71ee99d1fc300"
+checksum = "f307578cc6389d7c00bc284401ee1bff6d47c66c39debd8fc4db5b02892bc7a4"
 dependencies = [
- "indexmap",
- "memchr",
- "rustc-hash",
- "serde",
- "smallvec",
-]
-
-[[package]]
-name = "noyalib"
-version = "0.0.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d0ba37b65d8c94344cc44af197654bd0f270bf5729dad540c6eacf3447f50e0"
-dependencies = [
+ "hashbrown 0.17.1",
  "indexmap",
  "itoa",
+ "libm",
  "memchr",
  "rustc-hash",
  "ryu",
- "serde",
  "serde_core",
  "serde_ignored",
  "smallvec",
@@ -2138,7 +2093,7 @@ checksum = "7da1d65da6dd5d1e44199ac0f58712d241c0f439f80adea8924d832384087f85"
 dependencies = [
  "base64 0.22.1",
  "indexmap",
- "quick-xml",
+ "quick-xml 0.41.0",
  "serde",
  "time",
 ]
@@ -2287,6 +2242,15 @@ checksum = "e660451e55124f798a69a5af3f49ccfbefbd41910eefd25caf2393e1f3473ec1"
 dependencies = [
  "memchr",
  "serde",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.42.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41b1177fdf999d2321d3fb46ff47159d9c1fb9ad66a4879f8c50a0b504615e9b"
+dependencies = [
+ "memchr",
 ]
 
 [[package]]
@@ -2514,7 +2478,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c3b5748fb3d0f3e25d2464c3487f3dcf9add985563f082bdd18d6c1d8ed2f58"
 dependencies = [
  "log",
- "quick-xml",
+ "quick-xml 0.41.0",
  "serde",
  "thiserror",
  "time",
@@ -2552,9 +2516,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.43"
+version = "0.23.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0283386ce02abc0151e1761d08802dfe86c173b0b494af5cbc086574e453da06"
+checksum = "0d41d731c7d2f962d1ccc364cec258de3c0e93b38c2fb3ba97ac74513048d634"
 dependencies = [
  "log",
  "once_cell",
@@ -2838,18 +2802,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "simple_logger"
-version = "5.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7038d0e96661bf9ce647e1a6f6ef6d6f3663f66d9bf741abf14ba4876071c17"
-dependencies = [
- "colored",
- "log",
- "time",
- "windows-sys 0.61.2",
-]
-
-[[package]]
 name = "siphasher"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2901,7 +2853,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.59"
+version = "0.0.64"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -2913,7 +2865,7 @@ dependencies = [
  "lol_html",
  "minijinja",
  "notify",
- "noyalib 0.0.19",
+ "noyalib 0.0.44",
  "pulldown-cmark",
  "ravif",
  "rayon",
@@ -2923,6 +2875,7 @@ dependencies = [
  "sha2",
  "ssg-a11y",
  "ssg-core",
+ "ssg-i18n",
  "ssg-rpc",
  "ssg-search",
  "staticdatagen",
@@ -2935,7 +2888,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-a11y"
-version = "0.0.59"
+version = "0.0.64"
 dependencies = [
  "serde",
  "serde_json",
@@ -2943,10 +2896,10 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.0.59"
+version = "0.0.64"
 dependencies = [
  "log",
- "noyalib 0.0.19",
+ "noyalib 0.0.44",
  "pulldown-cmark",
  "serde",
  "serde_json",
@@ -2965,8 +2918,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ssg-i18n"
+version = "0.0.64"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "ssg-rpc"
-version = "0.0.59"
+version = "0.0.64"
 dependencies = [
  "inventory",
  "schemars",
@@ -2978,7 +2938,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc-macro"
-version = "0.0.59"
+version = "0.0.64"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2987,7 +2947,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-search"
-version = "0.0.59"
+version = "0.0.64"
 dependencies = [
  "serde",
  "serde_json",
@@ -3001,9 +2961,9 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.17"
+version = "0.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97dab9eeefe34cbe46487f63f1e1eb1e5a4f05ed6a2548b8b0a2ab3f23ee1ec4"
+checksum = "fa2ffc1883d6dd9ff1a4800cd462c1e09642651c646603b61ad99f5c66ecfd4f"
 dependencies = [
  "anyhow",
  "comrak 0.54.0",
@@ -3013,7 +2973,7 @@ dependencies = [
  "log",
  "metadata-gen",
  "pulldown-cmark",
- "quick-xml",
+ "quick-xml 0.42.0",
  "rayon",
  "regex",
  "rss-gen",
@@ -3025,7 +2985,6 @@ dependencies = [
  "time",
  "url",
  "uuid",
- "version_check",
  "walkdir",
  "xml-rs",
 ]
@@ -3807,17 +3766,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56c1936c4cc7a1c9ab21a1ebb602eb942ba868cbd44a99cb7cdc5892335e1c85"
 dependencies = [
  "linked-hash-map",
-]
-
-[[package]]
-name = "yaml-rust2"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b36710ce3a279cfce8465dbab826f161675a262950b922cb2c3663852dfe9eb0"
-dependencies = [
- "arraydeque",
- "encoding_rs",
- "hashlink",
 ]
 
 [[package]]
