@@ -197,35 +197,6 @@ pub fn validate_iban(input: &str) -> ValidationOutcome {
     }
 }
 
-/// Why an IBAN was rejected, carrying nothing derived from its value.
-///
-/// [`validate_iban`]'s `reason` is for callers and quotes lengths,
-/// positions and the MOD-97 remainder. The build log gets only this
-/// category, so no part of an account number, nor anything computed
-/// from one, reaches a log line (`rust/cleartext-logging`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum IbanIssue {
-    Length,
-    CountryCode,
-    CheckDigits,
-    Bban,
-    Character,
-    Checksum,
-}
-
-impl IbanIssue {
-    const fn describe(self) -> &'static str {
-        match self {
-            Self::Length => "length outside the ISO 13616 range 15..=34",
-            Self::CountryCode => "country code is not two ASCII letters",
-            Self::CheckDigits => "check digits are not two ASCII digits",
-            Self::Bban => "BBAN is not alphanumeric ASCII",
-            Self::Character => "contains a non-alphanumeric character",
-            Self::Checksum => "MOD-97 checksum failed",
-        }
-    }
-}
-
 /// The first failure [`check_iban`] found, with the measurements behind
 /// [`validate_iban`]'s detailed reason.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -239,20 +210,6 @@ enum IbanFault {
 }
 
 impl IbanFault {
-    /// The category alone. Each arm returns a constant and reads none of
-    /// the fault's fields, so nothing measured from the account flows
-    /// into a log line.
-    const fn issue(self) -> IbanIssue {
-        match self {
-            Self::Length(_) => IbanIssue::Length,
-            Self::CountryCode => IbanIssue::CountryCode,
-            Self::CheckDigits => IbanIssue::CheckDigits,
-            Self::Bban => IbanIssue::Bban,
-            Self::Character { .. } => IbanIssue::Character,
-            Self::Checksum { .. } => IbanIssue::Checksum,
-        }
-    }
-
     /// The detailed reason for callers of [`validate_iban`]; never logged.
     fn reason(self) -> String {
         match self {
@@ -920,18 +877,6 @@ pub fn from_frontmatter(
     }
 }
 
-/// The build-log line for an invalid IBAN, or `None` when it is valid.
-///
-/// It names the page and the field and says what kind of problem it is,
-/// but quotes nothing from the value: see [`IbanIssue`].
-fn iban_warning(page_label: &str, who: &str, iban: &str) -> Option<String> {
-    let issue = check_iban(iban).err()?.issue();
-    Some(format!(
-        "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: {}",
-        issue.describe()
-    ))
-}
-
 /// Walks every IBAN/BIC inside an entity and emits `log::warn!` for
 /// anything that fails validation. The `page_label` is included in the
 /// warning so site authors can locate the offending page.
@@ -950,11 +895,41 @@ fn iban_warning(page_label: &str, who: &str, iban: &str) -> Option<String> {
 /// assert_eq!(warn_invalid_fields(&e, "page.md"), 1);
 /// ```
 pub fn warn_invalid_fields(entity: &Iso20022Entity, page_label: &str) -> usize {
+    // Each arm logs a literal: the account decides which line prints,
+    // but nothing read or computed from it is interpolated, so there is
+    // no data flow from the IBAN to the log (`rust/cleartext-logging`).
+    // Only the page and the field are named.
     fn warn_iban(page_label: &str, iban: &str, who: &str) -> usize {
-        iban_warning(page_label, who, iban).map_or(0, |line| {
-            log::warn!("{line}");
-            1
-        })
+        let Err(fault) = check_iban(iban) else {
+            return 0;
+        };
+        match fault {
+            IbanFault::Length(_) => log::warn!(
+                "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
+                 length outside the ISO 13616 range 15..=34"
+            ),
+            IbanFault::CountryCode => log::warn!(
+                "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
+                 country code is not two ASCII letters"
+            ),
+            IbanFault::CheckDigits => log::warn!(
+                "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
+                 check digits are not two ASCII digits"
+            ),
+            IbanFault::Bban => log::warn!(
+                "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
+                 BBAN is not alphanumeric ASCII"
+            ),
+            IbanFault::Character { .. } => log::warn!(
+                "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
+                 contains a non-alphanumeric character"
+            ),
+            IbanFault::Checksum { .. } => log::warn!(
+                "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
+                 MOD-97 checksum failed"
+            ),
+        }
+        1
     }
     fn warn_bic(page_label: &str, bic: &str, who: &str) -> usize {
         if let ValidationOutcome::Invalid { reason } = validate_bic(bic) {
@@ -1148,24 +1123,27 @@ pub fn validate_schema_org(value: &serde_json::Value) -> Vec<SchemaOrgError> {
 mod tests {
 
     #[test]
-    fn iban_warning_leaks_nothing_from_the_account() {
-        // A bad checksum: the reason carried the MOD-97 remainder, and the
-        // line a redacted fragment of the account itself.
-        let iban = "GB29NWBK60161331926818";
-        assert!(!validate_iban(iban).is_valid());
-        let line = iban_warning("page.md", "bank_account.iban", iban)
-            .expect("an invalid IBAN produces a warning");
-        assert!(line.contains("page.md") && line.contains("bank_account.iban"));
-        for fragment in ["GB29", "6818", "NWBK", "remainder"] {
-            assert!(
-                !line.contains(fragment),
-                "{fragment:?} leaked into {line:?}"
-            );
+    fn warn_invalid_fields_counts_each_iban_fault_once() {
+        for bad in [
+            "GB29",                   // length
+            "1B29NWBK60161331926819", // country code
+            "GBX9NWBK60161331926819", // check digits
+            "GB29NWBK6016133192681_", // BBAN
+            "GB29NWBK60161331926818", // checksum
+        ] {
+            let e = Iso20022Entity::BankAccount(BankAccount {
+                iban: Some(bad.into()),
+                ..BankAccount::default()
+            });
+            assert_eq!(warn_invalid_fields(&e, "page.md"), 1, "{bad}");
         }
-        assert!(
-            iban_warning("page.md", "x", "GB29NWBK60161331926819").is_none()
-        );
+        let ok = Iso20022Entity::BankAccount(BankAccount {
+            iban: Some("GB29NWBK60161331926819".into()),
+            ..BankAccount::default()
+        });
+        assert_eq!(warn_invalid_fields(&ok, "page.md"), 0);
     }
+
     /// A validation reason must never quote the value it rejected.
     ///
     /// These reasons are logged. `warn_invalid_fields` redacts the IBAN
