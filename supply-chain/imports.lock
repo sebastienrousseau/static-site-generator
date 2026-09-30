@@ -22,6 +22,27 @@ user-id = 696
 user-login = "fitzgen"
 user-name = "Nick Fitzgerald"
 
+[[publisher.clap]]
+version = "4.6.7"
+when = "2026-09-14"
+user-id = 6743
+user-login = "epage"
+user-name = "Ed Page"
+
+[[publisher.clap_builder]]
+version = "4.6.7"
+when = "2026-09-14"
+user-id = 6743
+user-login = "epage"
+user-name = "Ed Page"
+
+[[publisher.clap_derive]]
+version = "4.6.7"
+when = "2026-09-14"
+user-id = 6743
+user-login = "epage"
+user-name = "Ed Page"
+
 [[publisher.dtt]]
 version = "0.0.11"
 when = "2026-07-24"
@@ -57,6 +78,16 @@ user-id = 186843
 user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
+[[publisher.noyalib]]
+version = "0.0.37"
+when = "2026-09-06"
+trusted-publisher = "github:sebastienrousseau/noyalib"
+
+[[publisher.noyalib]]
+version = "0.0.44"
+when = "2026-09-17"
+trusted-publisher = "github:sebastienrousseau/noyalib"
+
 [[publisher.rss-gen]]
 version = "0.0.11"
 when = "2026-08-10"
@@ -82,6 +113,34 @@ when = "2026-07-24"
 user-id = 186843
 user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
+
+[[publisher.syn]]
+version = "2.0.119"
+when = "2026-07-15"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
+[[publisher.syn]]
+version = "3.0.6"
+when = "2026-09-16"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
+[[publisher.thiserror]]
+version = "2.0.21"
+when = "2026-09-23"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
+[[publisher.thiserror-impl]]
+version = "2.0.21"
+when = "2026-09-23"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
 
 [[publisher.unicode-normalization]]
 version = "0.1.25"

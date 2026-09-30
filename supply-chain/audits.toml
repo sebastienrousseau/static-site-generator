@@ -133,6 +133,27 @@ user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-10-05"
 end = "2027-07-26"
 
+[[trusted.clap]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2021-12-08"
+end = "2027-09-30"
+notes = "Ed Page maintains clap; Mozilla and the Bytecode Alliance trust him."
+
+[[trusted.clap_builder]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2023-03-28"
+end = "2027-09-30"
+notes = "Ed Page maintains clap; Mozilla and the Bytecode Alliance trust him."
+
+[[trusted.clap_derive]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2021-12-08"
+end = "2027-09-30"
+notes = "Ed Page maintains clap; Mozilla and the Bytecode Alliance trust him."
+
 [[trusted.dtt]]
 criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
@@ -170,6 +191,13 @@ user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
 start = "2026-05-10"
 end = "2027-07-26"
 
+[[trusted.noyalib]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:sebastienrousseau/noyalib"
+start = "2026-09-01"
+end = "2027-09-30"
+notes = "The maintainer's own crate, published by GitHub trusted publishing from sebastienrousseau/noyalib."
+
 [[trusted.rss-gen]]
 criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
@@ -200,3 +228,24 @@ criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
 start = "2024-10-17"
 end = "2027-07-26"
+
+[[trusted.syn]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-03-01"
+end = "2027-09-30"
+notes = "Extends this repo's existing trust in dtolnay to syn."
+
+[[trusted.thiserror]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-10-09"
+end = "2027-09-30"
+notes = "Extends this repo's existing trust in dtolnay to thiserror."
+
+[[trusted.thiserror-impl]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-10-09"
+end = "2027-09-30"
+notes = "Extends this repo's existing trust in dtolnay to thiserror-impl."
