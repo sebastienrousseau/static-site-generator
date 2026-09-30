@@ -16,12 +16,16 @@
 /// normal builds this compiles to nothing.
 #[cfg(feature = "test-fault-injection")]
 macro_rules! fail_point {
+    ($name:expr) => {
+        fail::fail_point!($name);
+    };
     ($name:expr, $body:expr) => {
         fail::fail_point!($name, $body);
     };
 }
 #[cfg(not(feature = "test-fault-injection"))]
 macro_rules! fail_point {
+    ($name:expr) => {};
     ($name:expr, $body:expr) => {};
 }
 

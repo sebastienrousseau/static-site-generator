@@ -293,6 +293,9 @@ fn parse_page_entry(
     sidecar_path: &Path,
     sidecar_dir: &Path,
 ) -> Option<PageEntry> {
+    // Counted by tests/listings_scale.rs: the sidecars are read once per
+    // build however many listings filter them.
+    fail_point!("pagination::read-sidecar");
     let content = fs::read_to_string(sidecar_path).ok()?;
     let meta: HashMap<String, serde_json::Value> =
         serde_json::from_str(&content).ok()?;
