@@ -23,6 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still passed a leftover `-n=docs` (a no-op before 0.0.63) saw success
   with nothing in its output directory.
 
+### Security
+
+- **Invalid IBANs are logged without any account data.** The ISO 20022
+  JSON-LD check logged a failing IBAN with its redacted head and tail
+  and the MOD-97 remainder, which is derived from the full number
+  (CodeQL cleartext-logging). The log line now carries only the page,
+  the field and a failure category; `validate_iban`'s result is
+  unchanged.
+
 ## [0.0.63] - 2026-09-15
 
 ### Added
