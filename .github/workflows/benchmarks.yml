@@ -52,7 +52,10 @@ jobs:
       github.event_name != 'pull_request' ||
       contains(github.event.pull_request.labels.*.name, 'run-benchmarks')
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    # The first split run (2026-10-01) took 76 min for all_pub_api and
+    # 72 min for bench; 120 leaves room for a slower runner without
+    # shortening Criterion's sampling.
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
