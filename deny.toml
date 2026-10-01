@@ -50,12 +50,15 @@ skip-tree = []
 
 [advisories]
 # List of advisory IDs to ignore.
-# These are unmaintained crate warnings from transitive deps in staticdatagen
-# that cannot be resolved without upstream changes.
+# These are unmaintained crate warnings from transitive dependencies that
+# cannot be resolved without upstream changes: both crates below are the
+# latest releases of their dependents (syntect 5.3.0, rav1e 0.8.1).
 ignore = [
-    "RUSTSEC-2024-0320", # yaml-rust (unmaintained) — via syntect/comrak
-    "RUSTSEC-2024-0436", # paste (unmaintained) — via dtt
-    "RUSTSEC-2025-0141", # bincode (unmaintained) — via syntect
+    "RUSTSEC-2024-0436", # paste (unmaintained) — via rav1e (ravif AVIF encoding)
+    "RUSTSEC-2025-0141", # bincode (unmaintained) — via syntect (mdx-gen)
+    # RUSTSEC-2024-0320 (yaml-rust) was removed for v0.0.64: staticdatagen
+    # 0.0.20 stopped enabling comrak's default features, which had turned
+    # on syntect's yaml-load, so yaml-rust (and onig) left the graph.
     # The quick-xml <0.41 DoS pair (RUSTSEC-2026-0194 / -0195) and the
     # proc-macro-error2 unmaintained advisory (RUSTSEC-2026-0173) were
     # removed in v0.0.50: no crate in the graph matches them any more. The

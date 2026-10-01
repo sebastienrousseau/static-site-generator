@@ -122,21 +122,6 @@ impl ValidationOutcome {
     }
 }
 
-/// Validates an IBAN (ISO 13616) using the MOD-97 checksum.
-///
-/// Accepts the canonical compact form (no spaces) as well as the
-/// space-delimited print form. Length bounds: 15–34 characters
-/// once whitespace is stripped.
-///
-/// # Algorithm
-///
-/// 1. Strip all ASCII whitespace; upper-case.
-/// 2. Move the first 4 characters (country + check digits) to the end.
-/// 3. Map letters A-Z → 10..=35.
-/// 4. The resulting integer must be congruent to 1 mod 97.
-///
-/// Implemented without `num-bigint` by walking the digit string left
-/// to right, taking each modulo step incrementally — this keeps the
 /// Masks the middle of a financial identifier for logging.
 ///
 /// # Why logging differs from publishing
@@ -178,6 +163,21 @@ pub fn redact_for_log(value: &str) -> String {
     format!("{head}…{tail}")
 }
 
+/// Validates an IBAN (ISO 13616) using the MOD-97 checksum.
+///
+/// Accepts the canonical compact form (no spaces) as well as the
+/// space-delimited print form. Length bounds: 15–34 characters
+/// once whitespace is stripped.
+///
+/// # Algorithm
+///
+/// 1. Strip all ASCII whitespace; upper-case.
+/// 2. Move the first 4 characters (country + check digits) to the end.
+/// 3. Map letters A-Z → 10..=35.
+/// 4. The resulting integer must be congruent to 1 mod 97.
+///
+/// Implemented without `num-bigint` by walking the digit string left
+/// to right, taking each modulo step incrementally — this keeps the
 /// crate dependency-free for the ISO validator.
 ///
 /// # Examples
@@ -189,6 +189,54 @@ pub fn redact_for_log(value: &str) -> String {
 /// ```
 #[must_use]
 pub fn validate_iban(input: &str) -> ValidationOutcome {
+    match check_iban(input) {
+        Ok(()) => ValidationOutcome::Valid,
+        Err(fault) => ValidationOutcome::Invalid {
+            reason: fault.reason(),
+        },
+    }
+}
+
+/// The first failure [`check_iban`] found, with the measurements behind
+/// [`validate_iban`]'s detailed reason.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum IbanFault {
+    Length(usize),
+    CountryCode,
+    CheckDigits,
+    Bban,
+    Character { position: usize },
+    Checksum { remainder: u64 },
+}
+
+impl IbanFault {
+    /// The detailed reason for callers of [`validate_iban`]; never logged.
+    fn reason(self) -> String {
+        match self {
+            Self::Length(len) => {
+                format!("IBAN length {len} outside ISO 13616 range 15..=34")
+            }
+            Self::CountryCode => {
+                "IBAN country code must be two ASCII letters".to_string()
+            }
+            Self::CheckDigits => {
+                "IBAN check digits must be two ASCII digits".to_string()
+            }
+            Self::Bban => "IBAN BBAN must be alphanumeric ASCII".to_string(),
+            Self::Character { position } => {
+                format!(
+                    "Non-alphanumeric character in IBAN at position {position}"
+                )
+            }
+            Self::Checksum { remainder } => {
+                format!("IBAN MOD-97 checksum failed (remainder={remainder})")
+            }
+        }
+    }
+}
+
+/// The checks behind [`validate_iban`], returning the first failure.
+fn check_iban(input: &str) -> Result<(), IbanFault> {
     let compact: String = input
         .chars()
         .filter(|c| !c.is_whitespace())
@@ -196,31 +244,20 @@ pub fn validate_iban(input: &str) -> ValidationOutcome {
         .to_ascii_uppercase();
 
     if compact.len() < 15 || compact.len() > 34 {
-        return ValidationOutcome::Invalid {
-            reason: format!(
-                "IBAN length {} outside ISO 13616 range 15..=34",
-                compact.len()
-            ),
-        };
+        return Err(IbanFault::Length(compact.len()));
     }
 
     // First two chars must be ASCII letters (country code), next two ASCII digits (check digits).
     let bytes = compact.as_bytes();
     if !(bytes[0].is_ascii_alphabetic() && bytes[1].is_ascii_alphabetic()) {
-        return ValidationOutcome::Invalid {
-            reason: "IBAN country code must be two ASCII letters".to_string(),
-        };
+        return Err(IbanFault::CountryCode);
     }
     if !(bytes[2].is_ascii_digit() && bytes[3].is_ascii_digit()) {
-        return ValidationOutcome::Invalid {
-            reason: "IBAN check digits must be two ASCII digits".to_string(),
-        };
+        return Err(IbanFault::CheckDigits);
     }
     // The remaining BBAN must be alphanumeric.
     if !bytes[4..].iter().all(u8::is_ascii_alphanumeric) {
-        return ValidationOutcome::Invalid {
-            reason: "IBAN BBAN must be alphanumeric ASCII".to_string(),
-        };
+        return Err(IbanFault::Bban);
     }
 
     // Rearrange: move first 4 chars to end.
@@ -242,11 +279,7 @@ pub fn validate_iban(input: &str) -> ValidationOutcome {
             // it straight back into the same line, which is what
             // `rust/cleartext-logging` flagged. A position is enough to
             // locate the problem and reveals nothing about the account.
-            return ValidationOutcome::Invalid {
-                reason: format!(
-                    "Non-alphanumeric character in IBAN at position {position}"
-                ),
-            };
+            return Err(IbanFault::Character { position });
         };
         // Each letter expands to two digits (10..=35); fold accordingly.
         if digits >= 10 {
@@ -257,13 +290,9 @@ pub fn validate_iban(input: &str) -> ValidationOutcome {
     }
 
     if remainder == 1 {
-        ValidationOutcome::Valid
+        Ok(())
     } else {
-        ValidationOutcome::Invalid {
-            reason: format!(
-                "IBAN MOD-97 checksum failed (remainder={remainder})"
-            ),
-        }
+        Err(IbanFault::Checksum { remainder })
     }
 }
 
@@ -866,17 +895,41 @@ pub fn from_frontmatter(
 /// assert_eq!(warn_invalid_fields(&e, "page.md"), 1);
 /// ```
 pub fn warn_invalid_fields(entity: &Iso20022Entity, page_label: &str) -> usize {
+    // Each arm logs a literal: the account decides which line prints,
+    // but nothing read or computed from it is interpolated, so there is
+    // no data flow from the IBAN to the log (`rust/cleartext-logging`).
+    // Only the page and the field are named.
     fn warn_iban(page_label: &str, iban: &str, who: &str) -> usize {
-        if let ValidationOutcome::Invalid { reason } = validate_iban(iban) {
-            log::warn!(
+        let Err(fault) = check_iban(iban) else {
+            return 0;
+        };
+        match fault {
+            IbanFault::Length(_) => log::warn!(
                 "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
-                 {} — {reason}",
-                redact_for_log(iban)
-            );
-            1
-        } else {
-            0
+                 length outside the ISO 13616 range 15..=34"
+            ),
+            IbanFault::CountryCode => log::warn!(
+                "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
+                 country code is not two ASCII letters"
+            ),
+            IbanFault::CheckDigits => log::warn!(
+                "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
+                 check digits are not two ASCII digits"
+            ),
+            IbanFault::Bban => log::warn!(
+                "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
+                 BBAN is not alphanumeric ASCII"
+            ),
+            IbanFault::Character { .. } => log::warn!(
+                "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
+                 contains a non-alphanumeric character"
+            ),
+            IbanFault::Checksum { .. } => log::warn!(
+                "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
+                 MOD-97 checksum failed"
+            ),
         }
+        1
     }
     fn warn_bic(page_label: &str, bic: &str, who: &str) -> usize {
         if let ValidationOutcome::Invalid { reason } = validate_bic(bic) {
@@ -1068,6 +1121,29 @@ pub fn validate_schema_org(value: &serde_json::Value) -> Vec<SchemaOrgError> {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn warn_invalid_fields_counts_each_iban_fault_once() {
+        for bad in [
+            "GB29",                   // length
+            "1B29NWBK60161331926819", // country code
+            "GBX9NWBK60161331926819", // check digits
+            "GB29NWBK6016133192681_", // BBAN
+            "GB29NWBK60161331926818", // checksum
+        ] {
+            let e = Iso20022Entity::BankAccount(BankAccount {
+                iban: Some(bad.into()),
+                ..BankAccount::default()
+            });
+            assert_eq!(warn_invalid_fields(&e, "page.md"), 1, "{bad}");
+        }
+        let ok = Iso20022Entity::BankAccount(BankAccount {
+            iban: Some("GB29NWBK60161331926819".into()),
+            ..BankAccount::default()
+        });
+        assert_eq!(warn_invalid_fields(&ok, "page.md"), 0);
+    }
+
     /// A validation reason must never quote the value it rejected.
     ///
     /// These reasons are logged. `warn_invalid_fields` redacts the IBAN

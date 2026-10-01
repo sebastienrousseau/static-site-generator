@@ -162,7 +162,7 @@ what it measured.
 | Location | Contains |
 |---|---|
 | `src/**` `#[cfg(test)]` | Unit tests, next to the code they cover |
-| `tests/*.rs` | Integration and gate suites (58 files) |
+| `tests/*.rs` | Integration and gate suites |
 | `tests/golden/` | Golden-file fixtures |
 | `benches/bench.rs` | Criterion umbrella harness (`make bench`) |
 | `fuzz/fuzz_targets/` | libFuzzer targets, replayed per push by ClusterFuzzLite |

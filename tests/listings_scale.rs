@@ -18,8 +18,11 @@
 //! Wall-clock assertions are the weakest kind of test — a loaded runner
 //! can miss any budget. So the budget here is a *ceiling* set well above
 //! the local baseline, in the same spirit as `tests/perf_budgets.rs`
-//! (~10x), and the ratio assertion carries the algorithmic claim, which
-//! is the part that actually regresses.
+//! (~10x). Claim 1 is checked by counting sidecar reads through the
+//! `pagination::read-sidecar` failpoint, not by timing: a timed ratio of
+//! sixteen listings to one measured 2.7x and 4.3x on correct code on
+//! Windows runners, where file I/O dominates, against 4.53x for the
+//! broken code it was meant to catch. A count is the same on every OS.
 
 // `clippy.toml`'s `allow-expect-in-tests` only reaches `#[test]` functions
 // and `#[cfg(test)]` modules. This is an integration test crate, built
@@ -45,6 +48,15 @@ const CORPUS: usize = 10_000;
 /// genuine algorithmic regression (a re-read per listing, or per page)
 /// blows past it by an order of magnitude rather than a few percent.
 const BUDGET: Duration = Duration::from_secs(20);
+
+/// Serialises the tests in this file. The read counter is a global
+/// failpoint, so a build running in a parallel test would add its reads.
+fn serial() -> std::sync::MutexGuard<'static, ()> {
+    static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    SERIAL
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
 
 fn corpus(meta: &Path, n: usize) {
     fs::create_dir_all(meta).expect("create .meta");
@@ -130,6 +142,7 @@ fn corpus_dir() -> TempDir {
 
 #[test]
 fn ten_thousand_items_stay_within_the_budget() {
+    let _serial = serial();
     let dir = corpus_dir();
     let elapsed = timed(&dir, one_listing());
 
@@ -149,38 +162,38 @@ fn ten_thousand_items_stay_within_the_budget() {
     );
 }
 
-/// Sixteen listings over the same corpus must not cost sixteen times one.
+/// Sixteen listings over the same corpus must read it once, as one does.
 ///
-/// This is the "cached frontmatter" half of the claim, and unlike the
-/// wall-clock ceiling it fails loudly on the regression it describes:
-/// re-reading sidecars per listing turns this ratio into roughly 16.
+/// This is the "cached frontmatter" half of the claim. Re-reading the
+/// sidecars per listing makes the sixteen-listing count sixteen times
+/// the corpus; it must equal it. Needs the `pagination::read-sidecar`
+/// failpoint, so it exists only under `test-fault-injection`, which is
+/// how CI runs `cargo test --tests`.
+#[cfg(feature = "test-fault-injection")]
 #[test]
-fn listing_count_does_not_multiply_the_work() {
+fn listing_count_does_not_multiply_sidecar_reads() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    let _serial = serial();
     let dir = corpus_dir();
+    let reads = Arc::new(AtomicUsize::new(0));
+    let counter = Arc::clone(&reads);
+    fail::cfg_callback("pagination::read-sidecar", move || {
+        let _ = counter.fetch_add(1, Ordering::SeqCst);
+    })
+    .expect("activate the read counter");
 
-    // Warm the cache first so neither measurement pays for the other's
-    // cold read.
     let _ = timed(&dir, one_listing());
+    let one = reads.swap(0, Ordering::SeqCst);
+    let _ = timed(&dir, many_listings());
+    let many = reads.swap(0, Ordering::SeqCst);
+    fail::remove("pagination::read-sidecar");
 
-    let one = timed(&dir, one_listing());
-    let many = timed(&dir, many_listings());
-
-    // The bound is calibrated by breaking the code, not guessed.
-    // Measured on this corpus with sixteen partitions:
-    //
-    //   shared read (correct)        ~0.90x
-    //   re-read per listing (broken) ~4.53x
-    //
-    // 2.5 sits between them with roughly 2.8x headroom over the correct
-    // value, which Windows needs: file writes there are expensive
-    // enough that an earlier version of this test — where the extra
-    // listings wrote extra pages rather than partitioning the same
-    // corpus — reached 2.1x on correct code and failed CI.
-    let ratio = many.as_secs_f64() / one.as_secs_f64().max(0.001);
-    println!("[scale] one={one:?} many={many:?} ratio={ratio:.2}x");
-    assert!(
-        ratio < 2.5,
-        "sixteen listings took {many:?} against {one:?} for one \
-         (ratio {ratio:.1}x) — sidecars look re-read per listing"
+    assert_eq!(one, CORPUS, "one listing should read each sidecar once");
+    assert_eq!(
+        many, CORPUS,
+        "sixteen listings read {many} sidecars for a {CORPUS}-item corpus: \
+         sidecars look re-read per listing"
     );
 }

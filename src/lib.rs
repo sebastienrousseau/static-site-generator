@@ -16,12 +16,16 @@
 /// normal builds this compiles to nothing.
 #[cfg(feature = "test-fault-injection")]
 macro_rules! fail_point {
+    ($name:expr) => {
+        fail::fail_point!($name);
+    };
     ($name:expr, $body:expr) => {
         fail::fail_point!($name, $body);
     };
 }
 #[cfg(not(feature = "test-fault-injection"))]
 macro_rules! fail_point {
+    ($name:expr) => {};
     ($name:expr, $body:expr) => {};
 }
 
@@ -639,7 +643,7 @@ fn dispatch_invocation(
     invocation: CliInvocation,
     matches: &clap::ArgMatches,
 ) -> Result<(), SsgError> {
-    let announces_site = generates_site(&invocation);
+    let announces_site = announces_site(&invocation, matches);
 
     let result = match invocation {
         CliInvocation::Legacy => run_legacy(matches),
@@ -681,6 +685,24 @@ const fn generates_site(invocation: &CliInvocation) -> bool {
         | CliInvocation::Audit
         | CliInvocation::Plugins { .. } => false,
     }
+}
+
+/// Whether a successful `invocation` may print "Site generated
+/// successfully.".
+///
+/// The legacy form with `--new NAME` scaffolds a project and returns
+/// before building (see [`run_legacy`]), so it has no site to announce.
+fn announces_site(
+    invocation: &CliInvocation,
+    matches: &clap::ArgMatches,
+) -> bool {
+    let scaffolds = matches!(invocation, CliInvocation::Legacy)
+        && matches
+            .try_get_one::<String>("new")
+            .ok()
+            .flatten()
+            .is_some();
+    generates_site(invocation) && !scaffolds
 }
 
 /// Reports the plugin pipeline without building anything.
@@ -3908,6 +3930,27 @@ mod tests {
                 "{inv:?} writes no site and must not claim one"
             );
         }
+    }
+
+    #[test]
+    fn legacy_new_scaffolds_and_does_not_claim_a_site() {
+        // Regression: `ssg --new NAME` scaffolds a project and exits
+        // without building, yet printed "Site generated successfully.",
+        // so a build script passing a leftover `-n=docs` reported
+        // success with nothing written to its output directory.
+        let (inv, matches) =
+            Cli::parse_and_dispatch(["ssg", "--new", "mysite"]).unwrap();
+        assert_same_variant(&inv, &CliInvocation::Legacy);
+        assert!(!announces_site(&inv, &matches), "--new builds no site");
+
+        let (inv, matches) =
+            Cli::parse_and_dispatch(["ssg", "-c", "content", "-o", "public"])
+                .unwrap();
+        assert_same_variant(&inv, &CliInvocation::Legacy);
+        assert!(
+            announces_site(&inv, &matches),
+            "a legacy build writes a site"
+        );
     }
 
     #[test]

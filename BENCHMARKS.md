@@ -2,7 +2,7 @@
 
 # Benchmarks
 
-Reproducible performance methodology and CI gates for SSG **v0.0.63**.
+Reproducible performance methodology and CI gates for SSG **v0.0.64**.
 
 > **Figures last measured at v0.0.58.** The methodology and the CI gates
 > below apply to this release; the numbers under _Current_ were carried
@@ -149,7 +149,7 @@ Each row was measured on the same content corpus (`benches/corpus/small`,
 100 pages, full frontmatter). Wall-clock times are median-of-10 runs
 captured with [`hyperfine`](https://github.com/sharkdp/hyperfine).
 
-| Capability | SSG v0.0.63 | Hugo v0.155+ | Zola v0.20+ | Astro 6 | Eleventy 3 |
+| Capability | SSG v0.0.64 | Hugo v0.155+ | Zola v0.20+ | Astro 6 | Eleventy 3 |
 |---|---|---|---|---|---|
 | Language | Rust | Go | Rust | JS/TS | JS |
 | Runtime | None | None | None | Node 20+ | Node 20+ |
@@ -255,11 +255,11 @@ measurement.
 
 CI's coverage gate enforces the floors below (set in `ci.yml` `env`):
 
-| Metric | Floor | Current (v0.0.63) | Headroom |
+| Metric | Floor | Current (v0.0.64) | Headroom |
 |---|---:|---:|---:|
-| Regions | 98.0 % | 99.31 % | 1.31 |
-| Functions | 98.0 % | 99.24 % | 1.24 |
-| Lines | 98.0 % | 99.29 % | 1.29 |
+| Regions | 98.0 % | 99.09 % | 1.09 |
+| Functions | 98.0 % | 99.00 % | 1.00 |
+| Lines | 98.0 % | 99.07 % | 1.07 |
 
 The gate runs `cargo llvm-cov --lib` (not `--tests`) so the heavy
 `tests/example_outputs.rs` integration suite stays in its own

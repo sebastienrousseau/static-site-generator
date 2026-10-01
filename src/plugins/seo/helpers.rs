@@ -332,7 +332,12 @@ pub(super) fn extract_first_content_image(html: &str) -> String {
 
     if let Some(img_pos) = search_region.find("<img") {
         let after_img = &search_region[img_pos..];
-        let tag_end = after_img.find('>').unwrap_or(500).min(500);
+        // Scan at most 500 bytes of the tag, stepping back to a char
+        // boundary: text in the tag may be multi-byte (a Tamil `alt`).
+        let mut tag_end = after_img.find('>').unwrap_or(500).min(500);
+        while !after_img.is_char_boundary(tag_end) {
+            tag_end -= 1;
+        }
         let img_tag = &after_img[..tag_end];
         if let Some(src_pos) = img_tag.find("src=\"") {
             let after_src = &img_tag[src_pos + 5..];
@@ -797,5 +802,43 @@ mod tests {
     fn extract_meta_date_unterminated_datetime_returns_none() {
         let html = r#"<time datetime="2026-01-01"#;
         assert_eq!(extract_meta_date(html), None);
+    }
+
+    // ---- multi-byte text in an <img> tag -------------------------------
+    //
+    // The tag scan is capped at 500 bytes. With no `>` inside that window,
+    // byte 500 can fall inside a multi-byte character, and slicing there
+    // panicked (`end byte index 500 is not a char boundary`). Found
+    // building a Tamil page, where each character is three bytes.
+
+    /// `src` comes first and the long Tamil `alt` runs past the cap.
+    #[test]
+    fn first_content_image_src_before_long_multibyte_alt() {
+        let html = format!(
+            "<main><img src=\"/ta.png\" alt=\"{}\"></main>",
+            "ட".repeat(200)
+        );
+        assert_eq!(extract_first_content_image(&html), "/ta.png");
+    }
+
+    /// `src` sits beyond the cap: no image, and no panic.
+    #[test]
+    fn first_content_image_src_past_cap_inside_multibyte_run() {
+        // `<img alt="` is 10 bytes; 10 + 3k never equals 500.
+        let html = format!(
+            "<main><img alt=\"{}\" src=\"/late.png\"></main>",
+            "ட".repeat(200)
+        );
+        assert_eq!(extract_first_content_image(&html), "");
+    }
+
+    /// A short, unterminated tag: no `>` and fewer than 500 bytes left,
+    /// so the cap itself lies past the end of the string.
+    #[test]
+    fn first_content_image_unterminated_short_tag() {
+        assert_eq!(
+            extract_first_content_image("<main><img src=\"/a.png\""),
+            "/a.png"
+        );
     }
 }

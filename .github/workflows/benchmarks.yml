@@ -95,9 +95,14 @@ jobs:
         run: cargo test --lib bench_corpus
 
       - name: Run benchmarks
+        # `--bench '*'` selects the [[bench]] targets only. A bare
+        # `cargo bench` also runs the library and binary under libtest's
+        # bench harness, which rejects Criterion's `--output-format` with
+        # "Unrecognized option" and failed every run before a single
+        # Criterion benchmark started.
         run: |
           set -o pipefail
-          cargo bench --features benchmark -- --output-format bencher \
+          cargo bench --features benchmark --bench '*' -- --output-format bencher \
             | tee bench-raw.txt
 
       - name: Assemble the report

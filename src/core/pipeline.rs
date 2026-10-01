@@ -989,12 +989,13 @@ pub fn register_default_plugins(
     plugins.register(postprocess::JsonFeedPlugin);
     plugins.register(postprocess::ManifestFixPlugin);
     plugins.register(postprocess::HtmlFixPlugin);
-    // `postprocess::SbomPlugin` ("sbom-generator") is deliberately not
-    // registered. It wrote the same `sbom.cdx.json` as `crate::sbom::SbomPlugin`
-    // ("sbom"), which registers later and therefore overwrote it — the build
-    // serialised the dependency tree twice and threw one copy away. The
-    // surviving plugin is the more complete of the two: it also injects the
-    // `<link rel="sbom">` into every document head.
+    // There is one SBOM emitter, `crate::sbom::SbomPlugin` ("sbom"). A second
+    // one, `postprocess::SbomPlugin` ("sbom-generator"), wrote the same
+    // `sbom.cdx.json` and was overwritten by it, so the build serialised the
+    // dependency tree twice and discarded one copy. It was unregistered,
+    // deprecated in 0.0.58 and removed in 0.0.64. The survivor is the more
+    // complete of the two: it also injects `<link rel="sbom">` into every
+    // document head.
 
     // Agentic discovery (#552): agents.txt + .well-known/ai-plugin.json
     // + .well-known/mcp.json. No-op when `[agents]` is absent from
@@ -1177,7 +1178,8 @@ mod tests {
     }
 
     /// Exactly one SBOM emitter, and it is the one that also links the
-    /// document head — see `postprocess::SbomPlugin`'s deprecation note.
+    /// document head. A duplicate was removed in 0.0.64; this guards
+    /// against a second emitter being registered again.
     #[test]
     fn exactly_one_sbom_plugin_is_registered() {
         let config = SsgConfig::default();
