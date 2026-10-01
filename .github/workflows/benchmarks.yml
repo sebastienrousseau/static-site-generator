@@ -40,12 +40,12 @@ permissions:
   contents: read
 
 jobs:
+  # One job per Criterion target. Run as a single job, all 421 benchmarks at
+  # Criterion's default sampling took longer than the 90-minute limit (the
+  # 2026-10-01 nightly was cancelled at the limit). Splitting keeps full
+  # sampling precision for the published figures instead of shortening it.
   bench:
-    name: Criterion (seeded corpus)
-    # Write is needed only by the "Commit the published figures" step,
-    # which is itself guarded by `github.event_name == 'schedule'`.
-    permissions:
-      contents: write
+    name: Criterion · ${{ matrix.target }}
     # Only run on a PR when explicitly labelled; always run on schedule and
     # manual dispatch.
     if: >-
@@ -53,21 +53,72 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'run-benchmarks')
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - bench
+          - bench_html_scanning
+          - avif_vs_webp
+          - incremental_1000_pages
+          - all_pub_api
+          - bench_concurrent_operations
+          - core
+          - plugins
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          key: benchmarks
+      - name: Verify the corpus generator is deterministic
+        # If the corpus is not reproducible the timings below mean nothing, so
+        # this gates the run rather than merely reporting.
+        run: cargo test --lib bench_corpus
+      - name: Run benchmarks
+        # `--bench <target>` selects one [[bench]] target. A bare
+        # `cargo bench` also runs the library and binary under libtest's
+        # bench harness, which rejects Criterion's `--output-format` with
+        # "Unrecognized option" and failed every run before a single
+        # Criterion benchmark started.
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -o pipefail
+          cargo bench --features benchmark --bench "$TARGET" -- --output-format bencher \
+            | tee "bench-raw-$TARGET.txt"
+      - name: Upload this target's results
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bench-raw-${{ matrix.target }}
+          path: |
+            bench-raw-${{ matrix.target }}.txt
+            target/criterion/**
+          retention-days: 90
 
+  report:
+    name: Benchmark report
+    needs: bench
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Write is needed only by the "Commit the published figures" step,
+    # which is itself guarded by `github.event_name == 'schedule'`.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The publish step commits back to the branch.
           persist-credentials: true
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      - name: Download every target's results
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          key: benchmarks
-
+          pattern: bench-raw-*
+          merge-multiple: true
       # The hardware is part of the result. A figure without the machine it
       # was measured on cannot be compared with anything.
       - name: Record the environment
@@ -80,7 +131,7 @@ jobs:
             echo "| --- | --- |"
             echo "| Date (UTC) | $(date -u +'%Y-%m-%d %H:%M') |"
             echo "| Commit | \`${GITHUB_SHA}\` |"
-            echo "| Runner | ${RUNNER_OS} / ${RUNNER_ARCH} (${{ runner.name }}) |"
+            echo "| Runner | ${RUNNER_OS} / ${RUNNER_ARCH} (${RUNNER_NAME}) |"
             echo "| CPU | $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs) |"
             echo "| Cores | $(nproc) |"
             echo "| Memory | $(free -h | awk '/^Mem:/{print $2}') |"
@@ -89,22 +140,14 @@ jobs:
           } > bench-env.md
           cat bench-env.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Verify the corpus generator is deterministic
-        # If the corpus is not reproducible the timings below mean nothing, so
-        # this gates the run rather than merely reporting.
-        run: cargo test --lib bench_corpus
-
-      - name: Run benchmarks
-        # `--bench '*'` selects the [[bench]] targets only. A bare
-        # `cargo bench` also runs the library and binary under libtest's
-        # bench harness, which rejects Criterion's `--output-format` with
-        # "Unrecognized option" and failed every run before a single
-        # Criterion benchmark started.
+      - name: Combine the targets in a fixed order
         run: |
-          set -o pipefail
-          cargo bench --features benchmark --bench '*' -- --output-format bencher \
-            | tee bench-raw.txt
-
+          set -euo pipefail
+          : > bench-raw.txt
+          for t in bench bench_html_scanning avif_vs_webp incremental_1000_pages all_pub_api bench_concurrent_operations core plugins; do
+            test -s "bench-raw-$t.txt" || { echo "::error::no results for $t"; exit 1; }
+            cat "bench-raw-$t.txt" >> bench-raw.txt
+          done
       - name: Assemble the report
         run: |
           {
@@ -166,12 +209,11 @@ jobs:
           git commit -m "chore(bench): publish nightly figures [skip ci]"
           git push
 
-      - name: Upload results
+      - name: Upload the report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: benchmarks-${{ github.sha }}
           path: |
             bench-report.md
             bench-raw.txt
-            target/criterion/**
           retention-days: 90
