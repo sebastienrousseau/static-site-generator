@@ -3474,9 +3474,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.20"
+version = "0.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2f3e2aa30f4e6fe517e0909a6eb0f6a618d2359f8586f74606589baf6f85994"
+checksum = "9a28f31deb9dd1778450a06bb0e1161a8b90dff97a5959bbf3f860b5a1901450"
 dependencies = [
  "anyhow",
  "comrak 0.54.0",
