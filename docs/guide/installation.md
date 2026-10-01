@@ -104,7 +104,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ssg = "0.0.64"
+ssg = "0.0.65"
 ```
 
 ## WSL2 / GitHub Codespaces

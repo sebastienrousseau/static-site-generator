@@ -85,10 +85,6 @@ fn apply_html_fixes(html: &str) -> String {
         modified = wrap_tables_for_reflow(&modified);
     }
 
-    if modified.contains("&lt;") {
-        modified = fix_escaped_html_entities(&modified);
-    }
-
     if modified.contains("<code><") {
         modified = escape_markup_inside_code_spans(&modified);
     }
@@ -631,124 +627,35 @@ fn inject_class_attr(html: &mut String, pos: usize, class_value: &str) {
     }
 }
 
-/// Decodes HTML entities that were escaped inside markdown template bodies.
-fn fix_escaped_html_entities(html: &str) -> String {
-    let mut modified = html.to_string();
-
-    let tag_prefixes = [
-        "&lt;section",
-        "&lt;/section&gt;",
-        "&lt;article",
-        "&lt;/article&gt;",
-        "&lt;header",
-        "&lt;/header&gt;",
-        "&lt;footer",
-        "&lt;/footer&gt;",
-        "&lt;nav",
-        "&lt;/nav&gt;",
-        "&lt;aside",
-        "&lt;/aside&gt;",
-        "&lt;main",
-        "&lt;/main&gt;",
-        "&lt;div",
-        "&lt;/div&gt;",
-        "&lt;form",
-        "&lt;/form&gt;",
-        "&lt;input",
-        "&lt;/input&gt;",
-        "&lt;label",
-        "&lt;/label&gt;",
-        "&lt;button",
-        "&lt;/button&gt;",
-        "&lt;select",
-        "&lt;/select&gt;",
-        "&lt;option",
-        "&lt;/option&gt;",
-        "&lt;textarea",
-        "&lt;/textarea&gt;",
-        "&lt;table",
-        "&lt;/table&gt;",
-        "&lt;thead",
-        "&lt;/thead&gt;",
-        "&lt;tbody",
-        "&lt;/tbody&gt;",
-        "&lt;tr",
-        "&lt;/tr&gt;",
-        "&lt;th",
-        "&lt;/th&gt;",
-        "&lt;td",
-        "&lt;/td&gt;",
-        "&lt;p",
-        "&lt;/p&gt;",
-        "&lt;span",
-        "&lt;/span&gt;",
-        "&lt;a ",
-        "&lt;/a&gt;",
-        "&lt;img",
-        "&lt;picture",
-        "&lt;/picture&gt;",
-        "&lt;source",
-        "&lt;h1",
-        "&lt;/h1&gt;",
-        "&lt;h2",
-        "&lt;/h2&gt;",
-        "&lt;h3",
-        "&lt;/h3&gt;",
-        "&lt;h4",
-        "&lt;/h4&gt;",
-        "&lt;h5",
-        "&lt;/h5&gt;",
-        "&lt;h6",
-        "&lt;/h6&gt;",
-        "&lt;ul",
-        "&lt;/ul&gt;",
-        "&lt;ol",
-        "&lt;/ol&gt;",
-        "&lt;li",
-        "&lt;/li&gt;",
-        "&lt;strong",
-        "&lt;/strong&gt;",
-        "&lt;em",
-        "&lt;/em&gt;",
-        "&lt;blockquote",
-        "&lt;/blockquote&gt;",
-        "&lt;hr",
-        "&lt;br",
-    ];
-
-    for prefix in tag_prefixes {
-        if prefix.ends_with("&gt;") {
-            let clean_closing =
-                prefix.replace("&lt;/", "</").replace("&gt;", ">");
-            modified = modified.replace(prefix, &clean_closing);
-        } else {
-            while let Some(start) = modified.find(prefix) {
-                if let Some(end_rel) = modified[start..].find("&gt;") {
-                    let end = start + end_rel + 4;
-                    let tag_chunk = &modified[start..end];
-                    let decoded_tag = tag_chunk
-                        .replace("&lt;", "<")
-                        .replace("&gt;", ">")
-                        .replace("&quot;", "\"")
-                        .replace("&#x27;", "'");
-                    modified = format!(
-                        "{}{}{}",
-                        &modified[..start],
-                        decoded_tag,
-                        &modified[end..]
-                    );
-                } else {
-                    break;
-                }
-            }
+#[cfg(test)]
+mod tests {
+    /// Markup quoted in prose stays text.
+    ///
+    /// An article explaining an element writes it as text: the source has
+    /// `&lt;div&gt;`, and the reader must see `<div>`. A pass that
+    /// "repaired" escaped tags from a fixed list turned that text into a
+    /// live element (and, matching by prefix, `&lt;embed` via `&lt;em` and
+    /// `&lt;link` via `&lt;li`). It existed to undo staticdatagen escaping
+    /// whole page bodies, which staticdatagen 0.0.21 no longer does.
+    #[test]
+    fn quoted_markup_in_prose_is_left_as_text() {
+        for quoted in [
+            "&lt;div class=&quot;card&quot;&gt;",
+            "&lt;section&gt;",
+            "&lt;embed src=&quot;x.swf&quot;&gt;",
+            "&lt;link rel=&quot;stylesheet&quot; href=&quot;x.css&quot;&gt;",
+        ] {
+            let html = format!(
+                "<html><head></head><body><main><p>Write {quoted} to wrap it.</p></main></body></html>"
+            );
+            let out = apply_html_fixes(&html);
+            assert!(
+                out.contains(quoted),
+                "quoted markup {quoted:?} must stay escaped, got: {out}"
+            );
         }
     }
 
-    modified
-}
-
-#[cfg(test)]
-mod tests {
     /// A themed code block keeps its markup.
     ///
     /// Regression: v0.0.58 escaped every bare `<code>`, including the ones

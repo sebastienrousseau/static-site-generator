@@ -3320,7 +3320,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.64"
+version = "0.0.65"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -3366,7 +3366,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-a11y"
-version = "0.0.64"
+version = "0.0.65"
 dependencies = [
  "serde",
  "serde_json",
@@ -3374,7 +3374,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.0.64"
+version = "0.0.65"
 dependencies = [
  "log",
  "noyalib 0.0.44",
@@ -3388,7 +3388,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-heap-probe"
-version = "0.0.64"
+version = "0.0.65"
 dependencies = [
  "ssg",
  "tempfile",
@@ -3396,14 +3396,14 @@ dependencies = [
 
 [[package]]
 name = "ssg-i18n"
-version = "0.0.64"
+version = "0.0.65"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "ssg-mcp"
-version = "0.0.64"
+version = "0.0.65"
 dependencies = [
  "schemars",
  "serde",
@@ -3413,7 +3413,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc"
-version = "0.0.64"
+version = "0.0.65"
 dependencies = [
  "criterion",
  "inventory",
@@ -3426,7 +3426,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc-macro"
-version = "0.0.64"
+version = "0.0.65"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3435,7 +3435,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-search"
-version = "0.0.64"
+version = "0.0.65"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",
@@ -3449,7 +3449,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-wasm"
-version = "0.0.64"
+version = "0.0.65"
 dependencies = [
  "js-sys",
  "serde-wasm-bindgen",
@@ -3474,9 +3474,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.20"
+version = "0.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2f3e2aa30f4e6fe517e0909a6eb0f6a618d2359f8586f74606589baf6f85994"
+checksum = "9a28f31deb9dd1778450a06bb0e1161a8b90dff97a5959bbf3f860b5a1901450"
 dependencies = [
  "anyhow",
  "comrak 0.54.0",

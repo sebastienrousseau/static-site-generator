@@ -7,6 +7,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.65] - 2026-10-01
+
+### Fixed
+
+- **Pages render their HTML again instead of showing it as text.**
+  staticdatagen 0.0.21 builds its layout engine without HTML-escaping,
+  so `{{content}}` and the other pre-rendered blocks reach the layout as
+  markup. With 0.0.20 and earlier the whole page body arrived
+  entity-escaped, and only tags on a fixed repair list were restored:
+  `<details>`, `<summary>`, `<time>`, `<figure>`, inline `<svg>` and
+  others were shown to readers as visible markup.
+- **Markup quoted in prose stays text.** The tag-repair pass that undid
+  that escaping (`fix_escaped_html_entities`, added in 0.0.58) could not
+  tell it apart from markup an author quotes, so `&lt;div&gt;` in prose
+  became a live element, and by prefix match `&lt;embed` and `&lt;link`
+  did too. With the cause gone the pass is removed. Mermaid diagrams
+  inside `<pre class="mermaid">` keep their `<br/>` line breaks, which
+  the pass had turned into elements that the diagram text then lost.
+
+### Changed
+
+- **Benchmarks run one job per Criterion target.** The single job ran
+  all 421 benchmarks past its 90-minute limit; eight parallel jobs keep
+  full sampling precision for the published figures.
+
 ## [0.0.64] - 2026-09-30
 
 ### Fixed
