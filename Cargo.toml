@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.64"                      # The version of the library
+version = "0.0.65"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen)
@@ -171,11 +171,11 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.64" }
-ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.64", optional = true }
-ssg-core = { path = "crates/ssg-core", version = "0.0.64" }
-ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.64" }
-ssg-search = { path = "crates/ssg-search", version = "0.0.64" }
+ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.65" }
+ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.65", optional = true }
+ssg-core = { path = "crates/ssg-core", version = "0.0.65" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.65" }
+ssg-search = { path = "crates/ssg-search", version = "0.0.65" }
 thiserror = "2"
 staticdatagen = "0.0.21"
 toml = "1.1.2"
