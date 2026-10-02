@@ -1174,7 +1174,10 @@ mod tests {
 
     #[test]
     fn sri_integrity_is_nonempty_for_input() {
-        assert!(!SriAlgorithm::default().integrity(b"hello").is_empty());
+        assert!(
+            !SriAlgorithm::default().integrity(b"hello").is_empty(),
+            "should not be empty"
+        );
     }
 
     #[test]
@@ -1302,7 +1305,7 @@ mod tests {
         let css_path = dir.path().join("style.css");
         let css = "body { background: url(/images/logo.png";
         let out = rewrite_css_urls(css, &css_path, dir.path(), &css_manifest());
-        assert!(!out.is_empty());
+        assert!(!out.is_empty(), "should not be empty");
     }
 
     #[test]
@@ -1890,7 +1893,7 @@ mod tests {
         let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
         // Root CI runners bypass perms; only assert when it errored.
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -1908,7 +1911,7 @@ mod tests {
         let err = FingerprintPlugin
             .after_compile(&plugin_ctx(dir.path(), &site))
             .unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -1927,7 +1930,7 @@ mod tests {
         let err = FingerprintPlugin
             .after_compile(&plugin_ctx(dir.path(), &site))
             .unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -1948,7 +1951,7 @@ mod tests {
         let _ =
             fs::set_permissions(&css_path, fs::Permissions::from_mode(0o644));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -1969,7 +1972,7 @@ mod tests {
 
         let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -1990,7 +1993,7 @@ mod tests {
 
         let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -2009,7 +2012,7 @@ mod tests {
 
         let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -2037,7 +2040,7 @@ mod tests {
         let _ =
             fs::set_permissions(&css_path, fs::Permissions::from_mode(0o644));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 

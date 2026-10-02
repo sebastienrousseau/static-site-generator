@@ -12,20 +12,20 @@ use ssg::plugin::Plugin;
 #[test]
 fn i18n_plugin_constructs_with_default_config() {
     let p = I18nPlugin::new(I18nConfig::default());
-    assert!(!p.name().is_empty());
+    assert!(!p.name().is_empty(), "should not be empty");
 }
 
 #[test]
 fn parse_accept_language_extracts_ordered_locales() {
     let langs = parse_accept_language("en-GB,fr;q=0.9,de;q=0.8");
-    assert!(!langs.is_empty());
+    assert!(!langs.is_empty(), "should not be empty");
     assert_eq!(langs[0], "en-GB");
 }
 
 #[test]
 fn parse_accept_language_returns_empty_for_empty_header() {
     let langs = parse_accept_language("");
-    assert!(langs.is_empty());
+    assert!(langs.is_empty(), "{:?}", langs);
 }
 
 #[test]

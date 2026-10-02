@@ -435,7 +435,7 @@ mod tests {
     fn collect_md_files_returns_empty_for_missing_directory() {
         let dir = tempdir().expect("tempdir");
         let result = collect_md_files(&dir.path().join("missing")).unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]

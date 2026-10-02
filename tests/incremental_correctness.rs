@@ -215,7 +215,7 @@ fn ac4_single_content_edit_invalidates_only_that_page() {
 
     let a_md = f.content.join("a.md");
     assert_eq!(diff.changed, vec![a_md.clone()]);
-    assert!(diff.deleted.is_empty());
+    assert!(diff.deleted.is_empty(), "{:?}", diff.deleted);
 
     let invalidated = graph.invalidated_outputs(&diff.changed);
     let expected_out = f.build.join("a").join("index.html");

@@ -301,7 +301,7 @@ mod tests {
 
     #[test]
     fn reserved_names_are_lowercase_and_non_empty() {
-        assert!(!RESERVED_NAMES.is_empty());
+        assert!(!RESERVED_NAMES.is_empty(), "should not be empty");
         for name in RESERVED_NAMES {
             assert!(!name.is_empty(), "reserved name should be non-empty");
             assert_eq!(

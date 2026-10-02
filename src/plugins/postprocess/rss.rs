@@ -779,7 +779,7 @@ mod tests {
     fn test_extract_last_build_date_empty() {
         let articles: Vec<(String, String)> = vec![];
         let date = extract_last_build_date(&articles);
-        assert!(date.is_empty());
+        assert!(date.is_empty(), "{:?}", date);
     }
 
     #[test]

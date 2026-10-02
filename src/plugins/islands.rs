@@ -757,7 +757,7 @@ mod tests {
         fs::write(site.join("_islands"), "not a dir").unwrap();
         let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
         let err = IslandPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -773,7 +773,7 @@ mod tests {
         let ctx = PluginContext::new(&content, dir.path(), &site, dir.path());
 
         let err = IslandPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -786,7 +786,7 @@ mod tests {
         let ctx = PluginContext::new(&content, dir.path(), &site, dir.path());
 
         let err = IslandPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -799,7 +799,7 @@ mod tests {
         let ctx = PluginContext::new(&content, dir.path(), &site, dir.path());
 
         let err = IslandPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -817,7 +817,7 @@ mod tests {
         let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
         // Root CI runners bypass perms; only assert when it errored.
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -854,7 +854,7 @@ mod tests {
 
         let _ = fs::set_permissions(&page, fs::Permissions::from_mode(0o644));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 }

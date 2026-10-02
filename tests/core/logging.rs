@@ -28,7 +28,7 @@ fn log_initialization_prepends_banner() {
     log_initialization(&mut f, "2026-06-07").unwrap();
     drop(f);
     let body = std::fs::read_to_string(&path).unwrap();
-    assert!(!body.is_empty());
+    assert!(!body.is_empty(), "should not be empty");
 }
 
 #[test]

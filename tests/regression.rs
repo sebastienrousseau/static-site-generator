@@ -619,7 +619,7 @@ fn build_cache_detects_no_changes() -> Result<()> {
     cache.update(&content_dir)?;
 
     let changed = cache.changed_files(&content_dir)?;
-    assert!(changed.is_empty());
+    assert!(changed.is_empty(), "{:?}", changed);
     Ok(())
 }
 
@@ -762,7 +762,7 @@ fn file_watcher_detects_new_file() -> Result<()> {
 
     fs::write(tmp.path().join("new.txt"), "new")?;
     let changes = watcher.check_for_changes()?;
-    assert!(!changes.is_empty());
+    assert!(!changes.is_empty(), "should not be empty");
     Ok(())
 }
 
@@ -775,7 +775,7 @@ fn file_watcher_no_changes() -> Result<()> {
     let mut watcher = FileWatcher::new(cfg)?;
 
     let changes = watcher.check_for_changes()?;
-    assert!(changes.is_empty());
+    assert!(changes.is_empty(), "{:?}", changes);
     Ok(())
 }
 
@@ -897,7 +897,7 @@ fn e2e_cache_then_copy_pipeline() -> Result<()> {
     // Second build: no changes
     let cache2 = BuildCache::load(&cache_path)?;
     let changed2 = cache2.changed_files(&content)?;
-    assert!(changed2.is_empty());
+    assert!(changed2.is_empty(), "{:?}", changed2);
     Ok(())
 }
 

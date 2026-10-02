@@ -587,7 +587,7 @@ mod tests {
 
         let redirects = fs::read_to_string(dir.path().join("_redirects"))
             .expect("read _redirects");
-        assert!(redirects.is_empty());
+        assert!(redirects.is_empty(), "{:?}", redirects);
     }
 
     #[test]

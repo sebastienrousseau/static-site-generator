@@ -1102,7 +1102,7 @@ mod tests {
     fn site_load_nonexistent_returns_empty_html_files() {
         // Covers line 240 — `Vec::new()` arm when root doesn't exist.
         let site = Site::load(Path::new("/nonexistent/xxx-audit")).unwrap();
-        assert!(site.html_files.is_empty());
+        assert!(site.html_files.is_empty(), "{:?}", site.html_files);
     }
 
     #[test]
@@ -1148,7 +1148,7 @@ mod tests {
     fn audit_runner_with_gates_accepts_empty_vec() {
         // Covers lines 634-639 — with_gates constructor.
         let runner = AuditRunner::with_gates(AuditConfig::new(), Vec::new());
-        assert!(runner.gate_names().is_empty());
+        assert!(runner.gate_names().is_empty(), "{:?}", runner.gate_names());
     }
 
     #[test]

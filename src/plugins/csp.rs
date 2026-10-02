@@ -1776,13 +1776,21 @@ mod tests {
     #[test]
     fn inline_collection_stops_when_opening_tag_unterminated() {
         let html = "<style media=all";
-        assert!(collect_inline_script_and_style(html).1.is_empty());
+        assert!(
+            collect_inline_script_and_style(html).1.is_empty(),
+            "{:?}",
+            collect_inline_script_and_style(html).1
+        );
     }
 
     #[test]
     fn inline_collection_stops_when_close_tag_missing() {
         let html = "<style>a{} no closing fence";
-        assert!(collect_inline_script_and_style(html).1.is_empty());
+        assert!(
+            collect_inline_script_and_style(html).1.is_empty(),
+            "{:?}",
+            collect_inline_script_and_style(html).1
+        );
     }
 
     #[test]
@@ -1828,7 +1836,7 @@ mod tests {
         fs::write(site.join("_csp"), "not a dir").unwrap();
         let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
         let err = CspPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -1847,7 +1855,7 @@ mod tests {
                 &ctx,
             )
             .unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]

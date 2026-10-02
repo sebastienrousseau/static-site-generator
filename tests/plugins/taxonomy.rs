@@ -12,7 +12,7 @@ use tempfile::TempDir;
 
 #[test]
 fn taxonomy_plugin_name_is_stable() {
-    assert!(!TaxonomyPlugin.name().is_empty());
+    assert!(!TaxonomyPlugin.name().is_empty(), "should not be empty");
 }
 
 /// Fixture site with the comma-separated `tags` string frontmatter the

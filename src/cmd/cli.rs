@@ -709,7 +709,7 @@ mod tests {
 
         Cli::print_banner();
 
-        assert!(!line.is_empty());
+        assert!(!line.is_empty(), "should not be empty");
         assert!(title.contains("SSG"));
         assert!(title.contains(version));
     }

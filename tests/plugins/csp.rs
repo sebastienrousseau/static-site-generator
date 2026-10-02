@@ -9,5 +9,5 @@ use ssg::plugin::Plugin;
 
 #[test]
 fn csp_plugin_name_is_stable() {
-    assert!(!CspPlugin.name().is_empty());
+    assert!(!CspPlugin.name().is_empty(), "should not be empty");
 }

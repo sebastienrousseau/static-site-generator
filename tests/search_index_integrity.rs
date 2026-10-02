@@ -134,7 +134,7 @@ fn ac5_every_embedded_vector_is_unit_norm() {
                 arts.embeddings[offset + 2],
                 arts.embeddings[offset + 3],
             ]);
-            sumsq += f * f;
+            sumsq = f.mul_add(f, sumsq);
         }
         let norm = sumsq.sqrt();
         assert!(

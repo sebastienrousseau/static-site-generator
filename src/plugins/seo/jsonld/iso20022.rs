@@ -1607,7 +1607,11 @@ mod tests {
             ..BankAccount::default()
         }
         .to_jsonld();
-        assert!(validate_schema_org(&v).is_empty());
+        assert!(
+            validate_schema_org(&v).is_empty(),
+            "{:?}",
+            validate_schema_org(&v)
+        );
     }
 
     #[test]
@@ -1627,7 +1631,11 @@ mod tests {
             ..FinancialTransaction::default()
         }
         .to_jsonld();
-        assert!(validate_schema_org(&v).is_empty());
+        assert!(
+            validate_schema_org(&v).is_empty(),
+            "{:?}",
+            validate_schema_org(&v)
+        );
     }
 
     #[test]
@@ -1893,7 +1901,11 @@ mod tests {
             ..RegulatedFinancialInstitution::default()
         }
         .to_jsonld();
-        assert!(validate_schema_org(&v).is_empty());
+        assert!(
+            validate_schema_org(&v).is_empty(),
+            "{:?}",
+            validate_schema_org(&v)
+        );
     }
 
     #[test]
@@ -1913,7 +1925,11 @@ mod tests {
             ..PaymentInstrument::default()
         }
         .to_jsonld();
-        assert!(validate_schema_org(&v).is_empty());
+        assert!(
+            validate_schema_org(&v).is_empty(),
+            "{:?}",
+            validate_schema_org(&v)
+        );
     }
 
     #[test]
@@ -1922,7 +1938,11 @@ mod tests {
             "@context": "https://schema.org",
             "@type": "SomethingElse",
         });
-        assert!(validate_schema_org(&v).is_empty());
+        assert!(
+            validate_schema_org(&v).is_empty(),
+            "{:?}",
+            validate_schema_org(&v)
+        );
     }
 
     #[test]

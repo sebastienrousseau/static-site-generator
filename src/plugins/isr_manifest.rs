@@ -719,7 +719,7 @@ mod tests {
     fn collect_md_files_nonexistent_dir_returns_empty() {
         // Covers line ~162 `if !dir.exists() return Ok(vec![])`.
         let out = collect_md_files(Path::new("/nonexistent/xxx")).unwrap();
-        assert!(out.is_empty());
+        assert!(out.is_empty(), "{:?}", out);
     }
 
     #[test]
@@ -754,7 +754,7 @@ mod tests {
     fn collect_templates_nonexistent_dir_returns_empty() {
         // Covers line ~249.
         let out = collect_templates(Path::new("/nonexistent/yyy"));
-        assert!(out.is_empty());
+        assert!(out.is_empty(), "{:?}", out);
     }
 
     #[test]
@@ -881,7 +881,7 @@ mod tests {
         restore_access(&content_dir.join("locked"));
         // Root CI runners bypass perms; only assert when it errored.
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -905,7 +905,7 @@ mod tests {
 
         restore_access(&md);
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -929,7 +929,7 @@ mod tests {
 
         restore_access(&tpl);
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -949,7 +949,7 @@ mod tests {
 
         let ctx = make_ctx(&content_dir, &template_dir, &site_dir);
         let err = IsrManifestPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -959,7 +959,7 @@ mod tests {
         let dir = tempdir().unwrap();
         fs::create_dir_all(dir.path().join(MANIFEST_RELATIVE_PATH)).unwrap();
         let err = write_manifest(&Manifest::default(), dir.path()).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -977,7 +977,7 @@ mod tests {
 
         let ctx = make_ctx(&content_dir, &template_dir, &site_dir);
         let err = IsrManifestPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     /// Builds a one-entry manifest whose entry lists `sources`.
@@ -1028,7 +1028,7 @@ mod tests {
         let m = manifest_with_sources(vec!["content/a.md".to_string()]);
         let err = copy_sources(&content_dir, &template_dir, &site_dir, &m)
             .unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -1048,7 +1048,7 @@ mod tests {
         let m = manifest_with_sources(vec!["content/a.md".to_string()]);
         let err = copy_sources(&content_dir, &template_dir, &site_dir, &m)
             .unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]

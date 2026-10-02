@@ -432,7 +432,11 @@ mod tests {
         let s = stringify(Err(err));
         let v: serde_json::Value = serde_json::from_str(&s).unwrap();
         assert_eq!(v["version"], "2.1.0");
-        assert!(v["runs"].as_array().unwrap().is_empty());
+        assert!(
+            v["runs"].as_array().unwrap().is_empty(),
+            "{:?}",
+            v["runs"].as_array().unwrap()
+        );
     }
 
     #[test]
@@ -440,6 +444,6 @@ mod tests {
         let s = format(&empty_report());
         let v: serde_json::Value = serde_json::from_str(&s).unwrap();
         let results = v["runs"][0]["results"].as_array().unwrap();
-        assert!(results.is_empty());
+        assert!(results.is_empty(), "{:?}", results);
     }
 }

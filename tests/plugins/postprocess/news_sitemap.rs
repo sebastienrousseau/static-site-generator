@@ -7,5 +7,8 @@ use ssg::postprocess::NewsSitemapFixPlugin;
 
 #[test]
 fn news_sitemap_plugin_name_is_stable() {
-    assert!(!NewsSitemapFixPlugin.name().is_empty());
+    assert!(
+        !NewsSitemapFixPlugin.name().is_empty(),
+        "should not be empty"
+    );
 }

@@ -781,7 +781,7 @@ mod tests {
 
         // Assert — file exists, no crash
         let content = fs::read_to_string(&html_path).unwrap();
-        assert!(content.is_empty());
+        assert!(content.is_empty(), "{:?}", content);
         Ok(())
     }
 

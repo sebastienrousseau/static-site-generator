@@ -1214,7 +1214,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         let (found, root) =
             detect_locales(tmp.path(), &["en".into(), "fr".into()], "en");
-        assert!(found.is_empty());
+        assert!(found.is_empty(), "{:?}", found);
         assert_eq!(root, None, "an empty site root hosts no default locale");
     }
 
@@ -2215,7 +2215,7 @@ mod tests {
     #[test]
     fn parse_accept_language_empty() {
         let result = parse_accept_language("");
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]

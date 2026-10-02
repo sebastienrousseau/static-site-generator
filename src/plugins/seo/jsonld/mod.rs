@@ -1205,7 +1205,11 @@ mod tests {
             {"@context":"https://schema.org","@type":"WebPage",
              "name":"Hi","url":"https://x.test/","inLanguage":"en"}
             </script></head><body></body></html>"#;
-        assert!(validate_jsonld(html).is_empty());
+        assert!(
+            validate_jsonld(html).is_empty(),
+            "{:?}",
+            validate_jsonld(html)
+        );
     }
 
     #[test]
@@ -1285,7 +1289,11 @@ mod tests {
         let html = r#"<script type="application/ld+json">
             {"@type":"CustomThing","foo":"bar"}
         </script>"#;
-        assert!(validate_jsonld(html).is_empty());
+        assert!(
+            validate_jsonld(html).is_empty(),
+            "{:?}",
+            validate_jsonld(html)
+        );
     }
 
     #[test]
@@ -1328,7 +1336,11 @@ mod tests {
         let html = r#"<script type='application/ld+json'>
             {"@type":"Organization","name":"O","url":"https://o/"}
         </script>"#;
-        assert!(validate_jsonld(html).is_empty());
+        assert!(
+            validate_jsonld(html).is_empty(),
+            "{:?}",
+            validate_jsonld(html)
+        );
     }
 
     #[test]
@@ -1336,7 +1348,11 @@ mod tests {
         let html = r#"<script id="ld1" type="application/ld+json">
             {"@type":"Organization","name":"O","url":"https://o/"}
         </script>"#;
-        assert!(validate_jsonld(html).is_empty());
+        assert!(
+            validate_jsonld(html).is_empty(),
+            "{:?}",
+            validate_jsonld(html)
+        );
     }
 
     // ── String-literal-aware </script> finder (audit fix item #5) ──
@@ -1446,7 +1462,11 @@ mod tests {
         // No closing </script> — the extractor must bail without
         // yielding a truncated block.
         let html = r#"<script type="application/ld+json">{"@type":"WebPage""#;
-        assert!(extract_jsonld_blocks(html).is_empty());
+        assert!(
+            extract_jsonld_blocks(html).is_empty(),
+            "{:?}",
+            extract_jsonld_blocks(html)
+        );
     }
 
     #[test]
@@ -1647,7 +1667,7 @@ mod tests {
         let c = locale_ctx(dir.path(), "en", &[]);
         let i18n = c.config.as_ref().unwrap().i18n.as_ref().unwrap();
         assert_eq!(i18n.default_locale, "en");
-        assert!(i18n.locales.is_empty());
+        assert!(i18n.locales.is_empty(), "{:?}", i18n.locales);
     }
 
     #[test]

@@ -43,7 +43,11 @@ fn ac5_protocol_reload_shape() {
     let m = HmrMessage::reload();
     let v: Value = serde_json::from_str(&m.to_json()).unwrap();
     assert_eq!(v["type"], "reload");
-    assert!(v["paths"].as_array().unwrap().is_empty());
+    assert!(
+        v["paths"].as_array().unwrap().is_empty(),
+        "{:?}",
+        v["paths"].as_array().unwrap()
+    );
 }
 
 #[test]

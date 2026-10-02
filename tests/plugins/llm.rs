@@ -10,5 +10,5 @@ use ssg::plugin::Plugin;
 #[test]
 fn llm_plugin_constructs_with_default_config() {
     let p = LlmPlugin::new(LlmConfig::default());
-    assert!(!p.name().is_empty());
+    assert!(!p.name().is_empty(), "should not be empty");
 }

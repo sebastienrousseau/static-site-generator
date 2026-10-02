@@ -410,7 +410,11 @@ fn ac5_auto_resources_off_emits_empty_resources_array() {
     let body =
         fs::read_to_string(dir.path().join(".well-known/mcp.json")).unwrap();
     let v: Value = serde_json::from_str(&body).unwrap();
-    assert!(v["resources"].as_array().unwrap().is_empty());
+    assert!(
+        v["resources"].as_array().unwrap().is_empty(),
+        "{:?}",
+        v["resources"].as_array().unwrap()
+    );
 }
 
 // ── AC6: disabled emitters produce no files ──────────────────────────

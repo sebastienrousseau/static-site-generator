@@ -19,7 +19,7 @@ mod gated {
             ..Default::default()
         };
         let p = TemplatePlugin::new(cfg);
-        assert!(!p.name().is_empty());
+        assert!(!p.name().is_empty(), "should not be empty");
     }
 }
 

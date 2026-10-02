@@ -1201,7 +1201,7 @@ mod tests {
     fn collect_html_files_returns_empty_for_missing_directory() {
         let dir = tempdir().unwrap();
         let result = collect_html_files(&dir.path().join("missing")).unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]
@@ -1313,7 +1313,7 @@ mod tests {
         let p3_fm = enriched.get(&html3).unwrap();
         let related_p3 =
             p3_fm.get("related_posts").unwrap().as_array().unwrap();
-        assert!(related_p3.is_empty());
+        assert!(related_p3.is_empty(), "{:?}", related_p3);
     }
 
     #[test]
@@ -1339,12 +1339,15 @@ mod tests {
         let fm = enriched.get(&html).unwrap();
         // Solo page, no overlap possible — just confirm it didn't panic
         // building the URL from the un-strippable full path.
-        assert!(fm
-            .get("related_posts")
-            .unwrap()
-            .as_array()
-            .unwrap()
-            .is_empty());
+        assert!(
+            fm.get("related_posts")
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .is_empty(),
+            "{:?}",
+            fm.get("related_posts").unwrap().as_array().unwrap()
+        );
     }
 
     #[test]

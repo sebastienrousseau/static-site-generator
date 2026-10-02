@@ -389,7 +389,7 @@ mod tests {
                 ..AuditOptions::default()
             },
         );
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 
     #[test]

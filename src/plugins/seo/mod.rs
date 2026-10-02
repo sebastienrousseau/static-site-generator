@@ -73,7 +73,7 @@ mod tests {
             format!("<html><head></head><body><p>{long}</p></body></html>");
         let desc = extract_description(&html, 160);
         assert!(desc.len() <= 160);
-        assert!(!desc.is_empty());
+        assert!(!desc.is_empty(), "should not be empty");
     }
 
     // -----------------------------------------------------------------
@@ -327,7 +327,7 @@ mod tests {
 
         // Assert: result is valid UTF-8 and within limit
         assert!(desc.len() <= 50);
-        assert!(!desc.is_empty());
+        assert!(!desc.is_empty(), "should not be empty");
         // Verify it doesn't panic and is a valid string
         let _ = desc.chars().count();
     }
@@ -955,7 +955,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let result =
             collect_html_files_recursive(&dir.path().join("missing")).unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     // -----------------------------------------------------------------

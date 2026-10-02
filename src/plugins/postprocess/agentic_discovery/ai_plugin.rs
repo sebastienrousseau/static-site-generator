@@ -434,8 +434,8 @@ mod tests {
         let m = build_manifest(&c);
         let h = m["description_for_human"].as_str().unwrap();
         let model = m["description_for_model"].as_str().unwrap();
-        assert!(!h.is_empty());
-        assert!(!model.is_empty());
+        assert!(!h.is_empty(), "should not be empty");
+        assert!(!model.is_empty(), "should not be empty");
     }
 
     #[test]

@@ -9,10 +9,10 @@ use ssg::plugins::{ImageOptiPlugin, MinifyPlugin};
 
 #[test]
 fn minify_plugin_name_is_stable() {
-    assert!(!MinifyPlugin.name().is_empty());
+    assert!(!MinifyPlugin.name().is_empty(), "should not be empty");
 }
 
 #[test]
 fn image_opti_plugin_name_is_stable() {
-    assert!(!ImageOptiPlugin.name().is_empty());
+    assert!(!ImageOptiPlugin.name().is_empty(), "should not be empty");
 }

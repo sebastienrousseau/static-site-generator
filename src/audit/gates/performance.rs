@@ -288,7 +288,7 @@ mod tests {
         };
         std::mem::forget(tmp);
         let f = PerformanceGate.run(&s, &AuditOptions::default());
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 
     #[test]

@@ -1412,7 +1412,7 @@ language = "en-GB"
         let cmd = Cli::build();
         let matches = cmd.get_matches_from(vec!["ssg", "--watch"]);
         let config = SsgConfig::from_matches(&matches).unwrap();
-        assert!(!config.site_name.is_empty());
+        assert!(!config.site_name.is_empty(), "should not be empty");
     }
 
     #[test]

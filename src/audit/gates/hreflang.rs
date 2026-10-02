@@ -365,7 +365,7 @@ mod tests {
             html_files: vec![dir_as_file],
         };
         let f = HreflangGate.run(&s, &AuditOptions::default());
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
         std::mem::forget(tmp);
     }
 
@@ -415,6 +415,6 @@ mod tests {
     fn empty_site_returns_no_findings() {
         let s = site_with(&[]);
         let f = HreflangGate.run(&s, &AuditOptions::default());
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 }

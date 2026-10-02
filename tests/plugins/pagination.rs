@@ -10,5 +10,5 @@ use ssg::plugin::Plugin;
 #[test]
 fn pagination_plugin_default_constructs() {
     let p = PaginationPlugin::default();
-    assert!(!p.name().is_empty());
+    assert!(!p.name().is_empty(), "should not be empty");
 }

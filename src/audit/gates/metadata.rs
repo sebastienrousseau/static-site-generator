@@ -308,6 +308,6 @@ mod tests {
             html_files: Vec::new(),
         };
         let f = MetadataGate.run(&s, &AuditOptions::default());
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 }

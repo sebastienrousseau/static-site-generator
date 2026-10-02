@@ -7,7 +7,7 @@ use ssg::seo::helpers::{extract_title, has_meta_tag};
 #[test]
 fn extract_title_returns_h1_or_title_tag() {
     let title = extract_title("<html><head><title>Hello</title></head></html>");
-    assert!(!title.is_empty());
+    assert!(!title.is_empty(), "should not be empty");
 }
 
 #[test]

@@ -35,7 +35,7 @@ fn walk_files_collects_all_matching_extensions_recursively() {
 fn walk_files_returns_empty_for_missing_dir() {
     let dir = tempdir().unwrap();
     let result = walk_files(&dir.path().join("nope"), "md").unwrap();
-    assert!(result.is_empty());
+    assert!(result.is_empty(), "{:?}", result);
 }
 
 #[test]

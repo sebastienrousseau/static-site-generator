@@ -944,7 +944,7 @@ mod tests {
         fs::write(tmp.path().join("a.txt"), "x").unwrap();
 
         let files = collect_files_bounded_with_limit(tmp.path(), 0).unwrap();
-        assert!(files.is_empty());
+        assert!(files.is_empty(), "{:?}", files);
     }
 
     #[test]
@@ -974,7 +974,7 @@ mod tests {
     fn collect_files_bounded_empty_dir() {
         let tmp = tempdir().unwrap();
         let files = collect_files_bounded(tmp.path()).unwrap();
-        assert!(files.is_empty());
+        assert!(files.is_empty(), "{:?}", files);
     }
 
     #[test]

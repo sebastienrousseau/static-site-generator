@@ -584,7 +584,7 @@ mod tests {
         let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
         // Root CI runners bypass perms; only assert when it errored.
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 }

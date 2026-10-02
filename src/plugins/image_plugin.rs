@@ -1102,7 +1102,7 @@ mod tests {
     fn collect_images_returns_empty_for_missing_directory() {
         let dir = tempdir().expect("tempdir");
         let result = collect_images(&dir.path().join("missing")).unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]
@@ -1560,7 +1560,7 @@ mod tests {
         let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
         // Root CI runners bypass perms; only assert when it errored.
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -1578,7 +1578,7 @@ mod tests {
         let err = ImageOptimizationPlugin::default()
             .after_compile(&ctx)
             .unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -1598,7 +1598,7 @@ mod tests {
 
         let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -1626,7 +1626,7 @@ mod tests {
 
         let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -1645,7 +1645,7 @@ mod tests {
 
         let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 }

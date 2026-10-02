@@ -620,7 +620,7 @@ mod tests {
     fn collect_html_files_recursive_empty_dir() {
         let tmp = tempdir().unwrap();
         let files = collect_html_files_recursive(tmp.path()).unwrap();
-        assert!(files.is_empty());
+        assert!(files.is_empty(), "{:?}", files);
     }
 
     #[test]

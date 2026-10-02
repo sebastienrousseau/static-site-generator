@@ -908,7 +908,7 @@ mod tests {
         let pm = PluginManager::new();
         assert!(pm.is_empty());
         assert_eq!(pm.len(), 0);
-        assert!(pm.names().is_empty());
+        assert!(pm.names().is_empty(), "{:?}", pm.names());
     }
 
     #[test]

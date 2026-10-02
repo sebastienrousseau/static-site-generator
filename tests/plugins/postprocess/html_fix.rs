@@ -7,5 +7,5 @@ use ssg::postprocess::HtmlFixPlugin;
 
 #[test]
 fn html_fix_plugin_name_is_stable() {
-    assert!(!HtmlFixPlugin.name().is_empty());
+    assert!(!HtmlFixPlugin.name().is_empty(), "should not be empty");
 }

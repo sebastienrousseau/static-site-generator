@@ -295,7 +295,7 @@ mod tests {
         let res = create_log_file("/no/such/parent/dir/test.log");
         assert!(res.is_err());
         let msg = format!("{}", res.unwrap_err());
-        assert!(!msg.is_empty());
+        assert!(!msg.is_empty(), "should not be empty");
     }
 
     #[test]

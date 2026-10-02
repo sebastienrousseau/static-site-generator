@@ -562,7 +562,7 @@ mod tests {
         let err = ViewTransitionsPlugin::new()
             .after_compile(&ctx_for(&site))
             .unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -574,6 +574,6 @@ mod tests {
         let err = ViewTransitionsPlugin::new()
             .after_compile(&ctx_for(&site))
             .unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 }

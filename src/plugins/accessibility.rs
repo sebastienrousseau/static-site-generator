@@ -227,7 +227,7 @@ mod tests {
         // Covered by the normal tempdir walk.
         let dir = tempdir().unwrap();
         let result = collect_html_files(&dir.path().join("missing")).unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]

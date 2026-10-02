@@ -633,7 +633,7 @@ mod tests {
         let ctx =
             PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
         let r = collect_mcp_resources(&ctx, &cfg());
-        assert!(r.is_empty());
+        assert!(r.is_empty(), "{:?}", r);
     }
 
     #[test]

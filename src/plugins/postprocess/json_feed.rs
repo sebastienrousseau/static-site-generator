@@ -820,7 +820,11 @@ mod tests {
         let tmp = tempdir().unwrap();
         let ctx = make_ctx(tmp.path());
         assert_eq!(extract_default_locale(&ctx), "en");
-        assert!(extract_known_locales(&ctx).is_empty());
+        assert!(
+            extract_known_locales(&ctx).is_empty(),
+            "{:?}",
+            extract_known_locales(&ctx)
+        );
     }
 
     #[test]

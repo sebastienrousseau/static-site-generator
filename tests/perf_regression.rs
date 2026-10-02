@@ -238,7 +238,7 @@ fn stream_hash_1000_files_under_500ms() {
         for i in 0..1000 {
             let path = content_dir.join(format!("file-{i}.txt"));
             let hash = ssg::stream::stream_hash(&path).unwrap();
-            assert!(!hash.is_empty());
+            assert!(!hash.is_empty(), "should not be empty");
         }
     });
 

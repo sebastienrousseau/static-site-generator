@@ -13,7 +13,7 @@ mod gated {
     #[test]
     fn image_plugin_default_constructs() {
         let p = ImageOptimizationPlugin::default();
-        assert!(!p.name().is_empty());
+        assert!(!p.name().is_empty(), "should not be empty");
         assert_eq!(p.avif_quality, 70);
         assert!(!p.lazy_avif);
     }

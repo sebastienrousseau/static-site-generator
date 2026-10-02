@@ -204,7 +204,11 @@ mod tests {
         let graph = DepGraph::new();
         let out = process_batch(&batch, &graph, Path::new("build"));
         assert!(out.frame.is_none());
-        assert!(out.invalidated_outputs.is_empty());
+        assert!(
+            out.invalidated_outputs.is_empty(),
+            "{:?}",
+            out.invalidated_outputs
+        );
     }
 
     #[test]

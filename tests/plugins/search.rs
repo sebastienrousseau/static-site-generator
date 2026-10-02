@@ -12,7 +12,7 @@ use tempfile::tempdir;
 
 #[test]
 fn search_plugin_name_is_stable() {
-    assert!(!SearchPlugin.name().is_empty());
+    assert!(!SearchPlugin.name().is_empty(), "should not be empty");
 }
 
 #[test]
@@ -29,14 +29,14 @@ fn search_entry_constructs_with_explicit_fields() {
 #[test]
 fn search_labels_english_returns_english_strings() {
     let l = SearchLabels::english();
-    assert!(!l.button_text.is_empty());
-    assert!(!l.input_placeholder.is_empty());
+    assert!(!l.button_text.is_empty(), "should not be empty");
+    assert!(!l.input_placeholder.is_empty(), "should not be empty");
 }
 
 #[test]
 fn search_labels_french_returns_french_strings() {
     let l = SearchLabels::french();
-    assert!(!l.button_text.is_empty());
+    assert!(!l.button_text.is_empty(), "should not be empty");
 }
 
 #[test]
@@ -44,9 +44,9 @@ fn search_labels_for_locale_recognises_known_codes() {
     let en = SearchLabels::for_locale("en-US");
     let fr = SearchLabels::for_locale("fr-FR");
     let unknown = SearchLabels::for_locale("xx-XX");
-    assert!(!en.button_text.is_empty());
-    assert!(!fr.button_text.is_empty());
-    assert!(!unknown.button_text.is_empty()); // fallback to english
+    assert!(!en.button_text.is_empty(), "should not be empty");
+    assert!(!fr.button_text.is_empty(), "should not be empty");
+    assert!(!unknown.button_text.is_empty(), "should not be empty"); // fallback to english
 }
 
 #[test]

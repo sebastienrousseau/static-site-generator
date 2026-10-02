@@ -27,7 +27,10 @@ fn livereload_plugin_default_trait_matches_new() {
 
 #[test]
 fn livereload_plugin_name_is_stable() {
-    assert!(!LiveReloadPlugin::new().name().is_empty());
+    assert!(
+        !LiveReloadPlugin::new().name().is_empty(),
+        "should not be empty"
+    );
 }
 
 #[test]
@@ -39,5 +42,5 @@ fn css_reload_message_contains_path() {
 #[test]
 fn css_reload_message_is_nonempty_for_root_path() {
     let msg = css_reload_message("style.css");
-    assert!(!msg.is_empty());
+    assert!(!msg.is_empty(), "should not be empty");
 }
