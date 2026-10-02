@@ -7,6 +7,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Pages are no longer nested inside a second page.** The template
+  plugin handed each `MiniJinja` layout the compile stage's whole
+  document as `page.content`, so every page carried a second
+  `<!DOCTYPE>`, `<html>`, `<head>` and `<main>` inside the layout's
+  `<main>`; ssg's own wcag audit reported "Page has 2 `<main>`
+  elements" on every page of every bundled example, and the layout's
+  `<title>` won over the real one. `page.content` is now the page's
+  rendered content (the inside of `<main>`, or of `<body>` when a
+  template has no `<main>`), as `docs/guide/templates.md` has always
+  said. `tests/element_presence.rs` now counts documents, `<html>`,
+  `<title>` and `<main>` on every page, before any exemption.
+- **Pages below the site root reach their layout with front matter.**
+  The compile stage writes `about.md` as `about/index.html`, but the
+  sidecar lookup only tried `about/index.meta.json`, never
+  `about.meta.json`, so every such page rendered with no `page.title`
+  and the `page.html` fallback whatever `layout:` said.
+- **The template plugin renders with the build's own templates.** It
+  read `templates/tera` from its registration-time config, which for
+  the default config is relative to the working directory; a library
+  caller could pick up an unrelated directory (the golden harness
+  rendered every bundled example through this repository's site
+  templates). It now reads `<template_dir>/tera` of the build context,
+  as the taxonomy plugin does.
+- **`ssg --new` layouts render their defaults.** The scaffold's
+  `MiniJinja` templates used Tera's `default(value="…")`, which
+  `MiniJinja` renders as the literal `{"value": "…"}`; they now use
+  `default("…")`. `examples/basic` carries the same correction.
+- **An unset config value no longer defeats a template's `default`.**
+  `site.title`, `site.name` and the other site globals were published
+  as empty strings when the config did not set them, and `MiniJinja`'s
+  `default` only replaces an undefined value, so a project without a
+  `site_title` shipped `<title></title>` on its home page. Empty values
+  are now left out.
+
 ## [0.0.65] - 2026-10-01
 
 ### Fixed
