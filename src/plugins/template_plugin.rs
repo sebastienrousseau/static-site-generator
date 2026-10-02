@@ -24,13 +24,19 @@ use std::{
 
 /// Plugin that post-processes compiled HTML through templates.
 ///
-/// Runs in the `after_compile` phase. For each HTML file in `site_dir`:
+/// Runs in the `after_compile` phase, with the `MiniJinja` templates
+/// under `<template_dir>/tera` of the build context. For each HTML file
+/// in `site_dir`:
 /// 1. Reads the companion `.meta.json` sidecar (from frontmatter extraction)
 /// 2. Determines the layout from frontmatter (`layout` field, default: `page`)
-/// 3. Renders the HTML through the template chain
+/// 3. Takes the page's rendered content out of the compiled document
+///    (the inside of `<main>`) and renders it through the template chain
 /// 4. Writes the rendered result back to the same file
 ///
-/// Falls back gracefully if no templates directory exists.
+/// Falls back gracefully if no templates directory exists. The
+/// `template_dir` of a [`TemplateConfig`] passed to [`Self::new`] does
+/// not override the context's: it only carries the globals and escaping
+/// settings.
 #[cfg(feature = "templates")]
 #[derive(Debug)]
 pub struct TemplatePlugin {
@@ -98,12 +104,24 @@ impl Plugin for TemplatePlugin {
     }
 
     fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
-        let Some(engine) = TemplateEngine::init(self.config.clone())
-            .map_err(|e| SsgError::io(e, &self.config.template_dir))?
+        // The templates of the build at hand: `<ctx.template_dir>/tera`,
+        // as the taxonomy plugin resolves them. The registration-time
+        // config is not consulted for the directory: with the default
+        // config that is `templates/tera` relative to the working
+        // directory, which let a library caller (the golden harness)
+        // render every bundled example through this repository's own
+        // site templates.
+        let config = TemplateConfig {
+            template_dir: ctx.template_dir.join("tera"),
+            ..self.config.clone()
+        };
+        let template_dir = config.template_dir.clone();
+        let Some(engine) = TemplateEngine::init(config)
+            .map_err(|e| SsgError::io(e, &template_dir))?
         else {
             log::info!(
                 "[templates] No templates at {}, skipping",
-                self.config.template_dir.display()
+                template_dir.display()
             );
             return Ok(());
         };
@@ -167,7 +185,7 @@ impl Plugin for TemplatePlugin {
 
             match engine.render_page(
                 &template_name,
-                &content,
+                page_fragment(&content),
                 &fm,
                 &site_globals,
             ) {
@@ -228,15 +246,66 @@ fn read_frontmatter_for_html(
     sidecar_dir: &Path,
 ) -> HashMap<String, serde_json::Value> {
     let rel = html_path.strip_prefix(site_dir).unwrap_or(html_path);
-    let sidecar = sidecar_dir.join(rel).with_extension("meta.json");
-    if sidecar.exists() {
-        if let Ok(content) = fs::read_to_string(&sidecar) {
+    // `emit_sidecars` names a sidecar after the content file
+    // (`about.md` -> `about.meta.json`), while the compile stage writes
+    // that page as `about/index.html`. So an `index.html` below the root
+    // also looks for its directory's sidecar.
+    let mut candidates =
+        vec![sidecar_dir.join(rel).with_extension("meta.json")];
+    if rel.file_name().is_some_and(|name| name == "index.html") {
+        if let Some(dir) = rel.parent().filter(|p| !p.as_os_str().is_empty()) {
+            candidates.push(sidecar_dir.join(dir).with_extension("meta.json"));
+        }
+    }
+    for sidecar in candidates.iter().filter(|p| p.exists()) {
+        if let Ok(content) = fs::read_to_string(sidecar) {
             if let Ok(meta) = serde_json::from_str(&content) {
                 return meta;
             }
         }
     }
     HashMap::new()
+}
+
+/// The rendered content of a compiled page, for `page.content`.
+///
+/// The compile stage writes a complete document: a `StaticWeaver` layout
+/// around the rendered Markdown. The `MiniJinja` layout supplies its own
+/// `<html>`, `<head>` and `<main>` (docs/guide/templates.md), so it must
+/// receive only the content, which is the inside of `<main>`, or of
+/// `<body>` when a template has no `<main>`. Handing it the whole
+/// document nested one page inside another: two `<!DOCTYPE>`s, the
+/// layout's empty `<title>` over the real one, and "Page has 2 <main>
+/// elements" from ssg's own wcag audit. A fragment comes back unchanged.
+#[cfg(feature = "templates")]
+fn page_fragment(html: &str) -> &str {
+    element_inner(html, "main")
+        .or_else(|| element_inner(html, "body"))
+        .unwrap_or(html)
+}
+
+/// The text between the first `<name …>` and the last `</name>` after
+/// it, matched case-insensitively. `<name` must be followed by `>` or
+/// whitespace, so `<main` does not match `<mainframe>`.
+#[cfg(feature = "templates")]
+fn element_inner<'a>(html: &'a str, name: &str) -> Option<&'a str> {
+    // ASCII lowering keeps every byte offset, so indices into `lower`
+    // index `html` too.
+    let lower = html.to_ascii_lowercase();
+    let open_tag = format!("<{name}");
+    let close_tag = format!("</{name}>");
+    let mut from = 0;
+    let open = loop {
+        let at = lower[from..].find(&open_tag)? + from;
+        let next = lower.as_bytes().get(at + open_tag.len());
+        if matches!(next, Some(b'>' | b' ' | b'\t' | b'\n' | b'\r')) {
+            break at;
+        }
+        from = at + open_tag.len();
+    };
+    let start = lower[open..].find('>')? + open + 1;
+    let end = lower[start..].rfind(&close_tag)? + start;
+    Some(&html[start..end])
 }
 
 /// Recursively collects `.html` files (delegates to `crate::walk`).
@@ -824,6 +893,155 @@ mod tests {
         assert!(out.contains("<!DOCTYPE html>"));
     }
 
+    /// The plugin renders with the templates of the build it is part of:
+    /// `<ctx.template_dir>/tera`, as the taxonomy plugin resolves them.
+    /// Reading the registration-time config instead let a library caller
+    /// with the default config (`templates`, relative to the working
+    /// directory) pick up an unrelated directory: the golden harness
+    /// rendered every bundled example through this repository's own site
+    /// templates.
+    #[test]
+    fn after_compile_reads_tera_under_the_context_template_dir() {
+        let dir = tempdir().unwrap();
+        setup_project(dir.path());
+        // Somewhere else entirely, with its own MiniJinja set.
+        let elsewhere = dir.path().join("elsewhere/tera");
+        fs::create_dir_all(&elsewhere).unwrap();
+        fs::write(
+            elsewhere.join("page.html"),
+            "ELSEWHERE {{ page.content | safe }}",
+        )
+        .unwrap();
+        let plugin = TemplatePlugin::new(TemplateConfig {
+            template_dir: elsewhere,
+            ..Default::default()
+        });
+        let ctx = PluginContext::new(
+            &dir.path().join("content"),
+            &dir.path().join("build"),
+            &dir.path().join("site"),
+            &dir.path().join("templates"),
+        );
+        plugin.after_compile(&ctx).unwrap();
+        let out =
+            fs::read_to_string(dir.path().join("site").join("index.html"))
+                .unwrap();
+        assert!(
+            !out.contains("ELSEWHERE"),
+            "the configured directory must not win over the context: {out}"
+        );
+        assert!(
+            out.contains("<!DOCTYPE html>"),
+            "the context's templates/tera rendered the page: {out}"
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // page_fragment — the compile stage hands over whole documents
+    // -------------------------------------------------------------------
+
+    /// What the compile stage writes to `site/`: a complete document from
+    /// a `StaticWeaver` template, with the rendered Markdown inside `<main>`.
+    const COMPILED_PAGE: &str = r##"<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <title>Stage one</title>
+  <link rel="canonical" href="https://example.com/" />
+</head>
+<body>
+  <a href="#main-content" class="sr-only">Skip to main content</a>
+  <header role="banner"><nav aria-label="Main navigation"><a href="/">Home</a></nav></header>
+  <main id="main-content" role="main">
+    <div lang="en-GB"><h1>Welcome</h1><p>Body.</p></div>
+  </main>
+  <footer role="contentinfo"><p>Built with SSG.</p></footer>
+</body>
+</html>"##;
+
+    #[test]
+    fn page_fragment_takes_the_inside_of_main() {
+        let fragment = page_fragment(COMPILED_PAGE);
+        assert_eq!(
+            fragment.trim(),
+            "<div lang=\"en-GB\"><h1>Welcome</h1><p>Body.</p></div>"
+        );
+    }
+
+    #[test]
+    fn page_fragment_falls_back_to_body_without_main() {
+        let html = "<!DOCTYPE html><html><head><title>T</title></head>\
+                    <BODY class=\"x\"><p>Only body.</p></BODY></html>";
+        assert_eq!(page_fragment(html).trim(), "<p>Only body.</p>");
+    }
+
+    #[test]
+    fn page_fragment_leaves_a_fragment_alone() {
+        for fragment in [
+            "<h1>Welcome</h1>",
+            "<p>Text with a <mainframe> word and </main> stray.</p>",
+            "",
+        ] {
+            assert_eq!(page_fragment(fragment), fragment);
+        }
+    }
+
+    #[test]
+    fn page_fragment_is_case_insensitive_and_keeps_nested_markup() {
+        let html = "<html><body><MAIN role=\"main\"><section>\
+                    <p>a</p></section></MAIN></body></html>";
+        assert_eq!(page_fragment(html), "<section><p>a</p></section>");
+    }
+
+    /// Regression: the plugin rendered the compile stage's whole document
+    /// as `page.content`, so every page carried a second `<!DOCTYPE>`,
+    /// `<html>`, `<head>` and `<main>` inside the layout's `<main>`. The
+    /// layout's own `<title>` won and the real one was buried; ssg's wcag
+    /// audit reported "Page has 2 <main> elements" on every page of every
+    /// bundled example. `page.content` is the rendered content, as
+    /// docs/guide/templates.md says.
+    #[test]
+    fn after_compile_unwraps_a_compiled_document_before_rendering() {
+        let dir = tempdir().unwrap();
+        setup_project(dir.path());
+        fs::write(
+            dir.path().join("templates/tera/base.html"),
+            "<!DOCTYPE html>\n<html><head><title>{{ page.title | default(\"\") }}</title></head>\n\
+             <body><main id=\"main-content\">{% block content %}{% endblock %}</main></body></html>",
+        )
+        .unwrap();
+        fs::write(dir.path().join("site").join("index.html"), COMPILED_PAGE)
+            .unwrap();
+        let plugin = TemplatePlugin::new(TemplateConfig {
+            template_dir: dir.path().join("templates/tera"),
+            ..Default::default()
+        });
+        let ctx = PluginContext::new(
+            &dir.path().join("content"),
+            &dir.path().join("build"),
+            &dir.path().join("site"),
+            &dir.path().join("templates"),
+        );
+        plugin.after_compile(&ctx).unwrap();
+        let out =
+            fs::read_to_string(dir.path().join("site").join("index.html"))
+                .unwrap();
+
+        assert_eq!(out.matches("<!DOCTYPE").count(), 1, "one document: {out}");
+        assert_eq!(out.matches("<html").count(), 1, "one <html>: {out}");
+        assert_eq!(out.matches("<main").count(), 1, "one <main>: {out}");
+        assert!(out.contains("<title>Home</title>"), "layout title: {out}");
+        assert!(!out.contains("Stage one"), "stage-one head is gone: {out}");
+        assert!(
+            out.contains("<h1>Welcome</h1><p>Body.</p>"),
+            "the rendered content is kept: {out}"
+        );
+        assert!(
+            !out.contains("Skip to main content"),
+            "stage-one chrome is not duplicated: {out}"
+        );
+    }
+
     // -------------------------------------------------------------------
     // read_frontmatter_for_html — three branches
     // -------------------------------------------------------------------
@@ -843,6 +1061,56 @@ mod tests {
 
         let meta = read_frontmatter_for_html(&html, &site, &sidecars);
         assert_eq!(meta.get("title").and_then(|v| v.as_str()), Some("Direct"));
+    }
+
+    /// Regression: the compile stage writes `about.md` as `about/index.html`
+    /// while `emit_sidecars` writes `about.meta.json`, so the lookup for
+    /// `about/index.meta.json` found nothing. Every page below the root
+    /// reached the layout with no front matter: no `page.title`, and the
+    /// `page.html` fallback whatever `layout:` said.
+    #[test]
+    fn read_frontmatter_for_html_finds_the_sidecar_of_a_nested_index_page() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let sidecars = dir.path().join(".meta");
+        fs::create_dir_all(site.join("about")).unwrap();
+        fs::create_dir_all(sidecars.join("blog")).unwrap();
+
+        fs::write(site.join("about/index.html"), "").unwrap();
+        fs::write(sidecars.join("about.meta.json"), r#"{"title": "About"}"#)
+            .unwrap();
+        let meta = read_frontmatter_for_html(
+            &site.join("about/index.html"),
+            &site,
+            &sidecars,
+        );
+        assert_eq!(meta.get("title").and_then(|v| v.as_str()), Some("About"));
+
+        // The same one level down, where the sidecar keeps the content tree.
+        fs::create_dir_all(site.join("blog/first-post")).unwrap();
+        fs::write(site.join("blog/first-post/index.html"), "").unwrap();
+        fs::write(
+            sidecars.join("blog/first-post.meta.json"),
+            r#"{"title": "First", "layout": "post"}"#,
+        )
+        .unwrap();
+        let meta = read_frontmatter_for_html(
+            &site.join("blog/first-post/index.html"),
+            &site,
+            &sidecars,
+        );
+        assert_eq!(meta.get("layout").and_then(|v| v.as_str()), Some("post"));
+
+        // A directory's own index keeps its direct sidecar.
+        fs::write(site.join("index.html"), "").unwrap();
+        fs::write(sidecars.join("index.meta.json"), r#"{"title": "Home"}"#)
+            .unwrap();
+        let meta = read_frontmatter_for_html(
+            &site.join("index.html"),
+            &site,
+            &sidecars,
+        );
+        assert_eq!(meta.get("title").and_then(|v| v.as_str()), Some("Home"));
     }
 
     #[test]
@@ -984,8 +1252,10 @@ mod tests {
         fs::create_dir_all(&templates).unwrap();
         fs::write(templates.join("base.html"), "").unwrap();
 
+        // The MiniJinja set is `<template_dir>/tera`, so the context's
+        // template directory is `dir`, not `dir/tera`.
         let ctx =
-            PluginContext::new(dir.path(), dir.path(), &site_dir, &templates);
+            PluginContext::new(dir.path(), dir.path(), &site_dir, dir.path());
         let plugin = TemplatePlugin::new(TemplateConfig {
             template_dir: templates,
             ..Default::default()

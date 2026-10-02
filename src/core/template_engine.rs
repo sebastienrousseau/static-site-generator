@@ -267,27 +267,25 @@ impl TemplateEngine {
     pub fn site_globals_from_config(
         config: &crate::cmd::SsgConfig,
     ) -> HashMap<String, serde_json::Value> {
+        // A value the config does not set is left out rather than
+        // published as "", so a template's `default(value=...)` applies:
+        // MiniJinja's `default` replaces an undefined value, not an empty
+        // one, and the scaffold's index title block relies on it.
         let mut globals = HashMap::new();
-        let _ = globals.insert(
-            "name".to_string(),
-            serde_json::Value::String(config.site_name.clone()),
-        );
-        let _ = globals.insert(
-            "title".to_string(),
-            serde_json::Value::String(config.site_title.clone()),
-        );
-        let _ = globals.insert(
-            "description".to_string(),
-            serde_json::Value::String(config.site_description.clone()),
-        );
-        let _ = globals.insert(
-            "base_url".to_string(),
-            serde_json::Value::String(config.base_url.clone()),
-        );
-        let _ = globals.insert(
-            "language".to_string(),
-            serde_json::Value::String(config.language.clone()),
-        );
+        for (key, value) in [
+            ("name", &config.site_name),
+            ("title", &config.site_title),
+            ("description", &config.site_description),
+            ("base_url", &config.base_url),
+            ("language", &config.language),
+        ] {
+            if !value.is_empty() {
+                let _ = globals.insert(
+                    key.to_string(),
+                    serde_json::Value::String(value.clone()),
+                );
+            }
+        }
         globals
     }
 
@@ -962,5 +960,53 @@ mod tests {
         let result =
             engine.render_page("broken.html", "", &fm, &HashMap::new());
         assert!(result.is_err());
+    }
+
+    /// An unset config value must not defeat a template's `default`.
+    ///
+    /// `site_globals_from_config` published every field, so a project
+    /// with no `site_title` handed the layout `site.title == ""`, and
+    /// `{{ site.title | default(value="Home") }}` printed nothing:
+    /// `MiniJinja`'s `default` only replaces an undefined value. The
+    /// scaffold's `index.html` title block does exactly that, so a fresh
+    /// project's home page shipped `<title></title>`. Leaving empty
+    /// values out is safe in lenient mode: an undefined value renders as
+    /// nothing, is falsy, and passes through a filter.
+    #[test]
+    fn empty_config_values_are_left_out_so_template_defaults_apply() {
+        let dir = tempdir().unwrap();
+        let tera_dir = dir.path().join("tera");
+        fs::create_dir_all(&tera_dir).unwrap();
+        fs::write(
+            tera_dir.join("t.html"),
+            r#"[{{ site.title | default("Home") }}][{{ site.title | upper }}][{% if site.title %}set{% else %}unset{% endif %}][{{ site.name }}]"#,
+        )
+        .unwrap();
+        let engine = TemplateEngine::init(TemplateConfig {
+            template_dir: tera_dir,
+            ..Default::default()
+        })
+        .unwrap()
+        .unwrap();
+
+        let config = crate::cmd::SsgConfig::builder()
+            .site_name("Demo".to_string())
+            .site_title(String::new())
+            .build()
+            .unwrap();
+        let globals = TemplateEngine::site_globals_from_config(&config);
+        assert!(
+            !globals.contains_key("title"),
+            "an empty title is left out: {globals:?}"
+        );
+        assert_eq!(
+            globals.get("name").and_then(serde_json::Value::as_str),
+            Some("Demo")
+        );
+
+        let out = engine
+            .render_page("t.html", "", &HashMap::new(), &globals)
+            .unwrap();
+        assert_eq!(out, "[Home][][unset][Demo]");
     }
 }
