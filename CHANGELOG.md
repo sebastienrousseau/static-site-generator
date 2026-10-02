@@ -7,6 +7,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **The release pipeline no longer races itself for the release page.**
+  `release.yml`'s `github release · crates.io` job now waits for the SLSA
+  provenance job, whose `upload-assets` step creates the tag's release
+  page. In v0.0.66 the two ran concurrently: the publish job found no
+  published release, tried to create one, and failed with HTTP 422
+  "Release.tag_name already exists" two seconds after the SLSA job
+  published its draft, so the crates.io publish never ran. The job now
+  always edits the existing page in place.
+
 ## [0.0.66] - 2026-10-02
 
 ### Fixed
