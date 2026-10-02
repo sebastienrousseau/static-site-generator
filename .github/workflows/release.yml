@@ -524,10 +524,20 @@ jobs:
     # mean no secret, no release at all. Hence the explicit result check
     # below: proceed when it succeeded OR was skipped, fail only when it
     # actually failed.
-    needs: [build, gpg-sign]
+    #
+    # `slsa-provenance` is here because its `upload-assets: true` creates
+    # the release page for the tag (a draft it then publishes). In v0.0.66
+    # the two ran concurrently: this job's existence check found no
+    # published release at 12:03:09, took the `gh release create` branch,
+    # and at 12:03:11 the SLSA job published its draft, so the create
+    # failed with HTTP 422 "Release.tag_name already exists" and the
+    # crates.io publish after it never ran. Waiting for the SLSA job means
+    # the page always exists here, and this job always edits in place.
+    needs: [build, gpg-sign, slsa-provenance]
     if: >-
       !cancelled() &&
       needs.build.result == 'success' &&
+      needs.slsa-provenance.result == 'success' &&
       (needs.gpg-sign.result == 'success' || needs.gpg-sign.result == 'skipped')
     # GHCR is best-effort (multi-arch builds can be flaky); don't gate
     # the GitHub Release or crates.io publish on it.
