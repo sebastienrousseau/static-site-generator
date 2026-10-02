@@ -248,7 +248,7 @@ mod tests {
             html_files: Vec::new(),
         };
         let f = Html5Gate.run(&s, &AuditOptions::default());
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 
     #[test]

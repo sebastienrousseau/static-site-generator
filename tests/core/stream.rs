@@ -59,6 +59,6 @@ fn stream_hash_returns_a_non_empty_hex_string() {
     let path = dir.path().join("h.txt");
     fs::write(&path, "hello world").unwrap();
     let h = stream_hash(&path).unwrap();
-    assert!(!h.is_empty());
+    assert!(!h.is_empty(), "should not be empty");
     assert!(h.chars().all(|c| c.is_ascii_hexdigit()));
 }

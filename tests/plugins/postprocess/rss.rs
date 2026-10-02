@@ -7,5 +7,5 @@ use ssg::postprocess::RssAggregatePlugin;
 
 #[test]
 fn rss_aggregate_plugin_name_is_stable() {
-    assert!(!RssAggregatePlugin.name().is_empty());
+    assert!(!RssAggregatePlugin.name().is_empty(), "should not be empty");
 }

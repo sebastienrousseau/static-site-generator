@@ -534,7 +534,7 @@ mod tests {
         add_page(&ctx, "p", r#"{"title":"P"}"#);
         fs::create_dir_all(ctx.site_dir.join("p.oembed.json")).unwrap();
         let err = OembedPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]

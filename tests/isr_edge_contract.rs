@@ -177,5 +177,5 @@ fn ac8_webhook_finds_affected_urls() {
 
     // Editing an unknown source invalidates nothing.
     let none = manifest.urls_for_source("content/posts/ghost.md");
-    assert!(none.is_empty());
+    assert!(none.is_empty(), "{:?}", none);
 }

@@ -218,7 +218,7 @@ mod tests {
         fs::write(dir.path().join(".ssg"), "not a dir").unwrap();
         let ctx = ctx_for(dir.path());
         let err = RpcSchemaPlugin::new().after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -228,6 +228,6 @@ mod tests {
         fs::create_dir_all(dir.path().join(RPC_DTS_RELATIVE_PATH)).unwrap();
         let ctx = ctx_for(dir.path());
         let err = RpcSchemaPlugin::new().after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 }

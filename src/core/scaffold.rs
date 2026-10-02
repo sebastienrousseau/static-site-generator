@@ -200,7 +200,7 @@ Edit this file at `content/blog/first-post.md`.
 /// Writes all template files.
 ///
 /// The scaffolded `base.html` emits
-/// `<html lang="{{ site.language | default(value='en') }}">`. That is
+/// `<html lang="{{ site.language | default('en') }}">`. That is
 /// *not* a site-wide constant: the template engine resolves
 /// `site.language` per page (spec A5, plan §2 1.5 — front-matter
 /// `language` → front-matter `hreflang` → site default → `"en"`, see
@@ -292,11 +292,11 @@ fn write_template_files(root: &Path) -> Result<()> {
     write_scaffold_file(
         &root.join("templates/tera/base.html"),
         r##"<!DOCTYPE html>
-<html lang="{{ site.language | default(value='en') }}">
+<html lang="{{ site.language | default('en') }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ page.title | default(value="Untitled") }}{% if site.title %} — {{ site.title }}{% endif %}{% endblock %}</title>
+  <title>{% block title %}{{ page.title | default("Untitled") }}{% if site.title %} — {{ site.title }}{% endif %}{% endblock %}</title>
   {# `page` is absent on taxonomy pages, which render through this
      same base with `tag`/`posts` in scope instead. Without the
      `is defined` guard the whole build aborts with
@@ -310,7 +310,7 @@ fn write_template_files(root: &Path) -> Result<()> {
   <a href="#main-content" class="sr-only">Skip to main content</a>
   <header role="banner">
     <nav aria-label="Main navigation">
-      <a href="/">{{ site.name | default(value="Home") }}</a>
+      <a href="/">{{ site.name | default("Home") }}</a>
       <a href="/about.html">About</a>
     </nav>
   </header>
@@ -318,7 +318,7 @@ fn write_template_files(root: &Path) -> Result<()> {
     {% block content %}{% endblock %}
   </main>
   <footer role="contentinfo">
-    <p>&copy; {{ site.name | default(value="") }}. Built with <a href="https://static-site-generator.one">SSG</a>.</p>
+    <p>&copy; {{ site.name | default("") }}. Built with <a href="https://static-site-generator.one">SSG</a>.</p>
   </footer>
 </body>
 </html>
@@ -346,7 +346,7 @@ fn write_template_files(root: &Path) -> Result<()> {
 {% block content %}
 <article>
   <header>
-    <h1>{{ page.title | default(value="") }}</h1>
+    <h1>{{ page.title | default("") }}</h1>
     {% if page.date %}<time datetime="{{ page.date }}">{{ page.date }}</time>{% endif %}
     {% if page.author %}<span class="author">by {{ page.author }}</span>{% endif %}
     {% if page.content %}<span class="reading-time">{{ page.content | reading_time }}</span>{% endif %}
@@ -371,7 +371,7 @@ fn write_template_files(root: &Path) -> Result<()> {
     write_scaffold_file(
         &root.join("templates/tera/index.html"),
         r#"{% extends "base.html" %}
-{% block title %}{{ site.title | default(value="Home") }}{% endblock %}
+{% block title %}{{ site.title | default("Home") }}{% endblock %}
 {% block content %}
 <section>{{ page.content | safe }}</section>
 {% endblock %}

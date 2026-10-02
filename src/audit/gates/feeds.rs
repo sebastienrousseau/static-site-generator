@@ -271,7 +271,7 @@ mod tests {
 </urlset>"#;
         let s = site_with_files(&[("sitemap.xml", body)]);
         let f = FeedsGate.run(&s, &AuditOptions::default());
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 
     #[test]
@@ -279,14 +279,14 @@ mod tests {
         let body = r#"<?xml version="1.0"?><opml version="2.0"></opml>"#;
         let s = site_with_files(&[("opml.xml", body)]);
         let f = FeedsGate.run(&s, &AuditOptions::default());
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 
     #[test]
     fn no_xml_files_returns_empty() {
         let s = site_with_files(&[("index.html", "<html></html>")]);
         let f = FeedsGate.run(&s, &AuditOptions::default());
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 
     #[test]

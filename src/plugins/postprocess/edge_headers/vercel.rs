@@ -171,7 +171,7 @@ mod tests {
         let body = render(&[], &BTreeMap::new()).unwrap();
         let parsed: Value = serde_json::from_str(&body).unwrap();
         let arr = parsed["headers"][0]["headers"].as_array().unwrap();
-        assert!(arr.is_empty());
+        assert!(arr.is_empty(), "{:?}", arr);
     }
 
     #[test]

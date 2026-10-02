@@ -1010,7 +1010,7 @@ mod tests {
 
         fs::set_permissions(&file, fs::Permissions::from_mode(0o644)).unwrap();
         let err = result.expect_err("permission-denied read must surface");
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[cfg(unix)]
@@ -1032,7 +1032,7 @@ mod tests {
 
         fs::set_permissions(&file, fs::Permissions::from_mode(0o644)).unwrap();
         let err = result.expect_err("permission-denied write must surface");
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 }
 

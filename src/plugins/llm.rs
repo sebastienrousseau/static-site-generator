@@ -1646,7 +1646,7 @@ mod tests {
     fn split_frontmatter_no_frontmatter() {
         let input = "Just plain content.";
         let (fm, body) = split_frontmatter(input);
-        assert!(fm.is_empty());
+        assert!(fm.is_empty(), "{:?}", fm);
         assert_eq!(body, input);
     }
 
@@ -1848,7 +1848,7 @@ mod tests {
     fn split_frontmatter_unclosed() {
         let input = "---\ntitle: Hello\nNo closing delimiter";
         let (fm, body) = split_frontmatter(input);
-        assert!(fm.is_empty());
+        assert!(fm.is_empty(), "{:?}", fm);
         assert_eq!(body, input);
     }
 
@@ -2627,7 +2627,7 @@ mod tests {
     fn split_frontmatter_toml_unclosed() {
         let input = "+++\ntitle = \"Hello\"\nNo closing delimiter";
         let (fm, body) = split_frontmatter(input);
-        assert!(fm.is_empty());
+        assert!(fm.is_empty(), "{:?}", fm);
         assert_eq!(body, input);
     }
 
@@ -2933,7 +2933,7 @@ mod tests {
         let resp = b"HTTP/1.1 500 Internal Server Error\r\nContent-Length: 5\r\nConnection: close\r\n\r\nboom!";
         let (url, _h) = spawn_mock_ollama(resp);
         let err = query_ollama(&url, "m", "p", 5).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -2942,7 +2942,7 @@ mod tests {
         let (url, _h) = spawn_mock_ollama(resp);
         let err = query_ollama(&url, "m", "p", 5).unwrap_err();
         let msg = format!("{err}");
-        assert!(!msg.is_empty());
+        assert!(!msg.is_empty(), "should not be empty");
     }
 
     #[test]
@@ -2979,7 +2979,7 @@ mod tests {
         let url = format!("http://127.0.0.1:{port}");
         let err = query_ollama(&url, "m", "p", 2).unwrap_err();
         let msg = format!("{err}");
-        assert!(!msg.is_empty());
+        assert!(!msg.is_empty(), "should not be empty");
     }
 
     #[test]

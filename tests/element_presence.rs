@@ -189,6 +189,70 @@ struct Failure {
     detail: String,
 }
 
+/// One document per page, for every page, exempt or not.
+///
+/// A page nested inside a page (two `<!DOCTYPE>`s, two `<html>`s, two
+/// `<title>`s, two `<main>`s) is what the template plugin produced for
+/// every bundled example until v0.0.66. "`<main>` present" let it
+/// through, and `examples/basic` is exempt from the SEO checks, so no
+/// gate here could fail on it. Structure is not an SEO property, so this
+/// runs before [`is_exempt`].
+fn check_structure(
+    path: &Path,
+    rel: &str,
+    html: &str,
+    failures: &mut Vec<Failure>,
+) {
+    let markup = markup_only(html);
+    for (needle, what) in [
+        ("<!doctype", "<!DOCTYPE> declarations"),
+        ("<html", "<html> elements"),
+        ("<title>", "<title> elements"),
+        ("<main", "<main> elements"),
+    ] {
+        let count = count_ci(&markup, needle);
+        if count > 1 {
+            failures.push(Failure {
+                path: path.to_path_buf(),
+                invariant: "document-count",
+                detail: format!("page {rel}: {count} {what} (expected 1)"),
+            });
+        }
+    }
+}
+
+/// The page with `<script>`, `<style>` and comment bodies removed, so a
+/// tag name in a livereload script's JavaScript comment ("swap the
+/// `<main>` body") is not counted as an element.
+fn markup_only(html: &str) -> String {
+    let lower = html.to_lowercase();
+    let mut out = String::with_capacity(html.len());
+    let mut at = 0;
+    while at < html.len() {
+        let next = [
+            ("<script", "</script>"),
+            ("<style", "</style>"),
+            ("<!--", "-->"),
+        ]
+        .into_iter()
+        .filter_map(|(open, close)| {
+            lower[at..].find(open).map(|i| (at + i, open, close))
+        })
+        .min_by_key(|(start, _, _)| *start);
+        let Some((start, open, close)) = next else {
+            out.push_str(&html[at..]);
+            break;
+        };
+        out.push_str(&html[at..start]);
+        let body = start + open.len();
+        at = match lower[body..].find(close) {
+            Some(i) => body + i + close.len(),
+            None => html.len(),
+        };
+    }
+    out
+}
+
 fn check_invariants(
     path: &Path,
     rel: &str,
@@ -241,7 +305,8 @@ fn check_invariants(
         );
     }
 
-    // 4. <main> landmark
+    // 4. <main> landmark. Exactly one of it, and one document, is
+    // `check_structure`'s job: it runs on every page, exempt or not.
     if !contains_ci(html, "<main") {
         fail(
             "main-landmark",
@@ -347,11 +412,12 @@ fn every_built_example_page_satisfies_universal_invariants() {
             .unwrap_or(path)
             .to_string_lossy()
             .replace('\\', "/");
+        let html = fs::read_to_string(path).unwrap();
+        check_structure(path, &rel, &html, &mut failures);
         if is_exempt(&rel) {
             pages_exempted += 1;
             continue;
         }
-        let html = fs::read_to_string(path).unwrap();
         check_invariants(path, &rel, &html, &mut failures);
         pages_scanned += 1;
     }
@@ -448,7 +514,8 @@ fn check_core_invariants(
         fail("html-tag", format!("page {rel}: no <html> tag"));
     }
 
-    if count_ci(html, "<title>") == 0 {
+    let title_count = count_ci(html, "<title>");
+    if title_count == 0 {
         fail("title-missing", format!("page {rel}: no <title>"));
     } else if let Some(start) = lower.find("<title>") {
         if let Some(end) = lower[start..].find("</title>") {
@@ -519,10 +586,11 @@ fn core_invariants_hold_for_every_page() {
             .unwrap_or(path)
             .to_string_lossy()
             .replace('\\', "/");
+        let html = fs::read_to_string(path).unwrap();
+        check_structure(path, &rel, &html, &mut failures);
         if is_exempt(&rel) {
             continue;
         }
-        let html = fs::read_to_string(path).unwrap();
         check_core_invariants(path, &rel, &html, &mut failures);
         pages_scanned += 1;
     }
@@ -596,4 +664,29 @@ fn is_exempt_skips_404_and_search() {
     assert!(is_exempt("examples/blog/public/404.html"));
     assert!(is_exempt("examples/blog/public/search/index.html"));
     assert!(!is_exempt("examples/blog/public/index.html"));
+}
+
+#[test]
+fn check_structure_counts_markup_not_script_text() {
+    let html = "<!DOCTYPE html><html><head><title>t</title></head><body>\
+        <main id=\"main\">x</main>\
+        <!-- the old <main> went here -->\
+        <script>\n// swap the <main> body so state outside <main> survives\n\
+        var s = '<main>';</script><style>/* <main> */</style>\
+        </body></html>";
+    let mut failures = Vec::new();
+    check_structure(Path::new("p"), "p", html, &mut failures);
+    assert!(failures.is_empty(), "{:?}", failures);
+}
+
+#[test]
+fn check_structure_flags_a_nested_document() {
+    let html = "<!DOCTYPE html><html><head><title>a</title></head><body>\
+        <main><!DOCTYPE html><html><head><title>b</title></head>\
+        <body><main>x</main></body></html></main></body></html>";
+    let mut failures = Vec::new();
+    check_structure(Path::new("p"), "p", html, &mut failures);
+    let details: Vec<_> = failures.iter().map(|f| f.detail.as_str()).collect();
+    assert_eq!(details.len(), 4, "{details:?}");
+    assert!(details.iter().all(|d| d.contains("2 ")), "{details:?}");
 }

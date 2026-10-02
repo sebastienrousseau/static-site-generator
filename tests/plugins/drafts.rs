@@ -9,7 +9,10 @@ use ssg::plugin::Plugin;
 
 #[test]
 fn drafts_plugin_name_is_stable() {
-    assert!(!DraftPlugin::new(false).name().is_empty());
+    assert!(
+        !DraftPlugin::new(false).name().is_empty(),
+        "should not be empty"
+    );
 }
 
 #[test]

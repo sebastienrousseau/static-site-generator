@@ -10,5 +10,5 @@ use ssg::sbom::SbomPlugin;
 
 #[test]
 fn sbom_plugin_name_is_stable() {
-    assert!(!SbomPlugin.name().is_empty());
+    assert!(!SbomPlugin.name().is_empty(), "should not be empty");
 }

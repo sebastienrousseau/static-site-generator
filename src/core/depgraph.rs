@@ -1084,7 +1084,11 @@ mod tests {
         graph.record_hash(Path::new("a"), b"x");
         graph.clear();
         assert_eq!(graph.page_count(), 0);
-        assert!(graph.tracked_sources().is_empty());
+        assert!(
+            graph.tracked_sources().is_empty(),
+            "{:?}",
+            graph.tracked_sources()
+        );
     }
 
     #[test]
@@ -1383,7 +1387,11 @@ mod tests {
     #[test]
     fn scan_template_refs_ignores_plain_variables() {
         let body = "<p>{{title}}</p>{{!raw_html}}";
-        assert!(scan_template_refs(body).is_empty());
+        assert!(
+            scan_template_refs(body).is_empty(),
+            "{:?}",
+            scan_template_refs(body)
+        );
     }
 
     #[test]
@@ -1439,7 +1447,7 @@ mod tests {
         let graph = DepGraph::new();
         let err = graph.save(&cache_root).unwrap_err();
         let msg = format!("{err}");
-        assert!(!msg.is_empty());
+        assert!(!msg.is_empty(), "should not be empty");
     }
 
     #[test]
@@ -1477,7 +1485,11 @@ mod tests {
         fs::write(&path, br#"{"deps":{},"outputs":{},"hashes":{}}"#).unwrap();
         let loaded = DepGraph::load(cache_root);
         assert_eq!(loaded.page_count(), 0);
-        assert!(loaded.tracked_sources().is_empty());
+        assert!(
+            loaded.tracked_sources().is_empty(),
+            "{:?}",
+            loaded.tracked_sources()
+        );
     }
 
     // ── populate error-path closure coverage ────────────────────────
@@ -1809,7 +1821,7 @@ mod tests {
             Path::new("/content"),
             Path::new("/build"),
         );
-        assert!(out.is_empty());
+        assert!(out.is_empty(), "{:?}", out);
     }
 
     #[test]
@@ -1898,7 +1910,11 @@ mod tests {
     #[test]
     fn scan_template_refs_handles_unclosed_and_plain_refs() {
         // Unclosed `{{` → break arm.
-        assert!(scan_template_refs("{{#extends \"base\"").is_empty());
+        assert!(
+            scan_template_refs("{{#extends \"base\"").is_empty(),
+            "{:?}",
+            scan_template_refs("{{#extends \"base\"")
+        );
         // Plain variable refs produce no names; empty extends name is
         // filtered; duplicates are deduped.
         let refs =

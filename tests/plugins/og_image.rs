@@ -10,7 +10,7 @@ use ssg::plugin::Plugin;
 #[test]
 fn og_image_plugin_name_is_stable() {
     let p = OgImagePlugin::new("https://example.com");
-    assert!(!p.name().is_empty());
+    assert!(!p.name().is_empty(), "should not be empty");
 }
 
 #[test]

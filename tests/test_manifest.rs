@@ -165,7 +165,7 @@ mod tests {
         assert_eq!(manifest["description"], "");
 
         let icons = manifest["icons"].as_array().expect("Expected icons array");
-        assert!(icons.is_empty());
+        assert!(icons.is_empty(), "{:?}", icons);
 
         assert_eq!(manifest["orientation"], "portrait-primary");
         assert_eq!(manifest["scope"], "/");
@@ -195,7 +195,7 @@ mod tests {
         assert_eq!(manifest["description"], "");
 
         let icons = manifest["icons"].as_array().expect("Expected icons array");
-        assert!(icons.is_empty());
+        assert!(icons.is_empty(), "{:?}", icons);
 
         assert_eq!(manifest["orientation"], "portrait-primary");
         assert_eq!(manifest["scope"], "/");

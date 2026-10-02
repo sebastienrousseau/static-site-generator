@@ -1177,14 +1177,14 @@ mod tests {
         let dir = tempdir().expect("tempdir");
         let result =
             collect_json_files(&dir.path().join("does-not-exist")).unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]
     fn collect_json_files_returns_empty_for_empty_directory() {
         let dir = tempdir().expect("tempdir");
         let result = collect_json_files(dir.path()).unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]

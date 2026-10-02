@@ -337,7 +337,7 @@ mod tests {
     fn walk_files_returns_empty_for_missing_directory() {
         let dir = tempdir().unwrap();
         let result = walk_files(&dir.path().join("missing"), "html").unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]
@@ -437,7 +437,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let result =
             walk_files_multi(&dir.path().join("missing"), &["jpg"]).unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     // -------------------------------------------------------------------
@@ -475,7 +475,7 @@ mod tests {
         let result =
             walk_files_bounded_depth(&dir.path().join("missing"), "md", 8)
                 .unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     // -------------------------------------------------------------------
@@ -509,7 +509,7 @@ mod tests {
         let result =
             walk_files_bounded_count(&dir.path().join("missing"), "html", 100)
                 .unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]

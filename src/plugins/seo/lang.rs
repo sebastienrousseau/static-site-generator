@@ -586,7 +586,7 @@ mod tests {
         let ctx = ctx_with(dir.path(), None, Some(&[]));
         let i18n = ctx.config.as_ref().unwrap().i18n.as_ref().unwrap();
         assert_eq!(i18n.default_locale, "en");
-        assert!(i18n.locales.is_empty());
+        assert!(i18n.locales.is_empty(), "{:?}", i18n.locales);
 
         let lang = resolve_page_lang(
             "",

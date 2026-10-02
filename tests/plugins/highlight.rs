@@ -10,5 +10,5 @@ use ssg::plugin::Plugin;
 #[test]
 fn highlight_plugin_name_is_stable() {
     let p = HighlightPlugin::new("base16-ocean.dark");
-    assert!(!p.name().is_empty());
+    assert!(!p.name().is_empty(), "should not be empty");
 }

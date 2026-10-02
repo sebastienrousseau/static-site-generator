@@ -434,7 +434,7 @@ mod tests {
 
         let cache2 = BuildCache::load(&cache_path).ok().unwrap();
         let changed = cache2.changed_files(&content).ok().unwrap();
-        assert!(changed.is_empty());
+        assert!(changed.is_empty(), "{:?}", changed);
     }
 
     // 5. New files appear as changed.
@@ -499,7 +499,7 @@ mod tests {
         let (_tmp, content, cache_path) = setup();
         let cache = BuildCache::load(&cache_path).ok().unwrap();
         let changed = cache.changed_files(&content).ok().unwrap();
-        assert!(changed.is_empty());
+        assert!(changed.is_empty(), "{:?}", changed);
     }
 
     // 9. Non-existent content directory yields no changed files.
@@ -511,7 +511,7 @@ mod tests {
         let cache = BuildCache::load(&cache_path).ok().unwrap();
         let changed =
             cache.changed_files(&tmp.path().join("nope")).ok().unwrap();
-        assert!(changed.is_empty());
+        assert!(changed.is_empty(), "{:?}", changed);
     }
 
     // 10. Fingerprint is deterministic for the same content.
@@ -622,7 +622,10 @@ mod tests {
         // trivial static-string accessor but it's part of the
         // public API so we exercise it explicitly.
         assert_eq!(BuildCache::default_path(), DEFAULT_CACHE_FILE);
-        assert!(!BuildCache::default_path().is_empty());
+        assert!(
+            !BuildCache::default_path().is_empty(),
+            "should not be empty"
+        );
     }
 
     // 18. walk() propagates read_dir errors via with_context.

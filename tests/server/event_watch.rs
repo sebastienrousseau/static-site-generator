@@ -29,7 +29,11 @@ use tempfile::tempdir;
 
 #[test]
 fn debounce_paths_empty_input() {
-    assert!(debounce_paths(&[], Duration::from_millis(100)).is_empty());
+    assert!(
+        debounce_paths(&[], Duration::from_millis(100)).is_empty(),
+        "{:?}",
+        debounce_paths(&[], Duration::from_millis(100))
+    );
 }
 
 #[test]

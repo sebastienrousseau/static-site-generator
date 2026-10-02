@@ -526,9 +526,9 @@ mod tests {
     fn extract_returns_defaults_when_absent() {
         let html = "<html><head></head><body></body></html>";
         let meta = extract_head_meta(html);
-        assert!(meta.title.is_empty());
-        assert!(meta.lang.is_empty());
-        assert!(meta.canonical.is_empty());
+        assert!(meta.title.is_empty(), "{:?}", meta.title);
+        assert!(meta.lang.is_empty(), "{:?}", meta.lang);
+        assert!(meta.canonical.is_empty(), "{:?}", meta.canonical);
     }
 
     #[test]

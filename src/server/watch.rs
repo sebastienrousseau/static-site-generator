@@ -644,7 +644,7 @@ mod tests {
         // Add file, detect it, then check again — should be empty.
         write_file(&dir.join("b.md"), "new");
         let first = watcher.check_for_changes().expect("check");
-        assert!(!first.is_empty());
+        assert!(!first.is_empty(), "should not be empty");
 
         let second = watcher.check_for_changes().expect("check");
         assert!(second.is_empty(), "changes should be cleared after read");
@@ -722,7 +722,7 @@ mod tests {
         let mut call_count = 0;
         watch_blocking(&mut watcher, |changes| {
             call_count += 1;
-            assert!(!changes.is_empty());
+            assert!(!changes.is_empty(), "should not be empty");
             false // return immediately
         });
 
@@ -763,7 +763,7 @@ mod tests {
         // so check returns empty (this exercises line 246's
         // condition path even though it doesn't enter the loop arm).
         let changes = watcher.check_for_changes().expect("check");
-        assert!(changes.is_empty());
+        assert!(changes.is_empty(), "{:?}", changes);
         let _ = fs::remove_dir_all(&dir);
     }
 

@@ -7,5 +7,5 @@ use ssg::postprocess::ManifestFixPlugin;
 
 #[test]
 fn manifest_fix_plugin_name_is_stable() {
-    assert!(!ManifestFixPlugin.name().is_empty());
+    assert!(!ManifestFixPlugin.name().is_empty(), "should not be empty");
 }

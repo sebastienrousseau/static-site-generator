@@ -9,7 +9,7 @@ use ssg::shortcodes::{expand_shortcodes, ShortcodePlugin};
 
 #[test]
 fn shortcode_plugin_name_is_stable() {
-    assert!(!ShortcodePlugin.name().is_empty());
+    assert!(!ShortcodePlugin.name().is_empty(), "should not be empty");
 }
 
 #[test]

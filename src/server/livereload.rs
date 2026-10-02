@@ -404,14 +404,14 @@ mod tests {
         fs::write(tmp.path().join("readme.txt"), "hello").expect("write");
 
         let files = collect_html_files(tmp.path()).expect("collect");
-        assert!(files.is_empty());
+        assert!(files.is_empty(), "{:?}", files);
     }
 
     #[test]
     fn empty_directory() {
         let tmp = tempdir().expect("tempdir");
         let files = collect_html_files(tmp.path()).expect("collect");
-        assert!(files.is_empty());
+        assert!(files.is_empty(), "{:?}", files);
     }
 
     #[test]

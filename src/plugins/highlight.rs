@@ -353,7 +353,7 @@ mod tests {
     fn collect_html_files_returns_empty_for_missing_directory() {
         let dir = tempdir().unwrap();
         let result = collect_html_files(&dir.path().join("missing")).unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]

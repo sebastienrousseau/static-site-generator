@@ -2673,7 +2673,7 @@ mod tests {
     fn collect_json_files_returns_empty_for_missing_directory() {
         let dir = tempdir().expect("tempdir");
         let result = collect_json_files(&dir.path().join("missing")).unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]
@@ -2963,7 +2963,7 @@ mod tests {
         let _ = fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
         // Root CI runners bypass perms; only assert when it errored.
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -2985,7 +2985,7 @@ mod tests {
 
         let _ = fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -3007,7 +3007,7 @@ mod tests {
 
         let _ = fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -3029,7 +3029,7 @@ mod tests {
 
         let _ = fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -3055,7 +3055,7 @@ mod tests {
             .unwrap();
 
         let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -3080,7 +3080,7 @@ mod tests {
         .unwrap();
 
         let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     // -------------------------------------------------------------------
@@ -3102,7 +3102,7 @@ mod tests {
         let _ =
             fs::set_permissions(&sidecar, fs::Permissions::from_mode(0o644));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -3119,7 +3119,7 @@ mod tests {
 
         let _ = fs::set_permissions(&sub, fs::Permissions::from_mode(0o755));
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -3139,7 +3139,7 @@ mod tests {
         fs::write(site.join("tags/rust"), "not a dir").unwrap();
 
         let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -3153,7 +3153,7 @@ mod tests {
         fs::create_dir_all(site.join("tags/rust/index.html")).unwrap();
 
         let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -3167,7 +3167,7 @@ mod tests {
         fs::create_dir_all(site.join("tags/index.html")).unwrap();
 
         let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]

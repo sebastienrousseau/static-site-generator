@@ -365,7 +365,7 @@ mod tests {
         let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
         // Root CI runners bypass perms; only assert when it errored.
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 
@@ -378,7 +378,7 @@ mod tests {
         let err = VectorSearchPlugin
             .after_compile(&ctx(tmp.path()))
             .unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     /// Squats `search/<name>` with a directory so the corresponding
@@ -390,7 +390,7 @@ mod tests {
         let err = VectorSearchPlugin
             .after_compile(&ctx(tmp.path()))
             .unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]

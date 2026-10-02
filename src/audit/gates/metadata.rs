@@ -45,20 +45,16 @@ impl AuditGate for MetadataGate {
             let rel = site.rel(path);
 
             check_title(&html, &rel, &mut findings);
-            for required in ["description"] {
-                if !has_named_meta(&html, required) {
-                    findings.push(
-                        Finding::new(
-                            NAME,
-                            Severity::Error,
-                            format!(
-                                "<meta name=\"{required}\"> missing or empty"
-                            ),
-                        )
-                        .with_code(format!("META-{}", required.to_uppercase()))
-                        .with_path(rel.clone()),
-                    );
-                }
+            if !has_named_meta(&html, "description") {
+                findings.push(
+                    Finding::new(
+                        NAME,
+                        Severity::Error,
+                        "<meta name=\"description\"> missing or empty",
+                    )
+                    .with_code("META-DESCRIPTION")
+                    .with_path(rel.clone()),
+                );
             }
             for required in ["og:title", "og:type", "og:image"] {
                 if !has_property_meta(&html, required) {
@@ -312,6 +308,6 @@ mod tests {
             html_files: Vec::new(),
         };
         let f = MetadataGate.run(&s, &AuditOptions::default());
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 }

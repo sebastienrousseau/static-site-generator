@@ -276,7 +276,7 @@ mod tests {
 
         let budget = MemoryBudget::from_mb(512);
         let batches = batched_content_files(&content, &budget).unwrap();
-        assert!(batches.is_empty());
+        assert!(batches.is_empty(), "{:?}", batches);
     }
 
     #[test]
@@ -476,7 +476,7 @@ mod tests {
         // walk_files treats a missing dir as empty, so batched returns
         // Ok([]) — asserted without a conditional so no dead branch.
         let batches = result.unwrap_or_default();
-        assert!(batches.is_empty());
+        assert!(batches.is_empty(), "{:?}", batches);
     }
 
     #[test]

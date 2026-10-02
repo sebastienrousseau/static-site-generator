@@ -726,7 +726,7 @@ mod tests {
     fn extract_text_with_filter_no_match_returns_empty() {
         let html = "<div>not a heading</div>";
         let texts = extract_text_with_filter(html, "h1").unwrap();
-        assert!(texts.is_empty());
+        assert!(texts.is_empty(), "{:?}", texts);
     }
 
     // ── collapse_whitespace edge cases ──────────────────────────────

@@ -6,15 +6,27 @@ SSG uses the [MiniJinja](https://docs.rs/minijinja) template engine for renderin
 
 ## Template Directory
 
-Templates live in the directory specified by `-t` / `template_dir`:
+Templates live in the directory specified by `-t` / `template_dir`. The
+compile stage renders each content file through a StaticWeaver layout
+at the root of that directory, then the template plugin wraps the
+rendered content in the MiniJinja layouts under `tera/`:
 
 ```text
 templates/
-  base.html       # Base layout with shared structure
-  page.html       # Default page template
-  post.html       # Blog post template
-  index.html      # Home / listing page
+  template.html   # StaticWeaver layouts read by the compile stage
+  index.html
+  page.html
+  post.html
+  tera/
+    base.html     # MiniJinja base layout with shared structure
+    page.html     # Default page template
+    post.html     # Blog post template
+    index.html    # Home / listing page
 ```
+
+`ssg --new <name>` scaffolds both sets. A MiniJinja layout receives the
+page's rendered content as `page.content`, not the compiled document, so
+`base.html` owns the `<html>`, `<head>` and `<main>` of every page.
 
 ## MiniJinja Basics
 

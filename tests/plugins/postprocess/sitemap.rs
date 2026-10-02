@@ -7,5 +7,5 @@ use ssg::postprocess::SitemapFixPlugin;
 
 #[test]
 fn sitemap_fix_plugin_name_is_stable() {
-    assert!(!SitemapFixPlugin.name().is_empty());
+    assert!(!SitemapFixPlugin.name().is_empty(), "should not be empty");
 }

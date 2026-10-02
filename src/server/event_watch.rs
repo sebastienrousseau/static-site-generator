@@ -593,7 +593,11 @@ mod tests {
 
     #[test]
     fn debounce_empty_input_yields_empty_output() {
-        assert!(debounce_paths(&[], Duration::from_millis(100)).is_empty());
+        assert!(
+            debounce_paths(&[], Duration::from_millis(100)).is_empty(),
+            "{:?}",
+            debounce_paths(&[], Duration::from_millis(100))
+        );
     }
 
     #[test]

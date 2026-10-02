@@ -416,7 +416,7 @@ mod tests {
     fn empty_site_returns_no_findings() {
         let s = site_with(&[]);
         let f = CspSriGate.run(&s, &AuditOptions::default());
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 
     #[test]

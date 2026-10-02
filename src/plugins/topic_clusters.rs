@@ -217,7 +217,7 @@ mod tests {
         let payments = clusters.get("payments").expect("section loaded");
         assert!(payments.title.is_none());
         assert!(payments.lede.is_none());
-        assert!(payments.order.is_empty());
+        assert!(payments.order.is_empty(), "{:?}", payments.order);
     }
 
     #[test]

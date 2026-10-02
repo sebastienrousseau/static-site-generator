@@ -105,7 +105,7 @@ mod tests {
             html_files: Vec::new(),
         };
         let f = JsonLdGate.run(&s, &AuditOptions::default());
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 
     #[test]
@@ -128,7 +128,7 @@ mod tests {
         };
         let f = JsonLdGate.run(&s, &AuditOptions::default());
         std::mem::forget(tmp);
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 
     #[test]

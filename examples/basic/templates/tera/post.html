@@ -2,7 +2,7 @@
 {% block content %}
 <article>
   <header>
-    <h1>{{ page.title | default(value="") }}</h1>
+    <h1>{{ page.title | default("") }}</h1>
     {% if page.date %}<time datetime="{{ page.date }}">{{ page.date }}</time>{% endif %}
     {% if page.author %}<span class="author">by {{ page.author }}</span>{% endif %}
     {% if page.content %}<span class="reading-time">{{ page.content | reading_time }}</span>{% endif %}

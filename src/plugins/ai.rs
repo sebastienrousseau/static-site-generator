@@ -617,7 +617,7 @@ mod tests {
         let dir = tempdir().expect("tempdir");
         fs::write(dir.path().join("robots.txt"), "").unwrap();
         let result = parse_robots_disallow(dir.path());
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]
@@ -629,7 +629,7 @@ mod tests {
         )
         .unwrap();
         let result = parse_robots_disallow(dir.path());
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]
@@ -649,7 +649,7 @@ mod tests {
     fn test_parse_robots_disallow_missing_file() {
         let dir = tempdir().expect("tempdir");
         let result = parse_robots_disallow(dir.path());
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]
@@ -1248,7 +1248,7 @@ mod tests {
     fn collect_html_files_returns_empty_for_missing_directory() {
         let dir = tempdir().expect("tempdir");
         let result = collect_html_files(&dir.path().join("missing")).unwrap();
-        assert!(result.is_empty());
+        assert!(result.is_empty(), "{:?}", result);
     }
 
     #[test]
@@ -1458,7 +1458,7 @@ mod tests {
         // through the first `.map_err` in `after_compile`.
         fs::create_dir_all(site.join("llms.txt")).unwrap();
         let err = AiPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -1469,7 +1469,7 @@ mod tests {
         // directory so the second stage fails.
         fs::create_dir_all(site.join("llms-full.txt")).unwrap();
         let err = AiPlugin.after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -1488,7 +1488,7 @@ mod tests {
         // Root CI runners bypass permission checks; only assert when the
         // read genuinely failed.
         if let Err(e) = res {
-            assert!(!format!("{e}").is_empty());
+            assert!(!format!("{e}").is_empty(), "should not be empty");
         }
     }
 }

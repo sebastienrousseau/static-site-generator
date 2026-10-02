@@ -1338,7 +1338,7 @@ mod tests {
         let mut files = Vec::new();
 
         collect_files_recursive(temp_dir.path(), &mut files).unwrap();
-        assert!(files.is_empty());
+        assert!(files.is_empty(), "{:?}", files);
     }
 
     #[test]
@@ -1895,7 +1895,7 @@ mod tests {
         log_initialization(&mut log_file, &date).unwrap();
 
         let content = fs::read_to_string(&log_path).unwrap();
-        assert!(!content.is_empty());
+        assert!(!content.is_empty(), "should not be empty");
         assert!(content.contains("process"));
     }
 

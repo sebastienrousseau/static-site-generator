@@ -1204,7 +1204,7 @@ mod tests {
         register_default_plugins(&mut plugins, &config, false, None);
 
         let inv = plugins.inventory();
-        assert!(!inv.is_empty());
+        assert!(!inv.is_empty(), "should not be empty");
         for (i, info) in inv.iter().enumerate() {
             assert_eq!(info.order, i);
         }

@@ -9,5 +9,5 @@ use ssg::plugin::Plugin;
 
 #[test]
 fn plugin_name_is_stable() {
-    assert!(!AiPlugin.name().is_empty());
+    assert!(!AiPlugin.name().is_empty(), "should not be empty");
 }

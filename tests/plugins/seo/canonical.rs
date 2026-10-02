@@ -8,5 +8,5 @@ use ssg::seo::CanonicalPlugin;
 #[test]
 fn canonical_plugin_name_is_stable() {
     let p = CanonicalPlugin::new("https://example.com");
-    assert!(!p.name().is_empty());
+    assert!(!p.name().is_empty(), "should not be empty");
 }

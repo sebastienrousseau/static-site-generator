@@ -9,5 +9,5 @@ use ssg::plugin::Plugin;
 
 #[test]
 fn island_plugin_name_is_stable() {
-    assert!(!IslandPlugin.name().is_empty());
+    assert!(!IslandPlugin.name().is_empty(), "should not be empty");
 }

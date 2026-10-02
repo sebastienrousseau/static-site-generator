@@ -333,7 +333,7 @@ mod tests {
         assert!(sbom["metadata"]["timestamp"].as_str().is_some());
         assert!(sbom["metadata"]["tools"].as_array().is_some());
         let components = sbom["components"].as_array().unwrap();
-        assert!(!components.is_empty());
+        assert!(!components.is_empty(), "should not be empty");
         // Every component must have a name and a purl.
         for c in components {
             assert!(c["name"].as_str().is_some());

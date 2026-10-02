@@ -242,7 +242,7 @@ mod tests {
     #[test]
     fn empty_site_produces_no_findings() {
         let f = WcagGate.run(&empty_site(), &AuditOptions::default());
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 
     #[test]
@@ -355,7 +355,7 @@ mod tests {
         };
         std::mem::forget(tmp);
         let f = WcagGate.run(&s, &AuditOptions::default());
-        assert!(f.is_empty());
+        assert!(f.is_empty(), "{:?}", f);
     }
 
     #[test]

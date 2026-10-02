@@ -1024,7 +1024,7 @@ mod tests {
     fn test_extract_entries_from_rss_no_file() {
         let tmp = tempdir().unwrap();
         let entries = extract_entries_from_rss(tmp.path());
-        assert!(entries.is_empty());
+        assert!(entries.is_empty(), "{:?}", entries);
     }
 
     #[test]
@@ -1036,7 +1036,7 @@ mod tests {
         )
         .unwrap();
         let entries = extract_entries_from_rss(tmp.path());
-        assert!(entries.is_empty());
+        assert!(entries.is_empty(), "{:?}", entries);
     }
 
     #[test]
@@ -1054,7 +1054,7 @@ mod tests {
         // Has a link-derived rel_path and a description but no title,
         // so it should still be included (meta has no "title" key but
         // the filter checks contains_key("title") — so it's excluded)
-        assert!(entries.is_empty());
+        assert!(entries.is_empty(), "{:?}", entries);
     }
 
     #[test]
@@ -1070,7 +1070,7 @@ mod tests {
         fs::write(tmp.path().join("rss.xml"), rss).unwrap();
         let entries = extract_entries_from_rss(tmp.path());
         // rel_path is empty without link => skipped
-        assert!(entries.is_empty());
+        assert!(entries.is_empty(), "{:?}", entries);
     }
 
     // -----------------------------------------------------------------
@@ -1101,9 +1101,9 @@ mod tests {
         let (date_key, entry) = result.unwrap();
         assert_eq!(entry.title, "Test");
         assert!(entry.link.contains("example.com/page/"));
-        assert!(entry.author.is_empty());
+        assert!(entry.author.is_empty(), "{:?}", entry.author);
         // No pub_date in meta => empty string date key
-        assert!(date_key.is_empty());
+        assert!(date_key.is_empty(), "{:?}", date_key);
     }
 
     #[test]
@@ -1445,8 +1445,8 @@ mod tests {
         let _ = meta.insert("title".to_string(), "No Date".to_string());
         let result = build_atom_entry("nodate", &meta, "https://example.com");
         let (date_key, entry) = result.unwrap();
-        assert!(date_key.is_empty());
-        assert!(entry.published.is_empty());
+        assert!(date_key.is_empty(), "{:?}", date_key);
+        assert!(entry.published.is_empty(), "{:?}", entry.published);
     }
 
     // -----------------------------------------------------------------
@@ -1527,7 +1527,7 @@ mod tests {
 </channel></rss>"#;
         fs::write(tmp.path().join("rss.xml"), rss).unwrap();
         let entries = extract_entries_from_rss(tmp.path());
-        assert!(entries.is_empty());
+        assert!(entries.is_empty(), "{:?}", entries);
     }
 
     #[test]

@@ -10,7 +10,7 @@ use std::path::Path;
 
 #[test]
 fn seo_plugin_name_is_stable() {
-    assert!(!SeoPlugin.name().is_empty());
+    assert!(!SeoPlugin.name().is_empty(), "should not be empty");
 }
 
 /// Builds a `PluginContext` carrying a site `language` and declared

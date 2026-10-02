@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="{{ site.language | default(value='en') }}">
+<html lang="{{ site.language | default('en') }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ page.title | default(value="Untitled") }}{% if site.title %} — {{ site.title }}{% endif %}{% endblock %}</title>
+  <title>{% block title %}{{ page.title | default("Untitled") }}{% if site.title %} — {{ site.title }}{% endif %}{% endblock %}</title>
   {# `page` is absent on taxonomy pages, which render through this
      same base with `tag`/`posts` in scope instead. Without the
      `is defined` guard the whole build aborts with
@@ -17,7 +17,7 @@
   <a href="#main-content" class="sr-only">Skip to main content</a>
   <header role="banner">
     <nav aria-label="Main navigation">
-      <a href="/">{{ site.name | default(value="Home") }}</a>
+      <a href="/">{{ site.name | default("Home") }}</a>
       <a href="/about.html">About</a>
     </nav>
   </header>
@@ -25,7 +25,7 @@
     {% block content %}{% endblock %}
   </main>
   <footer role="contentinfo">
-    <p>&copy; {{ site.name | default(value="") }}. Built with <a href="https://static-site-generator.one">SSG</a>.</p>
+    <p>&copy; {{ site.name | default("") }}. Built with <a href="https://static-site-generator.one">SSG</a>.</p>
   </footer>
 </body>
 </html>

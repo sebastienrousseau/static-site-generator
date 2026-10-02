@@ -8,5 +8,5 @@ use ssg::seo::RobotsPlugin;
 #[test]
 fn robots_plugin_name_is_stable() {
     let p = RobotsPlugin::new("https://example.com");
-    assert!(!p.name().is_empty());
+    assert!(!p.name().is_empty(), "should not be empty");
 }

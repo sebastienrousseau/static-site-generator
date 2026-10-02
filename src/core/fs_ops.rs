@@ -969,7 +969,7 @@ mod tests {
         let mut files = Vec::new();
         collect_files_recursive(tmp.path(), &mut files).unwrap();
 
-        assert!(files.is_empty());
+        assert!(files.is_empty(), "{:?}", files);
     }
 
     #[test]

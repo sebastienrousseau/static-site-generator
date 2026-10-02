@@ -588,7 +588,7 @@ mod tests {
         // The `!current.is_dir()` continue at line 141.
         let dir = tempdir().expect("tempdir");
         let files = collect_md_files(&dir.path().join("missing")).unwrap();
-        assert!(files.is_empty());
+        assert!(files.is_empty(), "{:?}", files);
     }
 
     #[test]

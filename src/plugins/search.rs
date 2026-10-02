@@ -1505,7 +1505,7 @@ mod tests {
         // afterwards.
         let html = "<h1 attr=\"unterminated";
         let headings = extract_headings(html);
-        assert!(headings.is_empty());
+        assert!(headings.is_empty(), "{:?}", headings);
     }
 
     #[test]
@@ -2102,7 +2102,11 @@ mod tests {
 
     #[test]
     fn extract_headings_empty_on_ambiguous_markup() {
-        assert!(extract_headings(AMBIGUOUS_HTML).is_empty());
+        assert!(
+            extract_headings(AMBIGUOUS_HTML).is_empty(),
+            "{:?}",
+            extract_headings(AMBIGUOUS_HTML)
+        );
     }
 
     #[test]

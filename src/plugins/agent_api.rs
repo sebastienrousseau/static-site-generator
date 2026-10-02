@@ -1039,7 +1039,7 @@ mod tests {
         // SsgConfig::builder always supplies a non-empty default
         // language, so the site language is the expected fallback.
         let site_lang = ctx.config.as_ref().unwrap().language.clone();
-        assert!(!site_lang.is_empty());
+        assert!(!site_lang.is_empty(), "should not be empty");
         assert_eq!(arr[2]["locale"], *site_lang);
     }
 
@@ -1349,7 +1349,7 @@ mod tests {
         // fails.
         fs::write(ctx.site_dir.join("api"), "not a dir").unwrap();
         let err = AgentApiPlugin::default().after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]
@@ -1361,7 +1361,7 @@ mod tests {
         fs::create_dir_all(ctx.site_dir.join(API_DIR).join("index.json"))
             .unwrap();
         let err = AgentApiPlugin::default().after_compile(&ctx).unwrap_err();
-        assert!(!format!("{err}").is_empty());
+        assert!(!format!("{err}").is_empty(), "should not be empty");
     }
 
     #[test]

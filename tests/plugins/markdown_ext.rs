@@ -9,7 +9,7 @@ use ssg::plugin::Plugin;
 
 #[test]
 fn markdown_ext_plugin_name_is_stable() {
-    assert!(!MarkdownExtPlugin.name().is_empty());
+    assert!(!MarkdownExtPlugin.name().is_empty(), "should not be empty");
 }
 
 #[test]

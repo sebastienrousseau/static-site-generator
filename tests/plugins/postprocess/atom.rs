@@ -7,5 +7,5 @@ use ssg::postprocess::AtomFeedPlugin;
 
 #[test]
 fn atom_plugin_name_is_stable() {
-    assert!(!AtomFeedPlugin.name().is_empty());
+    assert!(!AtomFeedPlugin.name().is_empty(), "should not be empty");
 }
