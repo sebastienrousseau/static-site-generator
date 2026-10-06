@@ -108,6 +108,11 @@ fn one_listing() -> Vec<ListingConfig> {
 /// cheap and the ratio stayed near 1; on Windows they dominate and it
 /// reached 2.1x on correct code. The metric was measuring write volume,
 /// not reads.
+// Only the fault-injection test below reads sixteen listings; without that
+// feature the helper is dead code, and the workspace denies dead code, so
+// `cargo build --all-targets --locked` (the nightly Scheduled job) failed
+// from 2026-10-05 with "function `many_listings` is never used".
+#[cfg(feature = "test-fault-injection")]
 fn many_listings() -> Vec<ListingConfig> {
     (0..16)
         .map(|b| ListingConfig {
