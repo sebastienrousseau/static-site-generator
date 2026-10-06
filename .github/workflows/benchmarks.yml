@@ -153,9 +153,18 @@ jobs:
         run: |
           set -euo pipefail
           : > bench-raw.txt
+          # Criterion's bencher output is normally one line per benchmark,
+          # `test <name> ... bench: <n> ns/iter (+/- <m>)`. When it cannot read
+          # a previous baseline it interleaves an ERROR line, and the result
+          # arrives split across two lines (seen on incremental_1000_pages in
+          # run 37525482107). Re-join those so a result is never dropped.
           for t in bench bench_html_scanning avif_vs_webp incremental_1000_pages all_pub_api bench_concurrent_operations core plugins; do
             test -s "bench-raw-$t.txt" || { echo "::error::no results for $t"; exit 1; }
-            lines=$(grep -E '^test [^ ]+ \.\.\. bench: ' "bench-raw-$t.txt" || true)
+            lines=$(awk '
+              /^test [^ ]+ \.\.\. bench: / { print; name=""; next }
+              /^test [^ ]+ \.\.\. /        { name=$2; next }
+              /^bench: / && name != ""   { print "test " name " ... " $0; name=""; next }
+            ' "bench-raw-$t.txt")
             test -n "$lines" || { echo "::error::no bencher result lines for $t"; exit 1; }
             printf '%s\n' "$lines" >> bench-raw.txt
           done
