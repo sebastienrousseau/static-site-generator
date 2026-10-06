@@ -545,6 +545,15 @@ fn extract_jsonld_blocks(html: &str) -> Vec<String> {
 
     while let Some(rel_open) = lower[cursor..].find("<script") {
         let abs_open = cursor + rel_open;
+        // A `<script` quoted inside an HTML comment is prose, not a
+        // block. Without this check a head comment that documents the
+        // CSP by naming `<script type="application/ld+json">` opened a
+        // phantom block that ran to the next real `</script>`, and
+        // every page on sebastienrousseau.com audited as "Unparseable".
+        if let Some(comment_end) = comment_end_covering(&lower, abs_open) {
+            cursor = comment_end;
+            continue;
+        }
         // Use find_tag_end equivalent: advance past `>` while
         // skipping any `>` characters that appear inside quoted
         // attribute values. Without this, `<script type="text/x>y">`
@@ -568,6 +577,20 @@ fn extract_jsonld_blocks(html: &str) -> Vec<String> {
     }
 
     blocks
+}
+
+/// If byte offset `pos` lies inside an HTML comment, returns the offset
+/// just past that comment's `-->`; otherwise `None`. An unterminated
+/// comment covers everything after its `<!--`.
+pub(crate) fn comment_end_covering(lower: &str, pos: usize) -> Option<usize> {
+    let open = lower[..pos].rfind("<!--")?;
+    match lower[open + 4..].find("-->") {
+        Some(rel) => {
+            let end = open + 4 + rel + 3;
+            (end > pos).then_some(end)
+        }
+        None => Some(lower.len()),
+    }
 }
 
 /// Returns `true` if the `<script ...>` tag declares
@@ -1668,6 +1691,33 @@ mod tests {
         let i18n = c.config.as_ref().unwrap().i18n.as_ref().unwrap();
         assert_eq!(i18n.default_locale, "en");
         assert!(i18n.locales.is_empty(), "{:?}", i18n.locales);
+    }
+
+    #[test]
+    fn jsonld_tag_quoted_in_a_comment_is_not_a_block() {
+        let html = r#"<html><head>
+<!-- Strict CSP. Inline <script type="application/ld+json"> JSON-LD blocks
+     are allowed by hash only. -->
+<meta http-equiv="Content-Security-Policy" content="script-src 'self'">
+<script src="/theme-init.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"x","url":"https://e.com/"}</script>
+</head><body></body></html>"#;
+        let blocks = extract_jsonld_blocks(html);
+        assert_eq!(
+            blocks.len(),
+            1,
+            "the quoted tag inside the comment must not open a block"
+        );
+        assert!(blocks[0].starts_with("{\"@context\""));
+        assert!(
+            validate_jsonld(html)
+                .iter()
+                .all(|e| e.schema_type != "Unparseable"),
+            "no phantom unparseable block"
+        );
+        // An unterminated comment swallows the rest of the document.
+        assert_eq!(comment_end_covering("ab<!--cd", 6), Some(8));
+        assert_eq!(comment_end_covering("<!-- a --><script", 12), None);
     }
 
     #[test]

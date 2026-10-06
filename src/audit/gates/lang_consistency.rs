@@ -117,6 +117,14 @@ fn extract_jsonld_blocks(html: &str) -> Vec<String> {
     let mut cursor = 0;
     while let Some(rel) = lower[cursor..].find("<script") {
         let abs = cursor + rel;
+        // A `<script` quoted inside an HTML comment is prose, not a block
+        // (see `plugins::seo::jsonld::comment_end_covering`).
+        if let Some(end) =
+            crate::plugins_group::seo::jsonld::comment_end_covering(&lower, abs)
+        {
+            cursor = end;
+            continue;
+        }
         let tag_end = super::find_tag_end(html, abs);
         let is_ld = super::hreflang_attr(&html[abs..tag_end], "type")
             .is_some_and(|t| t.eq_ignore_ascii_case("application/ld+json"));
@@ -367,6 +375,18 @@ mod tests {
         );
         assert_eq!(blocks.len(), 1);
         assert_eq!(blocks[0], "{}");
+    }
+
+    #[test]
+    fn jsonld_tag_quoted_in_a_comment_is_skipped() {
+        let html = r#"<html lang="fr"><head>
+<!-- Inline <script type="application/ld+json"> blocks are hashed -->
+<script src="/a.js"></script>
+<script type="application/ld+json">{"inLanguage":"fr-FR"}</script>
+</head></html>"#;
+        let blocks = extract_jsonld_blocks(html);
+        assert_eq!(blocks.len(), 1);
+        assert!(blocks[0].contains("fr-FR"));
     }
 
     #[test]
