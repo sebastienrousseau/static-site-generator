@@ -397,36 +397,103 @@ fn rewrite_css_urls_inplace(
 }
 
 /// Rewrites asset references in HTML and adds SRI attributes.
+///
+/// `integrity` and `crossorigin` belong on `<link>` and `<script>` only,
+/// so those tags are rewritten first, attribute by attribute. Every other
+/// mention of an asset path (an `<img src>`, an `og:image` meta, a URL
+/// inside a JSON-LD graph or an inline script) is renamed to the
+/// fingerprinted file and nothing is appended. Appending everywhere, as
+/// this used to, produced invalid JSON-LD and bogus attributes on
+/// `<meta>` and `<img>` on any site that referenced a fingerprinted asset
+/// outside a link or script tag.
 fn rewrite_asset_refs(
     html: &str,
     manifest: &HashMap<String, AssetInfo>,
 ) -> String {
-    let mut result = html.to_string();
+    let mut out = String::with_capacity(html.len() + 256);
+    let mut rest = html;
+    while let Some(open) = find_sri_tag(rest) {
+        let end = tag_end(rest, open);
+        out.push_str(&rest[..open]);
+        out.push_str(&rewrite_refs_in(&rest[open..end], manifest, true));
+        rest = &rest[end..];
+    }
+    out.push_str(rest);
+    rewrite_refs_in(&out, manifest, false)
+}
+
+/// Replaces every quoted reference to a manifest entry in `s` with its
+/// fingerprinted name; with `with_sri`, the `integrity` and `crossorigin`
+/// attributes follow the closing quote.
+fn rewrite_refs_in(
+    s: &str,
+    manifest: &HashMap<String, AssetInfo>,
+    with_sri: bool,
+) -> String {
+    let mut result = s.to_string();
     for (old_path, info) in manifest {
+        let attrs = if with_sri {
+            format!(" integrity=\"{}\" crossorigin=\"anonymous\"", info.sri)
+        } else {
+            String::new()
+        };
         // Direct matches: "styles.css" and "/styles.css"
         let old_ref = format!("\"{old_path}\"");
+        let new_ref = format!("\"{}\"{attrs}", info.fingerprinted);
         let old_ref_slash = format!("\"/{old_path}\"");
-        let new_ref = format!(
-            "\"{}\" integrity=\"{}\" crossorigin=\"anonymous\"",
-            info.fingerprinted, info.sri
-        );
-        let new_ref_slash = format!(
-            "\"/{}\" integrity=\"{}\" crossorigin=\"anonymous\"",
-            info.fingerprinted, info.sri
-        );
-
+        let new_ref_slash = format!("\"/{}\"{attrs}", info.fingerprinted);
         result = result.replace(&old_ref, &new_ref);
         result = result.replace(&old_ref_slash, &new_ref_slash);
-
-        // Scoped sub-path matches: e.g. "/swiftdev/styles.css" -> "/swiftdev/styles.hash.css"
+        // Scoped sub-path matches: "/swiftdev/styles.css" -> "/swiftdev/styles.hash.css"
         let old_suffix = format!("/{old_path}\"");
-        let new_suffix = format!(
-            "/{}\" integrity=\"{}\" crossorigin=\"anonymous\"",
-            info.fingerprinted, info.sri
-        );
+        let new_suffix = format!("/{}\"{attrs}", info.fingerprinted);
         result = result.replace(&old_suffix, &new_suffix);
     }
     result
+}
+
+/// Byte offset of the next `<link` or `<script` open tag in `s`, if any.
+fn find_sri_tag(s: &str) -> Option<usize> {
+    let lower = s.to_ascii_lowercase();
+    let mut from = 0;
+    while let Some(rel) = lower[from..].find('<') {
+        let at = from + rel;
+        let tail = &lower[at..];
+        for name in ["<link", "<script"] {
+            if let Some(after) = tail.strip_prefix(name) {
+                if after
+                    .chars()
+                    .next()
+                    .is_none_or(|c| c.is_whitespace() || c == '>' || c == '/')
+                {
+                    return Some(at);
+                }
+            }
+        }
+        from = at + 1;
+    }
+    None
+}
+
+/// Byte offset just past the `>` that closes the tag opening at `open`,
+/// skipping any `>` inside a quoted attribute value; the end of `s` if
+/// the tag never closes.
+const fn tag_end(s: &str, open: usize) -> usize {
+    let bytes = s.as_bytes();
+    let mut i = open;
+    let mut quote: Option<u8> = None;
+    while i < bytes.len() {
+        let b = bytes[i];
+        match quote {
+            Some(q) if b == q => quote = None,
+            Some(_) => {}
+            None if b == b'"' || b == b'\'' => quote = Some(b),
+            None if b == b'>' => return i + 1,
+            None => {}
+        }
+        i += 1;
+    }
+    bytes.len()
 }
 
 /// SHA-256 hash as a 64-char hex string.
@@ -816,8 +883,32 @@ pub fn minify_js(js: &str) -> String {
     let mut clean = String::with_capacity(result.len());
     let chars: Vec<char> = result.chars().collect();
     let mut i = 0;
+    // The first pass kept string literals verbatim; this pass must too.
+    // It used to collapse whitespace everywhere, so `"0px 0px -10% 0px"`
+    // became `"0px 0px-10% 0px"` (an IntersectionObserver rootMargin that
+    // throws on load) and template literals lost their indentation.
+    let mut in_string: Option<char> = None;
     while i < chars.len() {
         let ch = chars[i];
+        if let Some(q) = in_string {
+            clean.push(ch);
+            if ch == '\\' && i + 1 < chars.len() {
+                clean.push(chars[i + 1]);
+                i += 2;
+                continue;
+            }
+            if ch == q {
+                in_string = None;
+            }
+            i += 1;
+            continue;
+        }
+        if ch == '\'' || ch == '"' || ch == '`' {
+            in_string = Some(ch);
+            clean.push(ch);
+            i += 1;
+            continue;
+        }
         if ch == ' ' || ch == '\n' {
             let prev = if i > 0 { Some(chars[i - 1]) } else { None };
             let next = if i + 1 < chars.len() {
@@ -1188,6 +1279,58 @@ mod tests {
         assert_eq!(SriAlgorithm::Sha256.integrity(b"hello").len(), 7 + 44);
         // "sha512-" (7) + SHA-512 → 64 raw bytes → base64 = 88 chars.
         assert_eq!(SriAlgorithm::Sha512.integrity(b"hello").len(), 7 + 88);
+    }
+
+    #[test]
+    fn rewrite_asset_refs_adds_sri_only_to_link_and_script() {
+        let mut manifest = HashMap::new();
+        for (name, fp) in [
+            ("style.css", "style.abc12345.css"),
+            ("app.js", "app.0badf00d.js"),
+            ("logo.png", "logo.c0ffee00.png"),
+        ] {
+            let _ = manifest.insert(
+                name.to_string(),
+                AssetInfo {
+                    fingerprinted: fp.to_string(),
+                    sri: format!("sha384-{name}"),
+                },
+            );
+        }
+        let html = concat!(
+            r#"<link rel="stylesheet" href="/style.css">"#,
+            r#"<script src="/app.js" defer></script>"#,
+            r#"<meta property="og:image" content="/logo.png">"#,
+            r#"<img src="/logo.png" alt="">"#,
+            r#"<script type="application/ld+json">{"image":"/logo.png","url":"/app.js"}</script>"#,
+        );
+        let out = rewrite_asset_refs(html, &manifest);
+        assert!(out.contains(
+            r#"<link rel="stylesheet" href="/style.abc12345.css" integrity="sha384-style.css" crossorigin="anonymous">"#
+        ), "{out}");
+        assert!(out.contains(
+            r#"<script src="/app.0badf00d.js" integrity="sha384-app.js" crossorigin="anonymous" defer></script>"#
+        ), "{out}");
+        assert!(
+            out.contains(
+                r#"<meta property="og:image" content="/logo.c0ffee00.png">"#
+            ),
+            "{out}"
+        );
+        assert!(
+            out.contains(r#"<img src="/logo.c0ffee00.png" alt="">"#),
+            "{out}"
+        );
+        assert_eq!(out.matches("integrity=").count(), 2, "{out}");
+        let ld = out
+            .split(r#"<script type="application/ld+json">"#)
+            .nth(1)
+            .and_then(|s| s.split("</script>").next())
+            .expect("ld+json block");
+        let value: serde_json::Value =
+            serde_json::from_str(ld).expect("JSON-LD still parses");
+        assert_eq!(value["image"], "/logo.c0ffee00.png");
+        assert_eq!(value["url"], "/app.0badf00d.js");
     }
 
     #[test]
@@ -1675,6 +1818,18 @@ mod tests {
             let twice = minify_css(&once);
             assert_eq!(once, twice, "not idempotent for: {css}");
         }
+    }
+
+    /// Whitespace inside a string or template literal is content.
+    #[test]
+    fn minify_js_preserves_whitespace_inside_string_literals() {
+        let js = "var m = \"0px 0px -10% 0px\";\nvar c = 'x - y';\nvar e = 'a \\' b';\nvar t = `  a\n  b`;";
+        let out = minify_js(js);
+        assert!(out.contains("\"0px 0px -10% 0px\""), "{out}");
+        assert!(out.contains("'x - y'"), "{out}");
+        assert!(out.contains("'a \\' b'"), "{out}");
+        assert!(out.contains("`  a\n  b`"), "{out}");
+        assert_eq!(minify_js(&out), out, "idempotent");
     }
 
     /// The same for JavaScript: two passes must agree.
