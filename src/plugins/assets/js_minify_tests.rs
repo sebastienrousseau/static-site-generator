@@ -127,3 +127,41 @@ fn postfix_increment_then_slash_divides() {
     assert_eq!(minify_js("y = [a] / 2"), "y=[a]/2");
     assert_eq!(minify_js("y = 'n' / 2"), "y='n'/2");
 }
+
+/// A newline that ends a statement under automatic semicolon insertion
+/// must survive; joining the lines changes the parse or breaks it.
+#[test]
+fn newline_after_closing_brace_ends_the_statement() {
+    assert_eq!(minify_js("var a = {}\nfoo()"), "var a={}\nfoo()");
+    assert_eq!(minify_js("function f(){}\ng()"), "function f(){}\ng()");
+    assert_eq!(minify_js("if(x){}\nlet y=1"), "if(x){}\nlet y=1");
+}
+
+#[test]
+fn newline_before_a_bracket_or_paren_led_line_survives() {
+    assert_eq!(
+        minify_js("var a = {}\n[1, 2].forEach(f)"),
+        "var a={}\n[1,2].forEach(f)"
+    );
+    assert_eq!(minify_js("var b = c\n(d)"), "var b=c\n(d)");
+    assert_eq!(minify_js("return\n(x)"), "return\n(x)");
+}
+
+#[test]
+fn newline_before_an_operator_that_asi_would_split_survives() {
+    assert_eq!(minify_js("a = b\n++c"), "a=b\n++c");
+    assert_eq!(minify_js("a++\nb"), "a++\nb");
+    assert_eq!(minify_js("x = 'a'\n`t`"), "x='a'\n`t`");
+    assert_eq!(minify_js("x = y\n!z"), "x=y\n!z");
+    assert_eq!(minify_js("x = /r/g\nf()"), "x=/r/g\nf()");
+}
+
+#[test]
+fn newline_before_a_continuing_token_is_still_dropped() {
+    assert_eq!(minify_js("if (a) {\n} else {\n}"), "if(a){}else{}");
+    assert_eq!(minify_js("f({\n}\n)"), "f({})");
+    assert_eq!(minify_js("var o = [{\n},\n{\n}];"), "var o=[{},{}];");
+    assert_eq!(minify_js("g(function(){}\n);"), "g(function(){});");
+    assert_eq!(minify_js("p\n.then(q)\n.catch(r);"), "p.then(q).catch(r);");
+    assert_eq!(minify_js("x = {\n  a: 1,\n  b: 2\n};"), "x={a:1,b:2};");
+}

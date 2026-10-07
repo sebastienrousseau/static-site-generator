@@ -49,6 +49,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   longer depends on hash-map order when a root `style.css` exists, and
   single-quoted references and query strings are handled. Comments and
   page text are left as written. (#798)
+- **The JavaScript minifier keeps line breaks that end a statement.**
+  A line break after a value (`}`, `)`, `]`, an identifier, a literal
+  or a postfix `++`) was dropped unless both neighbours were word
+  characters, so `var a = {}\nfoo()` became `var a={}foo()`, a syntax
+  error, and `a = b\n++c` became `a=b++c`. The line break is now kept
+  unless the next line starts with a token that continues the
+  statement.
 
 ## [0.0.66] - 2026-10-02
 

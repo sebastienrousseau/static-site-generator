@@ -136,15 +136,38 @@ impl Minifier<'_> {
         end
     }
 
-    /// Emits the pending whitespace if dropping it would join two tokens.
+    /// Emits the pending whitespace if dropping it would join two tokens,
+    /// or a line break if dropping it would change where a statement
+    /// ends.
     fn flush_gap(&mut self, next: char) {
         let gap = std::mem::replace(&mut self.gap, Gap::None);
         let Some(prev) = self.out.chars().next_back() else {
             return;
         };
-        if gap != Gap::None && needs_separator(prev, next) {
+        if gap == Gap::Newline
+            && self.may_end_statement()
+            && !continues_statement(next)
+        {
+            self.out.push('\n');
+        } else if gap != Gap::None && needs_separator(prev, next) {
             self.out.push(if gap == Gap::Newline { '\n' } else { ' ' });
         }
+    }
+
+    /// Whether the last token emitted can end a statement, so that a line
+    /// break after it may be where automatic semicolon insertion puts one:
+    /// a value (identifier, keyword, number, literal, `)`, `]`, `}`) or a
+    /// postfix `++`/`--`. `var a = {}\nfoo()` lost its line break and
+    /// became `var a={}foo()`, a syntax error.
+    fn may_end_statement(&self) -> bool {
+        self.after_literal
+            || self.out.ends_with("++")
+            || self.out.ends_with("--")
+            || self
+                .out
+                .chars()
+                .next_back()
+                .is_some_and(|c| is_word(c) || matches!(c, ')' | ']' | '}'))
     }
 
     /// Whether a `/` here opens a regex: after an operator, an opening
@@ -181,6 +204,32 @@ fn needs_separator(prev: char, next: char) -> bool {
     (is_word(prev) && is_word(next))
         || (prev == next && matches!(prev, '+' | '-' | '/'))
         || (prev.is_ascii_digit() && next == '.')
+}
+
+/// Whether a line may start with `next` and still continue the statement
+/// before it, so the line break carries no meaning: member access,
+/// separators, closers and binary operators that cannot start a statement.
+/// Anything else (an identifier, a literal, `(`, `[`, `+`, `-`, `/`, `!`,
+/// `{`, a template) keeps its line break, which is never wrong.
+const fn continues_statement(next: char) -> bool {
+    matches!(
+        next,
+        '.' | ','
+            | ';'
+            | ')'
+            | ']'
+            | '}'
+            | '?'
+            | ':'
+            | '='
+            | '*'
+            | '%'
+            | '&'
+            | '|'
+            | '^'
+            | '<'
+            | '>'
+    )
 }
 
 /// The identifier or number at the end of `out`.
