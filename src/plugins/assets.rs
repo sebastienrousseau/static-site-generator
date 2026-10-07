@@ -16,6 +16,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
+mod js_minify;
+
+pub use js_minify::minify_js;
+
 /// Plugin that fingerprints CSS/JS assets and rewrites HTML references.
 ///
 /// Runs in `after_compile`:
@@ -795,144 +799,6 @@ pub fn minify_css(css: &str) -> String {
         i += 1;
     }
 
-    clean.trim().to_string()
-}
-
-/// Minifies JavaScript by removing comments and collapsing whitespace.
-///
-/// ssg's own implementation rather than a dependency. It is deliberately
-/// conservative: it does not rename, reorder or rewrite anything, so it
-/// cannot change what a script does. String literals, regex literals and
-/// the division operator are all left alone.
-#[must_use]
-pub fn minify_js(js: &str) -> String {
-    let mut result = String::with_capacity(js.len());
-    let mut chars = js.chars().peekable();
-    let mut in_multi_comment = false;
-    let mut in_single_comment = false;
-    let mut in_string = None;
-
-    while let Some(ch) = chars.next() {
-        if in_multi_comment {
-            if ch == '*' && chars.peek() == Some(&'/') {
-                let _ = chars.next();
-                in_multi_comment = false;
-            }
-            continue;
-        }
-
-        if in_single_comment {
-            if ch == '\n' || ch == '\r' {
-                in_single_comment = false;
-                result.push('\n');
-            }
-            continue;
-        }
-
-        if let Some(quote) = in_string {
-            result.push(ch);
-            if ch == quote {
-                let mut backslashes = 0;
-                let mut temp = result.len() as isize - 2;
-                while temp >= 0 && result.as_bytes()[temp as usize] == b'\\' {
-                    backslashes += 1;
-                    temp -= 1;
-                }
-                if backslashes % 2 == 0 {
-                    in_string = None;
-                }
-            }
-            continue;
-        }
-
-        if ch == '/' {
-            if chars.peek() == Some(&'*') {
-                let _ = chars.next();
-                in_multi_comment = true;
-                continue;
-            } else if chars.peek() == Some(&'/') {
-                let _ = chars.next();
-                in_single_comment = true;
-                continue;
-            }
-        }
-
-        if ch == '\'' || ch == '"' || ch == '`' {
-            in_string = Some(ch);
-            result.push(ch);
-            continue;
-        }
-
-        if ch.is_whitespace() {
-            if ch == '\n' || ch == '\r' {
-                if !result.ends_with('\n') && !result.is_empty() {
-                    result.push('\n');
-                }
-            } else if !result.ends_with(' ')
-                && !result.ends_with('\n')
-                && !result.is_empty()
-            {
-                result.push(' ');
-            }
-            continue;
-        }
-
-        result.push(ch);
-    }
-
-    let mut clean = String::with_capacity(result.len());
-    let chars: Vec<char> = result.chars().collect();
-    let mut i = 0;
-    // The first pass kept string literals verbatim; this pass must too.
-    // It used to collapse whitespace everywhere, so `"0px 0px -10% 0px"`
-    // became `"0px 0px-10% 0px"` (an IntersectionObserver rootMargin that
-    // throws on load) and template literals lost their indentation.
-    let mut in_string: Option<char> = None;
-    while i < chars.len() {
-        let ch = chars[i];
-        if let Some(q) = in_string {
-            clean.push(ch);
-            if ch == '\\' && i + 1 < chars.len() {
-                clean.push(chars[i + 1]);
-                i += 2;
-                continue;
-            }
-            if ch == q {
-                in_string = None;
-            }
-            i += 1;
-            continue;
-        }
-        if ch == '\'' || ch == '"' || ch == '`' {
-            in_string = Some(ch);
-            clean.push(ch);
-            i += 1;
-            continue;
-        }
-        if ch == ' ' || ch == '\n' {
-            let prev = if i > 0 { Some(chars[i - 1]) } else { None };
-            let next = if i + 1 < chars.len() {
-                Some(chars[i + 1])
-            } else {
-                None
-            };
-
-            let is_needed = match (prev, next) {
-                (Some(p), Some(n)) => {
-                    let is_p_word = p.is_alphanumeric() || p == '_' || p == '$';
-                    let is_n_word = n.is_alphanumeric() || n == '_' || n == '$';
-                    is_p_word && is_n_word
-                }
-                _ => false,
-            };
-            if is_needed {
-                clean.push(ch);
-            }
-        } else {
-            clean.push(ch);
-        }
-        i += 1;
-    }
     clean.trim().to_string()
 }
 

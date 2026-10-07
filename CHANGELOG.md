@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "Release.tag_name already exists" two seconds after the SLSA job
   published its draft, so the crates.io publish never ran. The job now
   always edits the existing page in place.
+- **The JavaScript minifier copies string, template and regex literals
+  byte for byte.** `minify_js` tracked quotes only in its first pass, so
+  the second collapsed whitespace inside literals:
+  `rootMargin: "0px 0px -15% 0px"` lost its spaces and
+  `IntersectionObserver` threw on load, `'$ '` became `'$'`, and
+  template literals lost their indentation. A regex such as `/[/*]/`
+  opened a block comment that swallowed the rest of the script. The
+  minifier is now one tokenising pass: literals (with `${}`
+  substitutions, and regex literals told apart from division by the
+  token before the `/`) are copied through, and only whitespace and
+  comments between tokens are touched. Spaces that separate tokens
+  stay: `b \nlet c` no longer fuses into `blet c`, `a - -b` no longer
+  becomes `a--b`, and a comment between two words leaves a space.
+  (#799)
 
 ## [0.0.66] - 2026-10-02
 
