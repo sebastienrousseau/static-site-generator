@@ -16,8 +16,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
+mod html_refs;
 mod js_minify;
 
+use html_refs::rewrite_asset_refs;
 pub use js_minify::minify_js;
 
 /// Plugin that fingerprints CSS/JS assets and rewrites HTML references.
@@ -207,7 +209,7 @@ fn rewrite_html_references(
     let html_files = collect_html_files(site_dir)?;
     for html_path in &html_files {
         let html = fs::read_to_string(html_path).with_path(html_path)?;
-        let rewritten = rewrite_asset_refs(&html, manifest);
+        let rewritten = rewrite_asset_refs(&html, manifest)?;
         if rewritten != html {
             fs::write(html_path, rewritten).with_path(html_path)?;
         }
@@ -398,106 +400,6 @@ fn rewrite_css_urls_inplace(
         fs::write(css_path, rewritten).with_path(css_path)?;
     }
     Ok(())
-}
-
-/// Rewrites asset references in HTML and adds SRI attributes.
-///
-/// `integrity` and `crossorigin` belong on `<link>` and `<script>` only,
-/// so those tags are rewritten first, attribute by attribute. Every other
-/// mention of an asset path (an `<img src>`, an `og:image` meta, a URL
-/// inside a JSON-LD graph or an inline script) is renamed to the
-/// fingerprinted file and nothing is appended. Appending everywhere, as
-/// this used to, produced invalid JSON-LD and bogus attributes on
-/// `<meta>` and `<img>` on any site that referenced a fingerprinted asset
-/// outside a link or script tag.
-fn rewrite_asset_refs(
-    html: &str,
-    manifest: &HashMap<String, AssetInfo>,
-) -> String {
-    let mut out = String::with_capacity(html.len() + 256);
-    let mut rest = html;
-    while let Some(open) = find_sri_tag(rest) {
-        let end = tag_end(rest, open);
-        out.push_str(&rest[..open]);
-        out.push_str(&rewrite_refs_in(&rest[open..end], manifest, true));
-        rest = &rest[end..];
-    }
-    out.push_str(rest);
-    rewrite_refs_in(&out, manifest, false)
-}
-
-/// Replaces every quoted reference to a manifest entry in `s` with its
-/// fingerprinted name; with `with_sri`, the `integrity` and `crossorigin`
-/// attributes follow the closing quote.
-fn rewrite_refs_in(
-    s: &str,
-    manifest: &HashMap<String, AssetInfo>,
-    with_sri: bool,
-) -> String {
-    let mut result = s.to_string();
-    for (old_path, info) in manifest {
-        let attrs = if with_sri {
-            format!(" integrity=\"{}\" crossorigin=\"anonymous\"", info.sri)
-        } else {
-            String::new()
-        };
-        // Direct matches: "styles.css" and "/styles.css"
-        let old_ref = format!("\"{old_path}\"");
-        let new_ref = format!("\"{}\"{attrs}", info.fingerprinted);
-        let old_ref_slash = format!("\"/{old_path}\"");
-        let new_ref_slash = format!("\"/{}\"{attrs}", info.fingerprinted);
-        result = result.replace(&old_ref, &new_ref);
-        result = result.replace(&old_ref_slash, &new_ref_slash);
-        // Scoped sub-path matches: "/swiftdev/styles.css" -> "/swiftdev/styles.hash.css"
-        let old_suffix = format!("/{old_path}\"");
-        let new_suffix = format!("/{}\"{attrs}", info.fingerprinted);
-        result = result.replace(&old_suffix, &new_suffix);
-    }
-    result
-}
-
-/// Byte offset of the next `<link` or `<script` open tag in `s`, if any.
-fn find_sri_tag(s: &str) -> Option<usize> {
-    let lower = s.to_ascii_lowercase();
-    let mut from = 0;
-    while let Some(rel) = lower[from..].find('<') {
-        let at = from + rel;
-        let tail = &lower[at..];
-        for name in ["<link", "<script"] {
-            if let Some(after) = tail.strip_prefix(name) {
-                if after
-                    .chars()
-                    .next()
-                    .is_none_or(|c| c.is_whitespace() || c == '>' || c == '/')
-                {
-                    return Some(at);
-                }
-            }
-        }
-        from = at + 1;
-    }
-    None
-}
-
-/// Byte offset just past the `>` that closes the tag opening at `open`,
-/// skipping any `>` inside a quoted attribute value; the end of `s` if
-/// the tag never closes.
-const fn tag_end(s: &str, open: usize) -> usize {
-    let bytes = s.as_bytes();
-    let mut i = open;
-    let mut quote: Option<u8> = None;
-    while i < bytes.len() {
-        let b = bytes[i];
-        match quote {
-            Some(q) if b == q => quote = None,
-            Some(_) => {}
-            None if b == b'"' || b == b'\'' => quote = Some(b),
-            None if b == b'>' => return i + 1,
-            None => {}
-        }
-        i += 1;
-    }
-    bytes.len()
 }
 
 /// SHA-256 hash as a 64-char hex string.
@@ -1170,12 +1072,12 @@ mod tests {
             r#"<img src="/logo.png" alt="">"#,
             r#"<script type="application/ld+json">{"image":"/logo.png","url":"/app.js"}</script>"#,
         );
-        let out = rewrite_asset_refs(html, &manifest);
+        let out = rewrite_asset_refs(html, &manifest).unwrap();
         assert!(out.contains(
             r#"<link rel="stylesheet" href="/style.abc12345.css" integrity="sha384-style.css" crossorigin="anonymous">"#
         ), "{out}");
         assert!(out.contains(
-            r#"<script src="/app.0badf00d.js" integrity="sha384-app.js" crossorigin="anonymous" defer></script>"#
+            r#"<script src="/app.0badf00d.js" defer integrity="sha384-app.js" crossorigin="anonymous"></script>"#
         ), "{out}");
         assert!(
             out.contains(
@@ -1211,7 +1113,7 @@ mod tests {
         );
 
         let html = r#"<link rel="stylesheet" href="style.css">"#;
-        let result = rewrite_asset_refs(html, &manifest);
+        let result = rewrite_asset_refs(html, &manifest).unwrap();
         assert!(result.contains("style.abc12345.css"));
         assert!(result.contains("integrity=\"sha384-xyz\""));
     }

@@ -33,6 +33,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stay: `b \nlet c` no longer fuses into `blet c`, `a - -b` no longer
   becomes `a--b`, and a comment between two words leaves a space.
   (#799)
+- **Fingerprinting adds SRI attributes only where they apply.** The
+  fingerprint plugin renamed every quoted asset path in a page as text
+  and appended `integrity` and `crossorigin` after each one, so a URL
+  inside `<script type="application/ld+json">` made the block invalid
+  JSON, and `<meta property="og:image">` and `<img>` grew attributes
+  they cannot carry. Pages are now rewritten element by element through
+  `lol_html`: an attribute naming an asset is renamed to the
+  fingerprinted file, `integrity` and `crossorigin` are set only on
+  `<script src>` and on `<link href>` with a `stylesheet`, `preload` or
+  `modulepreload` rel (an authored `integrity`, which hashed the file
+  before minification, is replaced rather than duplicated), and quoted
+  paths in `<script>` and `<style>` bodies are renamed with nothing
+  appended. The longest matching path wins, so `/css/style.css` no
+  longer depends on hash-map order when a root `style.css` exists, and
+  single-quoted references and query strings are handled. Comments and
+  page text are left as written. (#798)
 
 ## [0.0.66] - 2026-10-02
 
