@@ -629,14 +629,6 @@ criteria = "safe-to-deploy"
 version = "0.1.5"
 criteria = "safe-to-deploy"
 
-[[exemptions.macro_rules_attribute]]
-version = "0.2.3"
-criteria = "safe-to-deploy"
-
-[[exemptions.macro_rules_attribute-proc_macro]]
-version = "0.2.3"
-criteria = "safe-to-deploy"
-
 [[exemptions.maplit]]
 version = "1.0.2"
 criteria = "safe-to-deploy"
@@ -787,10 +779,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.pastey]]
 version = "0.1.1"
-criteria = "safe-to-deploy"
-
-[[exemptions.pastey]]
-version = "0.2.3"
 criteria = "safe-to-deploy"
 
 [[exemptions.phf]]

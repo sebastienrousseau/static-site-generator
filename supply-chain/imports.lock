@@ -84,8 +84,8 @@ when = "2026-09-06"
 trusted-publisher = "github:sebastienrousseau/noyalib"
 
 [[publisher.noyalib]]
-version = "0.0.44"
-when = "2026-09-17"
+version = "0.0.51"
+when = "2026-09-22"
 trusted-publisher = "github:sebastienrousseau/noyalib"
 
 [[publisher.rss-gen]]
@@ -350,6 +350,12 @@ who = "Andrew Brown <andrew.brown@intel.com>"
 criteria = "safe-to-deploy"
 version = "0.2.19"
 notes = "As advertised: a numeric library. The only `unsafe` is from some float-to-int conversions, which seems expected."
+
+[[audits.bytecodealliance.audits.pastey]]
+who = "Chris Fallin <chris@cfallin.org>"
+criteria = "safe-to-deploy"
+version = "0.2.1"
+notes = "No unsafe code."
 
 [[audits.bytecodealliance.audits.percent-encoding]]
 who = "Alex Crichton <alex@alexcrichton.com>"
@@ -921,6 +927,26 @@ criteria = "safe-to-deploy"
 delta = "2.11.4 -> 2.14.0"
 notes = "Mostly internal refactorings.  No new unsafe code."
 
+[[audits.mozilla.audits.macro_rules_attribute]]
+who = "Andy Leiserson <aleiserson@mozilla.com>"
+criteria = "safe-to-deploy"
+version = "0.2.2"
+
+[[audits.mozilla.audits.macro_rules_attribute]]
+who = "Lars Eggert <lars@eggert.org>"
+criteria = "safe-to-deploy"
+delta = "0.2.2 -> 0.2.3"
+
+[[audits.mozilla.audits.macro_rules_attribute-proc_macro]]
+who = "Andy Leiserson <aleiserson@mozilla.com>"
+criteria = "safe-to-deploy"
+version = "0.2.2"
+
+[[audits.mozilla.audits.macro_rules_attribute-proc_macro]]
+who = "Lars Eggert <lars@eggert.org>"
+criteria = "safe-to-deploy"
+delta = "0.2.2 -> 0.2.3"
+
 [[audits.mozilla.audits.num-derive]]
 who = "Josh Stone <jistone@redhat.com>"
 criteria = "safe-to-deploy"
@@ -942,6 +968,11 @@ who = "Andy Leiserson <aleiserson@mozilla.com>"
 criteria = "safe-to-deploy"
 version = "4.1.0"
 notes = "Support library for objc2 with no unsafe code"
+
+[[audits.mozilla.audits.pastey]]
+who = "Lars Eggert <lars@eggert.org>"
+criteria = "safe-to-deploy"
+delta = "0.2.1 -> 0.2.3"
 
 [[audits.mozilla.audits.percent-encoding]]
 who = "Valentin Gosu <valentin.gosu@gmail.com>"
