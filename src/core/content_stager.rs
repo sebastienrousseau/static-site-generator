@@ -1603,6 +1603,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stager_fp)]
     fn inject_template_defaults_recursive_skips_write_when_no_keys_missing() {
         // Covers the `if staged == body { return None; }` skip-write
         // arm inside the parallel closure — every other
@@ -1878,6 +1879,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(stager_fp)]
     fn inject_defaults_recurses_and_injects_in_nested_dirs() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path().join("staged");
@@ -1897,6 +1899,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stager_fp)]
     fn inject_defaults_reports_unreadable_markdown() {
         // Non-UTF-8 bytes fail the read inside the parallel pass.
         let tmp = tempfile::tempdir().unwrap();
@@ -1915,6 +1918,7 @@ mod tests {
 
     #[test]
     #[cfg(unix)]
+    #[serial_test::parallel(stager_fp)]
     fn inject_defaults_propagates_unreadable_subdir() {
         use std::os::unix::fs::PermissionsExt;
         let tmp = tempfile::tempdir().unwrap();

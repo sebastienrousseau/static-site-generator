@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A flaky content-stager test.** Four tests that run `inject_template_defaults_recursive` did not take the `stager_fp` lock, so the fault-injection test could switch on its failpoint while one of them was running and fail it with `injected: content_stager::inject-defaults`. They now take the lock like the other tests on that path.
+
 - **The release pipeline no longer races itself for the release page.**
   `release.yml`'s `github release · crates.io` job now waits for the SLSA
   provenance job, whose `upload-assets` step creates the tag's release
