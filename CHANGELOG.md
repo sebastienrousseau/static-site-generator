@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **A flaky content-stager test.** Four tests that run `inject_template_defaults_recursive` did not take the `stager_fp` lock, so the fault-injection test could switch on its failpoint while one of them was running and fail it with `injected: content_stager::inject-defaults`. They now take the lock like the other tests on that path.
+- **A flaky scaling gate.** `perf_budgets` took all its 100-page samples before its 500-page ones, so a runner that slowed down part-way through read as super-linear scaling: 3.52x on `windows-latest` on #794, then a pass on the rerun of the same commit. The two sizes are now sampled in alternation, and two tests pin the estimator against a simulated slowdown (3.50x before the change, 1.00x after) and a quadratic cost (still caught).
 
 - **The release pipeline no longer races itself for the release page.**
   `release.yml`'s `github release · crates.io` job now waits for the SLSA

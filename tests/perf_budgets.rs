@@ -249,6 +249,73 @@ fn assert_under_budget(label: &str, actual: Duration, budget: Duration) {
 const SCALE_SMALL: usize = 100;
 const SCALE_LARGE: usize = 500;
 
+/// The best small and large build times for the scaling gate, each the
+/// fastest of [`SAMPLES`] runs after a warmup.
+///
+/// Interleaved, small then large in every round. Taking all the small
+/// samples first and all the large ones after meant a runner that slowed
+/// down part-way through charged the slowdown to the large corpus alone,
+/// which reads as super-linear scaling: that is how identical code went
+/// from a pass to 3.52x on `windows-latest` (#794). Interleaved, a
+/// slowdown lands on both sizes, and the best-of in each still finds the
+/// fast rounds.
+fn scaling_samples<F>(mut build: F) -> Option<(Duration, Duration)>
+where
+    F: FnMut(usize) -> Option<Duration>,
+{
+    let _ = build(SCALE_SMALL)?;
+    let _ = build(SCALE_LARGE)?;
+    let mut small = build(SCALE_SMALL)?;
+    let mut large = build(SCALE_LARGE)?;
+    for _ in 1..SAMPLES {
+        small = small.min(build(SCALE_SMALL)?);
+        large = large.min(build(SCALE_LARGE)?);
+    }
+    Some((small, large))
+}
+
+/// Per-page growth that [`scaling_samples`] reports for a simulated
+/// machine, so the estimator itself can be tested without a build.
+fn simulated_growth<F>(mut cost: F) -> f64
+where
+    F: FnMut(usize, usize) -> f64,
+{
+    let mut call = 0_usize;
+    let (small, large) = scaling_samples(|n| {
+        call += 1;
+        Some(Duration::from_secs_f64(cost(n, call)))
+    })
+    .expect("the simulated build never fails");
+    (large.as_secs_f64() / SCALE_LARGE as f64)
+        / (small.as_secs_f64() / SCALE_SMALL as f64)
+}
+
+/// A runner that slows down part-way through the gate must not read as
+/// super-linear scaling. This is the shape of the failure on #794
+/// (3.52x on `windows-latest`, then a pass on the same commit): the
+/// machine got slower after the first few builds, and only the later
+/// measurements paid for it.
+#[test]
+fn a_runner_slowing_mid_gate_is_not_read_as_super_linear_scaling() {
+    // Linear cost, 1 ms per page; from the seventh build on, the
+    // machine runs 3.5x slower and stays that way.
+    let growth = simulated_growth(|n, call| {
+        let slow = if call >= 7 { 3.5 } else { 1.0 };
+        n as f64 * 0.001 * slow
+    });
+    assert!(
+        growth <= MAX_PER_PAGE_GROWTH,
+        "a mid-gate slowdown read as {growth:.2}x growth"
+    );
+}
+
+/// The gate must still catch the regression it exists for.
+#[test]
+fn quadratic_cost_still_fails_the_scaling_gate() {
+    let growth = simulated_growth(|n, _| (n as f64).powi(2) * 1e-6);
+    assert!(growth > MAX_PER_PAGE_GROWTH, "O(n^2) read as {growth:.2}x");
+}
+
 /// How much per-page cost may grow between the two sizes.
 ///
 /// Measured growth across four runs, including two on a machine loaded
@@ -260,11 +327,12 @@ const SCALE_LARGE: usize = 500;
 /// only 1.35, correctly allowed. Below it: 1.7x headroom over the worst
 /// observed legitimate sample.
 ///
-/// The noise also runs in the safe direction. Inflating the *small*
-/// measurement lowers the ratio, and the small corpus is the noisier of
-/// the two (22% spread at n=100 against 1% at n=500). A false failure
-/// needs the large, stable measurement to be inflated relative to the
-/// small, noisy one — the unlikely direction.
+/// Noise is not one-sided across the whole gate, though. A runner that
+/// slows down part-way through inflates whichever measurements come
+/// after the slowdown; with all large samples taken last, that read as
+/// 3.52x on `windows-latest` for code that passed on the next run.
+/// [`scaling_samples`] interleaves the two sizes so a slowdown lands on
+/// both, and two tests pin the estimator against a simulated machine.
 const MAX_PER_PAGE_GROWTH: f64 = 2.0;
 
 /// The gate that survives a noisy runner: per-page cost must not grow
@@ -293,9 +361,7 @@ const MAX_PER_PAGE_GROWTH: f64 = 2.0;
 /// this stable enough to assert on every platform.
 #[test]
 fn build_cost_per_page_does_not_grow_with_corpus_size() {
-    let (Some(small), Some(large)) =
-        (best_of(SCALE_SMALL), best_of(SCALE_LARGE))
-    else {
+    let Some((small, large)) = scaling_samples(compile_n_pages) else {
         eprintln!("[perf_budgets] templates missing — skipping scaling");
         return;
     };
