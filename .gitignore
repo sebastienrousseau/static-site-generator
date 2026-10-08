@@ -23,6 +23,7 @@ node_modules/
 !/docs/perf/
 !/docs/security/
 !/docs/plans/
+!/docs/releases/
 /examples/public/
 /examples/build/
 /mysite/

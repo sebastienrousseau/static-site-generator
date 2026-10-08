@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.67] - 2026-10-08
 
 ### Fixed
 
@@ -59,6 +59,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   error, and `a = b\n++c` became `a=b++c`. The line break is now kept
   unless the next line starts with a token that continues the
   statement.
+- **`ssg audit` ignores script tags quoted inside HTML comments.** Both
+  JSON-LD extractors (`plugins::seo::jsonld` and the audit's
+  `lang_consistency` gate) scanned for `<script` without regard to
+  comments, so a head comment that names
+  `<script type="application/ld+json">` opened a phantom block that ran
+  to the next real `</script>`: every page of sebastienrousseau.com was
+  reported `JSONLD-Unparseable`. A `<script` inside `<!-- ... -->` is
+  now skipped, and an unterminated comment covers the rest of the
+  document, as browsers treat it.
+- **The weekly `Scheduled` build compiles again.** `cargo build
+  --all-targets --locked` failed with "function `many_listings` is never
+  used": the helper in `tests/listings_scale.rs` is read only by a test
+  behind the `test-fault-injection` feature, and the workspace denies
+  dead code. The helper now carries the same `#[cfg]` as its caller.
+- **Web app manifest icons carry the right MIME type.** staticdatagen
+  declares every manifest icon as `image/svg+xml`, so an `icon` front
+  matter value naming a PNG told browsers the PNG was an SVG. The
+  manifest fix plugin now sets each icon's `type` from the extension of
+  its `src` (PNG, SVG, WebP, AVIF, JPEG, GIF, ICO; query and fragment
+  ignored) and keeps the declared type when the extension names no image
+  format. This lets a site point its manifest at a sized PNG instead of
+  a large SVG.
+- **The nightly benchmark report fits in BENCHMARKS.md.** The report job
+  appended the whole stdout of `cargo bench` for eight targets, 455 MB,
+  over GitHub's 100 MB file limit and the 1 MB step-summary cap. It now
+  keeps only the bencher result lines, re-joins a result Criterion
+  splits around an error line, fails if a target yields no results, and
+  refuses a combined file above 256 KB.
+
+### Changed
+
+- **Dependencies.** noyalib 0.0.44 to 0.0.51 and model2vec-rs 0.2.1 to
+  0.3.0, with their supply-chain records: model2vec-rs has a
+  `safe-to-deploy` delta audit (no unsafe code, no build script, no new
+  dependency), and `cargo vet` exemptions fall from 380 to 377 with none
+  added. GitHub Actions: `crate-ci/typos` 1.50.3 and
+  `github/codeql-action` 4.38.2.
 
 ## [0.0.66] - 2026-10-02
 
