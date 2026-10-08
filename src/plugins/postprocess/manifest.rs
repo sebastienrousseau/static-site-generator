@@ -70,6 +70,7 @@ impl Plugin for ManifestFixPlugin {
         // "Error while trying to use the following icon from the Manifest"
         // when it tries to fetch them.
         drop_empty_icons(&mut manifest);
+        set_icon_types(&mut manifest);
 
         let output = serialize_manifest(&manifest)
             .map_err(|e| SsgError::io(e, &manifest_path))?;
@@ -115,6 +116,49 @@ fn drop_empty_icons(manifest: &mut serde_json::Value) {
         // doesn't advertise an empty icon set. (`get_mut("icons")`
         // succeeding above guarantees this is an object.)
         let _ = manifest.as_object_mut().and_then(|map| map.remove("icons"));
+    }
+}
+
+/// Sets each icon's `type` from its file extension.
+///
+/// staticdatagen's generator declares every icon as `image/svg+xml`, so an
+/// `icon` front-matter value naming a PNG produced a manifest that told the
+/// browser the PNG was an SVG. The extension of `src` (query and fragment
+/// stripped, case ignored) decides the type when it names an image format;
+/// otherwise the declared type is the only information and is kept.
+fn set_icon_types(manifest: &mut serde_json::Value) {
+    let Some(icons) = manifest.get_mut("icons").and_then(|v| v.as_array_mut())
+    else {
+        return;
+    };
+    for icon in icons {
+        let Some(mime) = icon
+            .get("src")
+            .and_then(|s| s.as_str())
+            .and_then(image_type_for)
+        else {
+            continue;
+        };
+        if let Some(entry) = icon.as_object_mut() {
+            let _ = entry.insert("type".into(), mime.into());
+        }
+    }
+}
+
+/// The image MIME type a URL's file extension names, if any.
+fn image_type_for(src: &str) -> Option<&'static str> {
+    let path = src.split(['?', '#']).next().unwrap_or(src);
+    let file = path.rsplit('/').next().unwrap_or(path);
+    let (_, ext) = file.rsplit_once('.')?;
+    match ext.to_ascii_lowercase().as_str() {
+        "png" => Some("image/png"),
+        "svg" => Some("image/svg+xml"),
+        "webp" => Some("image/webp"),
+        "avif" => Some("image/avif"),
+        "jpg" | "jpeg" => Some("image/jpeg"),
+        "gif" => Some("image/gif"),
+        "ico" => Some("image/x-icon"),
+        _ => None,
     }
 }
 
@@ -186,6 +230,73 @@ mod tests {
                 .unwrap();
         drop_empty_icons(&mut m);
         assert!(m.get("icons").is_none(), "icons key should be dropped");
+    }
+
+    #[test]
+    fn test_set_icon_types_follows_the_file_extension() {
+        let mut m: serde_json::Value = serde_json::from_str(
+            r#"{"icons":[
+                {"src":"https://cdn.example/icons/512x512.png","type":"image/svg+xml"},
+                {"src":"/icon.svg","type":"image/svg+xml"},
+                {"src":"/icon.WEBP?v=2#x"},
+                {"src":"/favicon.ico","type":"image/x-icon"},
+                {"src":"/photo.jpeg","type":"image/png"},
+                {"src":"/icon","type":"image/svg+xml"},
+                {"src":"/icon.bin","type":"application/x-custom"}
+            ]}"#,
+        )
+        .unwrap();
+        set_icon_types(&mut m);
+        let types: Vec<Option<&str>> = m["icons"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|i| i.get("type").and_then(|t| t.as_str()))
+            .collect();
+        assert_eq!(
+            types,
+            [
+                Some("image/png"),
+                Some("image/svg+xml"),
+                Some("image/webp"),
+                Some("image/x-icon"),
+                Some("image/jpeg"),
+                // No extension, or one that is not an image format: the
+                // declared type is the only information, so it stays.
+                Some("image/svg+xml"),
+                Some("application/x-custom"),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_set_icon_types_without_icons_is_a_no_op() {
+        let mut m: serde_json::Value =
+            serde_json::from_str(r#"{"name":"x"}"#).unwrap();
+        set_icon_types(&mut m);
+        assert_eq!(m, serde_json::json!({"name":"x"}));
+    }
+
+    #[test]
+    #[serial_test::parallel]
+    fn test_manifest_fix_corrects_a_png_icon_declared_as_svg() -> Result<()> {
+        // staticdatagen's manifest generator declares every icon as
+        // image/svg+xml, whatever the `icon` front matter points at.
+        let tmp = tempdir().unwrap();
+        let manifest_path = tmp.path().join("manifest.json");
+        fs::write(
+            &manifest_path,
+            r#"{"name":"Test","icons":[{"purpose":"any maskable","sizes":"512x512","src":"https://cdn.example/icons/512x512.png","type":"image/svg+xml"}]}"#,
+        )
+        .unwrap();
+        let ctx = test_ctx(tmp.path());
+        ManifestFixPlugin.after_compile(&ctx).unwrap();
+        let manifest: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&manifest_path).unwrap())
+                .unwrap();
+        assert_eq!(manifest["icons"][0]["type"], "image/png");
+        assert_eq!(manifest["icons"][0]["sizes"], "512x512");
+        Ok(())
     }
 
     #[test]
