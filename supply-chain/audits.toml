@@ -79,6 +79,12 @@ criteria = "safe-to-deploy"
 version = "0.0.4"
 notes = "Same-author crate, reviewed from the exact published crates.io source (5 source files). #![forbid(unsafe_code)]; zero unsafe blocks; build.rs is a version_check rustc-version gate only; no network, no process spawning, no env access, no fs deletion."
 
+[[audits.model2vec-rs]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.1 -> 0.3.0"
+notes = "Delta 0.2.1 -> 0.3.0 (6 files, +163/-135): edition 2024 and rust-version 1.88; clap optional behind a new cli feature so the library no longer pulls it; model state shared through an Arc; as_chunks replaces chunks_exact for tensor decoding; layout probing folded into one candidate table. No unsafe, no build script, no new dependency; ssg-search's local-only feature keeps it off the network."
+
 [[audits.noyalib]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"

@@ -1,6 +1,6 @@
 [package]
 name = "ssg-search"
-version = "0.0.66"
+version = "0.0.67"
 edition = "2021"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -41,7 +41,7 @@ js-sys = { version = "0.3", optional = true }
 # Enable with `--features model2vec`. We turn on the `fancy-regex`
 # tokenizer backend (pure-Rust, WASM-clean) rather than `onig`, which
 # would require a C dependency that fails on `wasm32-unknown-unknown`.
-model2vec-rs = { version = "0.2", optional = true, default-features = false, features = ["local-only", "fancy-regex"] }
+model2vec-rs = { version = "0.3", optional = true, default-features = false, features = ["local-only", "fancy-regex"] }
 
 [features]
 default = []

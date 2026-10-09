@@ -16,6 +16,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
+mod html_refs;
+mod js_minify;
+
+use html_refs::rewrite_asset_refs;
+pub use js_minify::minify_js;
+
 /// Plugin that fingerprints CSS/JS assets and rewrites HTML references.
 ///
 /// Runs in `after_compile`:
@@ -203,7 +209,7 @@ fn rewrite_html_references(
     let html_files = collect_html_files(site_dir)?;
     for html_path in &html_files {
         let html = fs::read_to_string(html_path).with_path(html_path)?;
-        let rewritten = rewrite_asset_refs(&html, manifest);
+        let rewritten = rewrite_asset_refs(&html, manifest)?;
         if rewritten != html {
             fs::write(html_path, rewritten).with_path(html_path)?;
         }
@@ -394,39 +400,6 @@ fn rewrite_css_urls_inplace(
         fs::write(css_path, rewritten).with_path(css_path)?;
     }
     Ok(())
-}
-
-/// Rewrites asset references in HTML and adds SRI attributes.
-fn rewrite_asset_refs(
-    html: &str,
-    manifest: &HashMap<String, AssetInfo>,
-) -> String {
-    let mut result = html.to_string();
-    for (old_path, info) in manifest {
-        // Direct matches: "styles.css" and "/styles.css"
-        let old_ref = format!("\"{old_path}\"");
-        let old_ref_slash = format!("\"/{old_path}\"");
-        let new_ref = format!(
-            "\"{}\" integrity=\"{}\" crossorigin=\"anonymous\"",
-            info.fingerprinted, info.sri
-        );
-        let new_ref_slash = format!(
-            "\"/{}\" integrity=\"{}\" crossorigin=\"anonymous\"",
-            info.fingerprinted, info.sri
-        );
-
-        result = result.replace(&old_ref, &new_ref);
-        result = result.replace(&old_ref_slash, &new_ref_slash);
-
-        // Scoped sub-path matches: e.g. "/swiftdev/styles.css" -> "/swiftdev/styles.hash.css"
-        let old_suffix = format!("/{old_path}\"");
-        let new_suffix = format!(
-            "/{}\" integrity=\"{}\" crossorigin=\"anonymous\"",
-            info.fingerprinted, info.sri
-        );
-        result = result.replace(&old_suffix, &new_suffix);
-    }
-    result
 }
 
 /// SHA-256 hash as a 64-char hex string.
@@ -728,120 +701,6 @@ pub fn minify_css(css: &str) -> String {
         i += 1;
     }
 
-    clean.trim().to_string()
-}
-
-/// Minifies JavaScript by removing comments and collapsing whitespace.
-///
-/// ssg's own implementation rather than a dependency. It is deliberately
-/// conservative: it does not rename, reorder or rewrite anything, so it
-/// cannot change what a script does. String literals, regex literals and
-/// the division operator are all left alone.
-#[must_use]
-pub fn minify_js(js: &str) -> String {
-    let mut result = String::with_capacity(js.len());
-    let mut chars = js.chars().peekable();
-    let mut in_multi_comment = false;
-    let mut in_single_comment = false;
-    let mut in_string = None;
-
-    while let Some(ch) = chars.next() {
-        if in_multi_comment {
-            if ch == '*' && chars.peek() == Some(&'/') {
-                let _ = chars.next();
-                in_multi_comment = false;
-            }
-            continue;
-        }
-
-        if in_single_comment {
-            if ch == '\n' || ch == '\r' {
-                in_single_comment = false;
-                result.push('\n');
-            }
-            continue;
-        }
-
-        if let Some(quote) = in_string {
-            result.push(ch);
-            if ch == quote {
-                let mut backslashes = 0;
-                let mut temp = result.len() as isize - 2;
-                while temp >= 0 && result.as_bytes()[temp as usize] == b'\\' {
-                    backslashes += 1;
-                    temp -= 1;
-                }
-                if backslashes % 2 == 0 {
-                    in_string = None;
-                }
-            }
-            continue;
-        }
-
-        if ch == '/' {
-            if chars.peek() == Some(&'*') {
-                let _ = chars.next();
-                in_multi_comment = true;
-                continue;
-            } else if chars.peek() == Some(&'/') {
-                let _ = chars.next();
-                in_single_comment = true;
-                continue;
-            }
-        }
-
-        if ch == '\'' || ch == '"' || ch == '`' {
-            in_string = Some(ch);
-            result.push(ch);
-            continue;
-        }
-
-        if ch.is_whitespace() {
-            if ch == '\n' || ch == '\r' {
-                if !result.ends_with('\n') && !result.is_empty() {
-                    result.push('\n');
-                }
-            } else if !result.ends_with(' ')
-                && !result.ends_with('\n')
-                && !result.is_empty()
-            {
-                result.push(' ');
-            }
-            continue;
-        }
-
-        result.push(ch);
-    }
-
-    let mut clean = String::with_capacity(result.len());
-    let chars: Vec<char> = result.chars().collect();
-    let mut i = 0;
-    while i < chars.len() {
-        let ch = chars[i];
-        if ch == ' ' || ch == '\n' {
-            let prev = if i > 0 { Some(chars[i - 1]) } else { None };
-            let next = if i + 1 < chars.len() {
-                Some(chars[i + 1])
-            } else {
-                None
-            };
-
-            let is_needed = match (prev, next) {
-                (Some(p), Some(n)) => {
-                    let is_p_word = p.is_alphanumeric() || p == '_' || p == '$';
-                    let is_n_word = n.is_alphanumeric() || n == '_' || n == '$';
-                    is_p_word && is_n_word
-                }
-                _ => false,
-            };
-            if is_needed {
-                clean.push(ch);
-            }
-        } else {
-            clean.push(ch);
-        }
-        i += 1;
-    }
     clean.trim().to_string()
 }
 
@@ -1191,6 +1050,58 @@ mod tests {
     }
 
     #[test]
+    fn rewrite_asset_refs_adds_sri_only_to_link_and_script() {
+        let mut manifest = HashMap::new();
+        for (name, fp) in [
+            ("style.css", "style.abc12345.css"),
+            ("app.js", "app.0badf00d.js"),
+            ("logo.png", "logo.c0ffee00.png"),
+        ] {
+            let _ = manifest.insert(
+                name.to_string(),
+                AssetInfo {
+                    fingerprinted: fp.to_string(),
+                    sri: format!("sha384-{name}"),
+                },
+            );
+        }
+        let html = concat!(
+            r#"<link rel="stylesheet" href="/style.css">"#,
+            r#"<script src="/app.js" defer></script>"#,
+            r#"<meta property="og:image" content="/logo.png">"#,
+            r#"<img src="/logo.png" alt="">"#,
+            r#"<script type="application/ld+json">{"image":"/logo.png","url":"/app.js"}</script>"#,
+        );
+        let out = rewrite_asset_refs(html, &manifest).unwrap();
+        assert!(out.contains(
+            r#"<link rel="stylesheet" href="/style.abc12345.css" integrity="sha384-style.css" crossorigin="anonymous">"#
+        ), "{out}");
+        assert!(out.contains(
+            r#"<script src="/app.0badf00d.js" defer integrity="sha384-app.js" crossorigin="anonymous"></script>"#
+        ), "{out}");
+        assert!(
+            out.contains(
+                r#"<meta property="og:image" content="/logo.c0ffee00.png">"#
+            ),
+            "{out}"
+        );
+        assert!(
+            out.contains(r#"<img src="/logo.c0ffee00.png" alt="">"#),
+            "{out}"
+        );
+        assert_eq!(out.matches("integrity=").count(), 2, "{out}");
+        let ld = out
+            .split(r#"<script type="application/ld+json">"#)
+            .nth(1)
+            .and_then(|s| s.split("</script>").next())
+            .expect("ld+json block");
+        let value: serde_json::Value =
+            serde_json::from_str(ld).expect("JSON-LD still parses");
+        assert_eq!(value["image"], "/logo.c0ffee00.png");
+        assert_eq!(value["url"], "/app.0badf00d.js");
+    }
+
+    #[test]
     fn test_rewrite_asset_refs() {
         let mut manifest = HashMap::new();
         let _ = manifest.insert(
@@ -1202,7 +1113,7 @@ mod tests {
         );
 
         let html = r#"<link rel="stylesheet" href="style.css">"#;
-        let result = rewrite_asset_refs(html, &manifest);
+        let result = rewrite_asset_refs(html, &manifest).unwrap();
         assert!(result.contains("style.abc12345.css"));
         assert!(result.contains("integrity=\"sha384-xyz\""));
     }
@@ -1675,6 +1586,18 @@ mod tests {
             let twice = minify_css(&once);
             assert_eq!(once, twice, "not idempotent for: {css}");
         }
+    }
+
+    /// Whitespace inside a string or template literal is content.
+    #[test]
+    fn minify_js_preserves_whitespace_inside_string_literals() {
+        let js = "var m = \"0px 0px -10% 0px\";\nvar c = 'x - y';\nvar e = 'a \\' b';\nvar t = `  a\n  b`;";
+        let out = minify_js(js);
+        assert!(out.contains("\"0px 0px -10% 0px\""), "{out}");
+        assert!(out.contains("'x - y'"), "{out}");
+        assert!(out.contains("'a \\' b'"), "{out}");
+        assert!(out.contains("`  a\n  b`"), "{out}");
+        assert_eq!(minify_js(&out), out, "idempotent");
     }
 
     /// The same for JavaScript: two passes must agree.

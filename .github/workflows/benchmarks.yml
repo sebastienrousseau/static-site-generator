@@ -143,14 +143,33 @@ jobs:
           } > bench-env.md
           cat bench-env.md >> "$GITHUB_STEP_SUMMARY"
 
+      # Keep only the bencher-format result lines. `cargo bench` writes
+      # everything a bench prints to stdout, and on 2026-10-05 and 10-06 the
+      # nightly run published 455 MB of it into BENCHMARKS.md: the step
+      # summary upload aborted at its 1 MB cap and the commit was refused
+      # by GitHub's 100 MB file limit, so the workflow has failed every
+      # night since. One result line per benchmark is the whole document.
       - name: Combine the targets in a fixed order
         run: |
           set -euo pipefail
           : > bench-raw.txt
+          # Criterion's bencher output is normally one line per benchmark,
+          # `test <name> ... bench: <n> ns/iter (+/- <m>)`. When it cannot read
+          # a previous baseline it interleaves an ERROR line, and the result
+          # arrives split across two lines (seen on incremental_1000_pages in
+          # run 37525482107). Re-join those so a result is never dropped.
           for t in bench bench_html_scanning avif_vs_webp incremental_1000_pages all_pub_api bench_concurrent_operations core plugins; do
             test -s "bench-raw-$t.txt" || { echo "::error::no results for $t"; exit 1; }
-            cat "bench-raw-$t.txt" >> bench-raw.txt
+            lines=$(awk '
+              /^test [^ ]+ \.\.\. bench: / { print; name=""; next }
+              /^test [^ ]+ \.\.\. /        { name=$2; next }
+              /^bench: / && name != ""   { print "test " name " ... " $0; name=""; next }
+            ' "bench-raw-$t.txt")
+            test -n "$lines" || { echo "::error::no bencher result lines for $t"; exit 1; }
+            printf '%s\n' "$lines" >> bench-raw.txt
           done
+          size=$(wc -c < bench-raw.txt)
+          test "$size" -le 262144 || { echo "::error::combined results are ${size} bytes; expected one line per benchmark"; exit 1; }
       - name: Assemble the report
         run: |
           {
