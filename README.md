@@ -142,7 +142,7 @@ SSG generates static websites from Markdown content, YAML frontmatter, and `Mini
 - **Incremental builds** -- content fingerprinting via FNV-1a hashing and dependency graph
 - **Bounded-memory batch compilation** -- configurable memory budgets for 100K+ page sites
 - **WCAG 2.2 AA** -- accessibility checked on every build (non-blocking by default; reports written to `accessibility-report.json` + `wcag-compliance.json`) and gated in CI by axe-core. Build-failure on a11y violations is opt-in via the `STRICT_A11Y` env var (implemented in v0.0.40)
-- **Zero unsafe code** -- `#![forbid(unsafe_code)]` across the entire codebase
+- **Zero unsafe code** -- `unsafe` code forbidden or denied in every published crate (details in [`SECURITY.md`](SECURITY.md))
 
 ---
 
@@ -170,8 +170,9 @@ Three choices follow from that, and each has a cost worth stating:
    is heavier per connection than an async runtime would be. The
    reasoning is recorded in [`docs/adr/`](docs/adr/).
 
-3. **`#![forbid(unsafe_code)]` workspace-wide.** No `unsafe` block exists
-   in the tree. Memory-safety review is therefore a property of the
+3. **No `unsafe` in the shipped crates.** No published crate contains an
+   `unsafe` block; the only one in the tree is the counting allocator of
+   `ssg-heap-probe`, an unpublished test tool. Memory-safety review is therefore a property of the
    compiler rather than of code review, and the Miri job
    ([`.github/workflows/miri.yml`](.github/workflows/miri.yml)) checks the
    dependency surface rather than our own. The cost is that a few
@@ -748,11 +749,11 @@ guidelines.
 <details>
 <summary><b>Safety guarantees and compliance</b></summary>
 
-- `#![forbid(unsafe_code)]` across the entire codebase
+- `unsafe` code forbidden or denied in every published crate (details in [`SECURITY.md`](SECURITY.md))
 - CSP build-time extraction: all inline styles and scripts moved to external files with SRI hashes. Zero `unsafe-inline`
 - Path traversal prevention with `..` detection and symlink rejection
 - File size limits and directory depth bounds
-- `cargo audit` with zero advisories
+- A published vulnerability advisory against any crate in the graph fails CI (`cargo deny check`); the unmaintained-crate warnings it accepts are listed with reasons in `deny.toml`
 - `cargo deny` -- license, advisory, ban, and source checks
 - `cargo vet` -- per-crate audit attestation; imports Mozilla Firefox, Bytecode Alliance, and Google trust sets. See [`supply-chain/README.md`](supply-chain/README.md)
 - `CycloneDX` SBOM generated as release artifact with Sigstore attestation
