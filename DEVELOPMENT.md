@@ -170,9 +170,10 @@ what it measured.
 
 The goldens under `tests/golden/` are byte-for-byte snapshots compared by
 `tests/golden_files.rs`. To reseed them after an intentional output change,
-run the suite with `UPDATE_GOLDEN=1` in the environment, once per feature
-set (`--features minify` writes the `.minify` variants); libtest rejects
-unknown flags, so there is no `--update-golden` switch. Seed on one platform
+run the suite with `UPDATE_GOLDEN=1` in the environment; libtest rejects
+unknown flags, so there is no `--update-golden` switch. There is one set
+of goldens: the `minify` feature, and the `.minify` variants it wrote, went
+when minification became ssg's own code in v0.0.62. Seed on one platform
 and re-run the suite on the other before committing — the suite has caught
 ordering that differed between APFS and ext4 — for example inside
 `docker run --rm -v "$PWD":/work -w /work rust:1.90` on macOS. A run that
