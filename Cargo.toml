@@ -238,7 +238,7 @@ ravif = { version = "0.13", optional = true, default-features = false, features 
 rgb = { version = "0.8", optional = true }
 
 # Owned crate for frontmatter parsing
-frontmatter-gen = "0.0.11"
+frontmatter-gen = "0.0.12"
 
 # Pure-Rust YAML parser for data/*.{yml,yaml} files loaded into
 # template globals (issue #536). The previous implementation parsed
