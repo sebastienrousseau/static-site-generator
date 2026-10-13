@@ -584,8 +584,12 @@ jobs:
             echo "::error file=supply-chain/config.toml::Exemption count ${count} exceeds the ratchet baseline ${baseline}. Audit the new dependency (cargo vet certify) instead of exempting it, or justify the exemption and still burn one down elsewhere. The baseline only moves downward."
             exit 1
           fi
+          # Below the baseline fails too. A notice here let the baseline
+          # sit at 555 while the count fell to 377, so 178 new exemptions
+          # would have passed this gate unnoticed.
           if [ "${count}" -lt "${baseline}" ]; then
-            echo "::notice file=supply-chain/exemptions-baseline.txt::Exemption count ${count} is below the baseline ${baseline} — ratchet it down: echo ${count} > supply-chain/exemptions-baseline.txt"
+            echo "::error file=supply-chain/exemptions-baseline.txt::Exemption count ${count} is below the baseline ${baseline}. Ratchet it down in this PR: echo ${count} > supply-chain/exemptions-baseline.txt"
+            exit 1
           fi
 
   # ── Phase 2f: API semver gate (v0.0.47 plan §3 item 2.6) ────────────
