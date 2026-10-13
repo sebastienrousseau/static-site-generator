@@ -424,6 +424,54 @@ pub fn slugify(input: &str) -> String {
 #[cfg(test)]
 mod tests {
 
+    /// YAML front matter of `levels` anchored flow sequences, each holding
+    /// `width` aliases of the one before: `width^levels` scalars once
+    /// expanded, from a document of a few hundred bytes.
+    fn alias_bomb_front_matter(levels: usize, width: usize) -> String {
+        let mut doc = String::from("---\n");
+        for level in 0..levels {
+            let item = if level == 0 {
+                "x".to_string()
+            } else {
+                format!("*l{}", level - 1)
+            };
+            let items = vec![item; width].join(", ");
+            doc.push_str(&format!("l{level}: &l{level} [{items}]\n"));
+        }
+        doc.push_str("---\n# Body\n");
+        doc
+    }
+
+    /// RUSTSEC-2026-0333: noyalib before 0.0.53 skipped its alias
+    /// budgets on the typed path `parse_frontmatter` uses, so 576 bytes
+    /// of front matter expanded to 3.4 MB of JSON. The document must be
+    /// refused (no metadata) and the body kept.
+    #[test]
+    fn yaml_front_matter_alias_amplification_is_refused() {
+        for (levels, width) in [(4, 30), (6, 10)] {
+            let doc = alias_bomb_front_matter(levels, width);
+            let (meta, body) = parse_frontmatter(&doc);
+            assert!(
+                meta.is_empty(),
+                "{}-byte front matter was accepted with {} keys",
+                doc.len(),
+                meta.len()
+            );
+            assert_eq!(body.trim(), "# Body");
+        }
+    }
+
+    /// Control: anchors and aliases inside the budgets still parse, so
+    /// the test above fails for the amplification, not for aliases.
+    #[test]
+    fn yaml_front_matter_modest_aliases_still_parse() {
+        let (meta, body) =
+            parse_frontmatter("---\nbase: &b [a, b]\ncopy: *b\n---\n# Body");
+        assert_eq!(meta.get("copy"), meta.get("base"));
+        assert!(meta.contains_key("base"));
+        assert_eq!(body.trim(), "# Body");
+    }
+
     /// A code span containing HTML must be escaped, not emitted as markup.
     ///
     /// The blog example carries an accessibility checklist whose second item

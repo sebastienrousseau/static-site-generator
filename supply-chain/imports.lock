@@ -84,8 +84,8 @@ when = "2026-09-06"
 trusted-publisher = "github:sebastienrousseau/noyalib"
 
 [[publisher.noyalib]]
-version = "0.0.51"
-when = "2026-09-22"
+version = "0.0.56"
+when = "2026-10-08"
 trusted-publisher = "github:sebastienrousseau/noyalib"
 
 [[publisher.rss-gen]]

@@ -775,6 +775,41 @@ mod tests {
         assert!(!result.contains_key("broken"));
     }
 
+    /// RUSTSEC-2026-0333: a `data/*.yml` file goes through noyalib's
+    /// typed path too. Before noyalib 0.0.53 a 576-byte alias fan-out
+    /// expanded to 3.4 MB of JSON there; now it is refused and skipped
+    /// like any unparseable data file, and the other files still load.
+    #[test]
+    fn load_data_files_refuses_yaml_alias_amplification() {
+        crate::test_support::init_logger();
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        let data = dir.path().join("data");
+        fs::create_dir_all(&data).unwrap();
+
+        let mut bomb = String::new();
+        for level in 0..4 {
+            let item = if level == 0 {
+                "x".to_string()
+            } else {
+                format!("*l{}", level - 1)
+            };
+            let items = vec![item; 30].join(", ");
+            bomb.push_str(&format!("l{level}: &l{level} [{items}]\n"));
+        }
+        fs::write(data.join("bomb.yml"), &bomb).unwrap();
+        fs::write(data.join("ok.yaml"), "base: &b [a, b]\ncopy: *b").unwrap();
+
+        let result = TemplateEngine::load_data_files(&content);
+        assert!(
+            !result.contains_key("bomb"),
+            "{}-byte data file was accepted",
+            bomb.len()
+        );
+        assert_eq!(result["ok"]["copy"], result["ok"]["base"]);
+    }
+
     #[test]
     fn load_data_files_ignores_unsupported_extensions() {
         let dir = tempdir().unwrap();
