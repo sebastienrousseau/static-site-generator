@@ -899,13 +899,13 @@ dependencies = [
 
 [[package]]
 name = "frontmatter-gen"
-version = "0.0.11"
+version = "0.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40c6973f70fa06e6f208238c470dc941684f282d169f39b0b6c6d946b612b167"
+checksum = "e9218b3d9cd20730eb38dc3b9c532c860b9f3c6cc10879c1a8b89364f53e2dc8"
 dependencies = [
  "anyhow",
  "log",
- "noyalib 0.0.37",
+ "noyalib 0.0.56",
  "serde",
  "serde_json",
  "thiserror",

@@ -58,8 +58,8 @@ user-login = "hsivonen"
 user-name = "Henri Sivonen"
 
 [[publisher.frontmatter-gen]]
-version = "0.0.11"
-when = "2026-09-07"
+version = "0.0.12"
+when = "2026-10-09"
 user-id = 186843
 user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
