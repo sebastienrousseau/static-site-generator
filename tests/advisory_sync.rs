@@ -94,9 +94,13 @@ fn every_deny_ignore_is_also_ignored_by_osv() {
 fn every_osv_only_ignore_states_a_reason() {
     let text = read("osv-scanner.toml");
     let blocks: Vec<&str> = text.split("[[IgnoredVulns]]").skip(1).collect();
+    // One block per `id =` line, and at least one: a fixed floor here
+    // failed when dead entries were removed, which is the wrong outcome
+    // for a cleanup this file asks for.
+    let ids = osv_ignores().len();
     assert!(
-        blocks.len() >= 5,
-        "only {} IgnoredVulns blocks parsed — the split is wrong",
+        ids > 0 && blocks.len() == ids,
+        "{} IgnoredVulns blocks parsed for {ids} ids — the split is wrong",
         blocks.len()
     );
 
