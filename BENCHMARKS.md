@@ -234,13 +234,15 @@ committed; the deterministic-corpus baselines under
 The figures in this section are produced by
 [`.github/workflows/benchmarks.yml`](.github/workflows/benchmarks.yml), not
 typed in. The workflow runs nightly on a named runner, records the hardware
-alongside the numbers, and uploads `bench-report.md` plus the raw Criterion
-output as a build artifact.
+alongside the numbers, uploads `bench-report.md` plus the raw Criterion
+output as a build artifact, and commits this file with the results filled in
+to the `benchmark-results` branch.
 
 <!-- BENCHMARK-RESULTS:START -->
-_No nightly run has been recorded yet. The workflow is scheduled at 03:30 UTC
-and can be triggered from the Actions tab; the first run replaces this
-placeholder._
+_The nightly run publishes its figures to this file on the
+`benchmark-results` branch, not here: `main` accepts changes only through a
+pull request. The workflow is scheduled at 03:30 UTC; each run's report is
+also attached to the run as an artifact._
 <!-- BENCHMARK-RESULTS:END -->
 
 Corpora come from `ssg::bench_corpus`, a seeded generator whose output is

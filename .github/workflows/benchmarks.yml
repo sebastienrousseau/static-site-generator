@@ -115,7 +115,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The publish step commits back to the branch.
+          # The publish step pushes to the benchmark-results branch.
           persist-credentials: true
       - name: Download every target's results
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -217,19 +217,38 @@ jobs:
           print("BENCHMARKS.md updated")
           PY
 
+      # main accepts changes only through a pull request, with signed
+      # commits and every required check, so the bot commit pushed to it
+      # was refused (GH006) by every nightly once the report itself was
+      # fixed, first in run 38021615107. The figures go to the
+      # benchmark-results branch instead: one commit per night on top of
+      # the last, holding this BENCHMARKS.md with the results filled in.
+      # main's copy keeps the pointer to that branch.
       - name: Commit the published figures
         if: github.event_name == 'schedule'
+        env:
+          RESULTS_BRANCH: benchmark-results
         run: |
           set -euo pipefail
-          if git diff --quiet -- BENCHMARKS.md; then
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          results="$RUNNER_TEMP/benchmark-results"
+          if git ls-remote --exit-code --heads origin "$RESULTS_BRANCH" >/dev/null; then
+            git fetch --quiet --depth=1 origin "refs/heads/$RESULTS_BRANCH"
+            git worktree add --quiet --detach "$results" FETCH_HEAD
+          else
+            git worktree add --quiet --detach "$results"
+            git -C "$results" switch --quiet --orphan "$RESULTS_BRANCH"
+          fi
+          cp BENCHMARKS.md "$results/BENCHMARKS.md"
+          git -C "$results" add BENCHMARKS.md
+          if git -C "$results" diff --cached --quiet; then
             echo "no change to publish"
             exit 0
           fi
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add BENCHMARKS.md
-          git commit -m "chore(bench): publish nightly figures [skip ci]"
-          git push
+          git -C "$results" commit --quiet -m "chore(bench): publish nightly figures [skip ci]"
+          git -C "$results" push --quiet origin "HEAD:refs/heads/$RESULTS_BRANCH"
+          echo "published to $RESULTS_BRANCH"
 
       - name: Upload the report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
