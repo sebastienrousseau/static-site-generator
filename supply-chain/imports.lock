@@ -72,8 +72,8 @@ user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
 [[publisher.metadata-gen]]
-version = "0.0.7"
-when = "2026-09-07"
+version = "0.0.8"
+when = "2026-10-09"
 user-id = 186843
 user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
@@ -103,8 +103,8 @@ user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
 [[publisher.staticdatagen]]
-version = "0.0.21"
-when = "2026-10-01"
+version = "0.0.22"
+when = "2026-10-10"
 trusted-publisher = "github:sebastienrousseau/staticdatagen"
 
 [[publisher.staticweaver]]

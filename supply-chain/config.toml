@@ -182,10 +182,6 @@ version = "0.9.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.comrak]]
-version = "0.52.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.comrak]]
 version = "0.54.0"
 criteria = "safe-to-deploy"
 
