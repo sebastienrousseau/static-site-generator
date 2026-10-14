@@ -8,7 +8,7 @@ name = "ssg"                            # The name of the library
 version = "0.0.68"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
-rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen)
+rust-version = "1.89.0"                 # Minimum supported Rust version (ADR-0010; dependencies alone need 1.88)
 license = "MIT OR Apache-2.0"           # Dual licensing strategy
 description = """
 A secure-by-default static site generator built in Rust. WCAG 2.2 AA validation, CSP/SRI hardening, native JS/CSS minification, automated CycloneDX SBOM, local LLM content pipeline, WebAssembly target, interactive islands, streaming compilation for 100K+ pages, 28-locale i18n, and one-command deployment.

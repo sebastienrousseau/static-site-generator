@@ -2,7 +2,7 @@
 name = "ssg-search"
 version = "0.0.68"
 edition = "2021"
-rust-version = "1.88.0"
+rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
 description = "Browser-native vector semantic search for SSG — WASM-compiled, int8-quantised, Float32Array boundary."
 repository = "https://github.com/sebastienrousseau/static-site-generator"

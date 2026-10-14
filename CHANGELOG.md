@@ -82,6 +82,21 @@ and the golden files are unchanged.
 
 ### Changed
 
+- **The MSRV is now Rust 1.89.0** (was 1.88.0). No dependency needs
+  it: the dependency floor is still 1.88. It is a maintainer decision to
+  share one floor with his other Rust crates, recorded as
+  [ADR-0010](docs/adr/0010-msrv-1.89-shared-floor.md). Every workspace
+  manifest, `build.rs`, the README, the guides and the Docker builder
+  image (`rust:1.89-slim`) state 1.89.
+- **The MSRV and beta CI legs build on the toolchain they name.**
+  `rust-toolchain.toml` pins `stable`, and rustup prefers that file over
+  the toolchain the job installs, so the `1.88` and `beta` entries in
+  `ci.yml` and the `1.88` portability legs in `scheduled.yml` were
+  building on stable. They now set `RUSTUP_TOOLCHAIN` and check
+  `rustc --version` before building. On the real floor the test suite
+  cannot build (`serial_test` 4, a dev-dependency, needs rustc
+  1.93.1), so the MSRV legs build the library and binaries, which is
+  what the floor promises users; tests stay on stable and beta.
 - **Dependencies.** noyalib 0.0.51 to 0.0.56, frontmatter-gen 0.0.11
   to 0.0.12 and staticdatagen 0.0.21 to 0.0.22, which brings comrak
   0.55, html-generator 0.0.12, mdx-gen 0.0.6 and metadata-gen 0.0.8;

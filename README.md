@@ -17,7 +17,7 @@
   <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
   <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.68-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
   <a href="#license"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg?style=for-the-badge" alt="License: MIT OR Apache-2.0" /></a>
-  <a href="#minimum-supported-rust-version"><img src="https://img.shields.io/badge/MSRV-1.88.0-dea584.svg?style=for-the-badge&logo=rust" alt="MSRV 1.88.0" /></a>
+  <a href="#minimum-supported-rust-version"><img src="https://img.shields.io/badge/MSRV-1.89.0-dea584.svg?style=for-the-badge&logo=rust" alt="MSRV 1.89.0" /></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/static-site-generator?style=for-the-badge&label=openssf%20scorecard" alt="OpenSSF Scorecard" /></a>
   <a href="https://www.bestpractices.dev/projects/14540"><img src="https://img.shields.io/cii/level/14540?style=for-the-badge&label=OpenSSF%20Best%20Practices&logo=openssf" alt="OpenSSF Best Practices" /></a>
 </p>
@@ -92,7 +92,7 @@ cd static-site-generator
 make          # check + clippy + test
 ```
 
-Requires **Rust 1.88.0+**. Tested on Linux, macOS, and Windows.
+Requires **Rust 1.89.0+**. Tested on Linux, macOS, and Windows.
 
 ### System install (packagers)
 
@@ -229,7 +229,7 @@ graph TD
 | **Examples** | 8 branded sites + 2 edge-runtime adapters (Cloudflare Workers, Vercel Edge) |
 | **Edge runtimes** | Cloudflare Workers + Vercel Edge with ISR (`ssg-wasm`) |
 | **Search** | Browser-native int8 vector embeddings via `ssg-search` (WASM, ≤2 MB gzipped budget) |
-| **MSRV** | Rust 1.88.0 |
+| **MSRV** | Rust 1.89.0 |
 
 ### Build performance
 
@@ -652,13 +652,16 @@ still tested, and warning via `LEGACY_DEPRECATION_WARNING`.
 
 ## Minimum supported Rust version
 
-**Rust 1.88.0.**
+**Rust 1.89.0.**
 
 ### The policy
 
-The MSRV is a *floor set by dependencies*, not a target chosen
-independently. It currently comes from `time-macros`, `staticdatagen`
-and the `oxc_*` crates.
+The MSRV is normally a *floor set by dependencies*, not a target chosen
+independently. The dependency floor is 1.88, from `time-macros`,
+`staticdatagen` and the `oxc_*` crates. The current 1.89.0 is the one
+exception: a maintainer decision to share one floor with his other Rust
+crates, recorded in
+[ADR-0010](docs/adr/0010-msrv-1.89-shared-floor.md).
 
 - It may rise in **any release**, because a `0.0.z` release carries no
   compatibility promise (see above).
@@ -668,7 +671,8 @@ and the `oxc_*` crates.
 - Each rise is recorded in the CHANGELOG for that release, with the
   reason and the crate that forced it.
 - The floor is CI-enforced: `scheduled.yml` builds against
-  `[stable, 1.88]`, so a change that quietly needs a newer compiler
+  `[stable, 1.89]` (library and binaries on 1.89; the test suite's
+  dev-dependencies need a newer compiler), so a change that quietly needs a newer compiler
   fails rather than being discovered by a user.
 
 ### On distro compatibility

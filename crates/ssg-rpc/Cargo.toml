@@ -2,7 +2,7 @@
 name = "ssg-rpc"
 version = "0.0.68"
 edition = "2021"
-rust-version = "1.88.0"
+rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
 description = "Edge RPC layer for SSG — JSON-over-POST dispatcher + #[ssg_rpc] macro + TypeScript schema emitter."
 repository = "https://github.com/sebastienrousseau/static-site-generator"

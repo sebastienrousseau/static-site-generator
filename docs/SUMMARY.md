@@ -76,6 +76,7 @@
   - [ADR-0006 — CycloneDX over SPDX](adr/0006-cyclonedx-over-spdx.md)
   - [ADR-0007 — staticdatagen staging shim](adr/0007-staticdatagen-staging-shim.md)
   - [ADR-0009 — Versioning policy](adr/0009-versioning-policy-0.0.x-until-0.0.999.md)
+  - [ADR-0010: Shared MSRV floor](adr/0010-msrv-1.89-shared-floor.md)
 
 ---
 

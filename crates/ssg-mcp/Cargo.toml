@@ -2,7 +2,7 @@
 name = "ssg-mcp"
 version = "0.0.68"
 edition = "2021"
-rust-version = "1.88.0"
+rust-version = "1.89.0"
 description = "Model Context Protocol stdio server exposing ssg's RPC surface as MCP tools."
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/sebastienrousseau/static-site-generator"

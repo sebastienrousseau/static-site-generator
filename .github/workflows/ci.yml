@@ -204,10 +204,16 @@ jobs:
         toolchain: [stable]
         include:
           - os: ubuntu-latest
-            toolchain: "1.88" # MSRV floor, must match Cargo.toml rust-version
+            toolchain: "1.89" # MSRV floor, must match Cargo.toml rust-version
+            msrv: true
           - os: ubuntu-latest
             toolchain: beta
             experimental: true
+    env:
+      # rust-toolchain.toml pins `stable`, and rustup prefers that file
+      # over the toolchain installed below, so without this the MSRV and
+      # beta entries built on stable and proved nothing.
+      RUSTUP_TOOLCHAIN: ${{ matrix.toolchain }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -215,6 +221,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           toolchain: ${{ matrix.toolchain }}
+      - name: The matrix toolchain is the one in use
+        shell: bash
+        env:
+          WANT: ${{ matrix.toolchain }}
+        run: |
+          v=$(rustc --version)
+          echo "$v"
+          case "$WANT" in
+            stable) [[ $v != *-beta* && $v != *-nightly* ]] ;;
+            beta) [[ $v == *-beta* ]] ;;
+            *) [[ $v == "rustc $WANT."* || $v == "rustc $WANT "* ]] ;;
+          esac
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
         with:
           shared-key: test-${{ matrix.os }}-${{ matrix.toolchain }}
@@ -225,7 +243,15 @@ jobs:
       # `Executable unittests src/lib.rs`. Running both meant the 3722
       # library unit tests executed twice, about four minutes wasted on
       # each of three platforms, in the job that was hitting its timeout.
+      # The MSRV promise covers the library and the binaries. The test
+      # suite cannot build on it: serial_test 4 (a dev-dependency)
+      # needs rustc 1.93.1. This leg passed only while it silently ran
+      # on stable; on the real floor it builds what users build.
+      - name: Library and binaries on the MSRV
+        if: ${{ matrix.msrv }}
+        run: cargo build --locked --lib --bins
       - name: Unit and integration tests
+        if: ${{ !matrix.msrv }}
         shell: bash
         # `--tests` rather than an enumerated list of targets.
         #
