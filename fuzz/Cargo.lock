@@ -2671,7 +2671,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.67"
+version = "0.0.68"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -2706,7 +2706,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-a11y"
-version = "0.0.67"
+version = "0.0.68"
 dependencies = [
  "serde",
  "serde_json",
@@ -2714,7 +2714,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.0.67"
+version = "0.0.68"
 dependencies = [
  "log",
  "noyalib",
@@ -2737,14 +2737,14 @@ dependencies = [
 
 [[package]]
 name = "ssg-i18n"
-version = "0.0.67"
+version = "0.0.68"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "ssg-rpc"
-version = "0.0.67"
+version = "0.0.68"
 dependencies = [
  "inventory",
  "schemars",
@@ -2756,7 +2756,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc-macro"
-version = "0.0.67"
+version = "0.0.68"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2765,7 +2765,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-search"
-version = "0.0.67"
+version = "0.0.68"
 dependencies = [
  "serde",
  "serde_json",
