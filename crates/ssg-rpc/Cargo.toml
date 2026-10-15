@@ -1,8 +1,8 @@
 [package]
 name = "ssg-rpc"
-version = "0.0.67"
+version = "0.0.68"
 edition = "2021"
-rust-version = "1.88.0"
+rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
 description = "Edge RPC layer for SSG — JSON-over-POST dispatcher + #[ssg_rpc] macro + TypeScript schema emitter."
 repository = "https://github.com/sebastienrousseau/static-site-generator"
@@ -27,7 +27,7 @@ schemars = { version = "1.2", default-features = false, features = ["derive", "s
 thiserror = "2"
 
 # Re-export the proc-macro so users only depend on `ssg-rpc`.
-ssg-rpc-macro = { path = "../ssg-rpc-macro", version = "0.0.67" }
+ssg-rpc-macro = { path = "../ssg-rpc-macro", version = "0.0.68" }
 
 [dev-dependencies]
 criterion = "0.8"

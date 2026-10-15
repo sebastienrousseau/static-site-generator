@@ -67,7 +67,7 @@ contract, it must explicitly update both the test and this document.
 |---|---|---|
 | Per-PR 3-OS test matrix | `ci.yml` `test` job (ubuntu, macos, windows) | Lib + integration tests pass on all three platforms. |
 | Multi-OS example outputs | `scheduled.yml` `examples-portability` job | Full `example_outputs.rs` suite runs weekly + on tag on macOS and Windows. |
-| Multi-OS × MSRV | `scheduled.yml` `portability` job | Build + lib tests + doc-build pass on stable + MSRV (1.88) × ubuntu/macos/windows. |
+| Multi-OS × MSRV | `scheduled.yml` `portability` job | Build + lib tests + doc-build pass on stable + MSRV (1.89) × ubuntu/macos/windows. |
 
 ## What is NOT gated
 

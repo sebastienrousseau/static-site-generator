@@ -7,7 +7,7 @@
 # Built and pushed by .github/workflows/release.yml on every `v*` tag.
 
 # ── Stage 1: build ─────────────────────────────────────────────────
-FROM rust:1.88-slim@sha256:38bc5a86d998772d4aec2348656ed21438d20fcdce2795b56ca434cf21430d89 AS builder
+FROM rust:1.89-slim@sha256:8cffb8fe4e8a95cf0d6a2060375e5a28aff4c752155aa9f1f9193530769bdf66 AS builder
 
 WORKDIR /usr/src/ssg
 

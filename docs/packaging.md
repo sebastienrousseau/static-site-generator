@@ -39,7 +39,7 @@ Bulk declarations for content, fixtures and generated files live in
 
 ## Minimum toolchain
 
-**Rust 1.88.0**, declared as `rust-version` in `Cargo.toml` and enforced
+**Rust 1.89.0**, declared as `rust-version` in `Cargo.toml` and enforced
 in CI by a build against that exact toolchain.
 
 Read the [MSRV policy](../README.md#minimum-supported-rust-version)

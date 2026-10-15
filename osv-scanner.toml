@@ -11,28 +11,24 @@
 #
 # Superset rather than mirror, because the two tools resolve different
 # graphs. cargo-deny walks the feature-resolved dependency tree; OSV
-# scans the lockfile, which lists optional dependencies whether or not
-# any feature enables them. RUSTSEC-2026-0235 below is exactly that case
-# — cargo-deny reports `advisory-not-detected` for it while OSV flags it.
+# scans the lockfiles, which list optional dependencies whether or not
+# any feature enables them. RUSTSEC-2025-0119 below is that case: its
+# crate is in Cargo.lock, but no feature set of this workspace builds
+# it (`cargo tree -i number_prefix --all-features --target all`).
 #
 # `tests/advisory_sync.rs` enforces the direction that matters: every
-# advisory deny.toml ignores must appear here.
+# advisory deny.toml ignores must appear here. The other direction is
+# kept by hand: an entry stays only while its crate is in Cargo.lock or
+# fuzz/Cargo.lock. Six were dropped in v0.0.68 because nothing matched
+# them any more (yaml-rust, fxhash, the quick-xml <0.41 pair,
+# proc-macro-error2, rkyv 0.7).
 #
 # All entries below are "unmaintained crate" informational advisories
-# (or, for the two quick-xml entries, documented low-risk build-time-only
-# findings) in transitive dependencies that cannot be resolved without
-# upstream releases. See `deny.toml` for the per-crate reasoning.
+# in transitive dependencies that cannot be resolved without upstream
+# releases. See `deny.toml` for the per-crate reasoning.
 
 [[IgnoredVulns]]
-id = "RUSTSEC-2024-0320" # yaml-rust (unmaintained) — via syntect/comrak
-reason = "unmaintained transitive dep, no upstream fix available"
-
-[[IgnoredVulns]]
-id = "RUSTSEC-2024-0436" # paste (unmaintained) — via dtt
-reason = "unmaintained transitive dep, no upstream fix available"
-
-[[IgnoredVulns]]
-id = "RUSTSEC-2025-0057" # fxhash (unmaintained) — via selectors/scraper
+id = "RUSTSEC-2024-0436" # paste (unmaintained) — via rav1e (ravif AVIF encoding)
 reason = "unmaintained transitive dep, no upstream fix available"
 
 [[IgnoredVulns]]
@@ -42,27 +38,3 @@ reason = "unmaintained transitive dep, no upstream fix available"
 [[IgnoredVulns]]
 id = "RUSTSEC-2025-0141" # bincode (unmaintained) — via syntect
 reason = "unmaintained transitive dep, no upstream fix available"
-
-[[IgnoredVulns]]
-id = "RUSTSEC-2026-0194"
-reason = "quick-xml <0.41 parser DoS pair, transitive + build-time only; ssg parses no untrusted XML at runtime. See deny.toml for the removal plan."
-
-[[IgnoredVulns]]
-id = "RUSTSEC-2026-0195"
-reason = "quick-xml <0.41 parser DoS pair, transitive + build-time only; ssg parses no untrusted XML at runtime. See deny.toml for the removal plan."
-
-[[IgnoredVulns]]
-id = "RUSTSEC-2026-0173" # proc-macro-error2 (unmaintained) — via defmt-macros/defmt, an optional jiff feature
-reason = "unmaintained transitive dep, no upstream fix available"
-
-[[IgnoredVulns]]
-id = "RUSTSEC-2026-0235" # rkyv 0.7 shared-pointer validation
-reason = """
-Not reachable in a default build. rkyv enters only through the optional `minify` feature: lightningcss -> parcel_sourcemap -> rkyv 0.7.46. `cargo tree -i rkyv` finds nothing without it.
-
-Not fixable here either. lightningcss needs rkyv 0.8.17+ and is still on 1.0.0-alpha.72; minify-html 0.18.1 depends on lightningcss with default features and exposes no feature flag to drop `sourcemap`, so setting `default-features = false` on our own lightningcss dependency changes nothing under cargo's feature unification. That was measured, not assumed. 0.18.1 is the latest release.
-
-The unsound path is unreachable regardless: it is in the checked `access` API for archives containing Rc/Arc, and ssg never deserialises an rkyv archive from user input. lightningcss uses rkyv for its own build-time sourcemap data.
-
-Revisit when lightningcss moves to rkyv 0.8, or when minify-html gains a feature flag for it.
-"""

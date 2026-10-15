@@ -5,10 +5,10 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.67"                      # The version of the library
+version = "0.0.68"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
-rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen)
+rust-version = "1.89.0"                 # Minimum supported Rust version (ADR-0010; dependencies alone need 1.88)
 license = "MIT OR Apache-2.0"           # Dual licensing strategy
 description = """
 A secure-by-default static site generator built in Rust. WCAG 2.2 AA validation, CSP/SRI hardening, native JS/CSS minification, automated CycloneDX SBOM, local LLM content pipeline, WebAssembly target, interactive islands, streaming compilation for 100K+ pages, 28-locale i18n, and one-command deployment.
@@ -171,13 +171,13 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.67" }
-ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.67", optional = true }
-ssg-core = { path = "crates/ssg-core", version = "0.0.67" }
-ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.67" }
-ssg-search = { path = "crates/ssg-search", version = "0.0.67" }
+ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.68" }
+ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.68", optional = true }
+ssg-core = { path = "crates/ssg-core", version = "0.0.68" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.68" }
+ssg-search = { path = "crates/ssg-search", version = "0.0.68" }
 thiserror = "2"
-staticdatagen = "0.0.21"
+staticdatagen = "0.0.22"
 toml = "1.1.2"
 
 # Real cryptographic hashing for Subresource Integrity (issue #468 follow-up).
@@ -238,7 +238,7 @@ ravif = { version = "0.13", optional = true, default-features = false, features 
 rgb = { version = "0.8", optional = true }
 
 # Owned crate for frontmatter parsing
-frontmatter-gen = "0.0.11"
+frontmatter-gen = "0.0.12"
 
 # Pure-Rust YAML parser for data/*.{yml,yaml} files loaded into
 # template globals (issue #536). The previous implementation parsed
@@ -248,7 +248,7 @@ frontmatter-gen = "0.0.11"
 # `ssg-core`'s frontmatter parser) — zero unsafe, no C deps, and
 # deliberately carries no dependency on the unmaintained `serde_yaml`
 # lineage `serde_yaml_ng` forked from.
-noyalib = "0.0.51"
+noyalib = "0.0.56"
 
 # Optional observability stack (issue #422). Both crates are
 # `optional = true` — they enter the build only when the `otel`

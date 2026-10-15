@@ -2,7 +2,7 @@
 
 # Benchmarks
 
-Reproducible performance methodology and CI gates for SSG **v0.0.67**.
+Reproducible performance methodology and CI gates for SSG **v0.0.68**.
 
 > **Figures last measured at v0.0.58.** The methodology and the CI gates
 > below apply to this release; the numbers under _Current_ were carried
@@ -149,7 +149,7 @@ Each row was measured on the same content corpus (`benches/corpus/small`,
 100 pages, full frontmatter). Wall-clock times are median-of-10 runs
 captured with [`hyperfine`](https://github.com/sharkdp/hyperfine).
 
-| Capability | SSG v0.0.67 | Hugo v0.155+ | Zola v0.20+ | Astro 6 | Eleventy 3 |
+| Capability | SSG v0.0.68 | Hugo v0.155+ | Zola v0.20+ | Astro 6 | Eleventy 3 |
 |---|---|---|---|---|---|
 | Language | Rust | Go | Rust | JS/TS | JS |
 | Runtime | None | None | None | Node 20+ | Node 20+ |
@@ -234,13 +234,15 @@ committed; the deterministic-corpus baselines under
 The figures in this section are produced by
 [`.github/workflows/benchmarks.yml`](.github/workflows/benchmarks.yml), not
 typed in. The workflow runs nightly on a named runner, records the hardware
-alongside the numbers, and uploads `bench-report.md` plus the raw Criterion
-output as a build artifact.
+alongside the numbers, uploads `bench-report.md` plus the raw Criterion
+output as a build artifact, and commits this file with the results filled in
+to the `benchmark-results` branch.
 
 <!-- BENCHMARK-RESULTS:START -->
-_No nightly run has been recorded yet. The workflow is scheduled at 03:30 UTC
-and can be triggered from the Actions tab; the first run replaces this
-placeholder._
+_The nightly run publishes its figures to this file on the
+`benchmark-results` branch, not here: `main` accepts changes only through a
+pull request. The workflow is scheduled at 03:30 UTC; each run's report is
+also attached to the run as an artifact._
 <!-- BENCHMARK-RESULTS:END -->
 
 Corpora come from `ssg::bench_corpus`, a seeded generator whose output is
@@ -255,7 +257,7 @@ measurement.
 
 CI's coverage gate enforces the floors below (set in `ci.yml` `env`):
 
-| Metric | Floor | Current (v0.0.67) | Headroom |
+| Metric | Floor | Current (v0.0.68) | Headroom |
 |---|---:|---:|---:|
 | Regions | 98.0 % | 99.09 % | 1.09 |
 | Functions | 98.0 % | 99.00 % | 1.00 |

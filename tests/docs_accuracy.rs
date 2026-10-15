@@ -280,6 +280,74 @@ fn readme_msrv_matches_cargo_toml() {
     }
 }
 
+/// Every statement of the MSRV names `rust-version` from the root
+/// `Cargo.toml`. A raise that misses one fails here, because the
+/// expected text (built from the current floor) is then absent. The
+/// short form (`1.89`) is what the CI matrices and `build.rs` use.
+#[test]
+fn every_msrv_statement_names_rust_version() {
+    let msrv = cargo_package_field("rust-version");
+    let short = msrv
+        .rsplit_once('.')
+        .map_or(msrv.as_str(), |(head, _)| head);
+    let expected: Vec<(&str, String)> = vec![
+        ("README.md", format!("badge/MSRV-{msrv}-")),
+        ("README.md", format!("alt=\"MSRV {msrv}\"")),
+        ("README.md", format!("Requires **Rust {msrv}+**")),
+        ("README.md", format!("| **MSRV** | Rust {msrv} |")),
+        ("README.md", format!("**Rust {msrv}.**")),
+        ("README.md", format!("`[stable, {short}]`")),
+        (
+            "CONTRIBUTING.md",
+            format!("(https://rustup.rs/) {msrv} or later"),
+        ),
+        ("DEVELOPMENT.md", format!("| MSRV | **{msrv}** |")),
+        ("DEVELOPMENT.md", format!("binaries on the MSRV `{short}`")),
+        ("DEVELOPMENT.md", format!("floor (`{short}`)")),
+        ("build.rs", format!("let min_version = \"{short}\";")),
+        ("Dockerfile", format!("FROM rust:{short}-slim@")),
+        (
+            ".github/workflows/ci.yml",
+            format!("toolchain: \"{short}\" # MSRV floor"),
+        ),
+        (
+            ".github/workflows/scheduled.yml",
+            format!("toolchain: [stable, \"{short}\"]"),
+        ),
+        ("docs/guide/installation.md", format!("**Rust {msrv}+**")),
+        ("docs/packaging.md", format!("**Rust {msrv}**, declared")),
+        (
+            "docs/architecture/regression-contract.md",
+            format!("MSRV ({short})"),
+        ),
+    ];
+    let mut stale: Vec<String> = expected
+        .iter()
+        .filter(|(file, text)| !read(file).contains(text.as_str()))
+        .map(|(file, text)| format!("{file}: no `{text}`"))
+        .collect();
+    let members =
+        fs::read_dir(workspace().join("crates")).expect("read crates/");
+    for entry in members.flatten() {
+        let manifest = entry.path().join("Cargo.toml");
+        let Ok(text) = fs::read_to_string(&manifest) else {
+            continue;
+        };
+        let declares = text.lines().any(|l| l.starts_with("rust-version = \""));
+        if declares && !text.contains(&format!("rust-version = \"{msrv}\"")) {
+            stale.push(format!(
+                "{}: rust-version is not {msrv}",
+                manifest.display()
+            ));
+        }
+    }
+    assert!(
+        stale.is_empty(),
+        "MSRV statements disagree with rust-version {msrv}:\n{}",
+        stale.join("\n")
+    );
+}
+
 // =====================================================================
 // SECURITY.md cross-check
 // =====================================================================

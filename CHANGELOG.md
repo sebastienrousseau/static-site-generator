@@ -7,6 +7,143 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.68] - 2026-10-15
+
+### Security
+
+- **YAML alias amplification is refused (RUSTSEC-2026-0333,
+  GHSA-4xcc-23fx-w2wj).** noyalib before 0.0.53 did not enforce its
+  alias budgets on the typed path ssg uses for front matter and for
+  `data/*.yml` files, so a 576-byte document of nested aliases
+  expanded to 3,409,529 bytes of JSON under v0.0.67. ssg and ssg-core
+  now use noyalib 0.0.56, which refuses that document: the page keeps
+  its body and gets no metadata, and the data file is skipped, as with
+  any malformed YAML. frontmatter-gen 0.0.12 and staticdatagen 0.0.22
+  (through html-generator 0.0.12 and metadata-gen 0.0.8) move to the
+  same noyalib, so no older copy is left in the graph. Two tests cover
+  the refusal and a third checks that ordinary anchors still parse.
+- **A page of bare email addresses no longer crashes the build
+  (GHSA-xg9p-p4jc-c46g, high).** comrak 0.54 and earlier recursed once
+  per bare email autolink, so a page with a few thousand addresses
+  overflowed the stack and aborted ssg. Markdown now renders through
+  comrak 0.55 everywhere: staticdatagen 0.0.22 uses it directly and
+  through html-generator 0.0.12 and mdx-gen 0.0.6. A new test compiles
+  a page of 3,000 addresses on a 512 KiB stack; it aborted on v0.0.67's
+  dependencies and passes now.
+- **TLS and HTML sanitising move past new advisories.** rustls
+  0.23.46 (through ureq) fixes RUSTSEC-2026-0346, -0347, -0348 and
+  -0349: a `Debug` impl that printed session secrets, data sent to the
+  outer server after an ECH rejection, a Brotli certificate decompressor
+  a peer could make allocate 1 GiB, and an unauthenticated downgrade to
+  classical key exchange. ammonia 4.1.7 (through html-generator) fixes
+  RUSTSEC-2021-0157 and RUSTSEC-2021-0158 (CSS `url()` escaping, and
+  `href` on SVG animation elements). These were published after this
+  release was first prepared; `cargo deny` refused 0.0.67's graph.
+
+### ⚠️ Behaviour change
+
+staticdatagen 0.0.22 and metadata-gen 0.0.8 change what some compiled
+pages carry. `tests/compile_output.rs` pins each change at
+`ssg::compile_site`; all four of its tests fail on v0.0.67's
+dependencies.
+
+- **Open Graph tags use `property=`.** A page whose front matter sets
+  `og:title`, `og:description`, `og:image`, `og:url` or `og:type` gets
+  `<meta property="og:...">`, as the Open Graph protocol specifies,
+  where its layout places `{{!opengraph}}`. It was `name=`.
+- **Meta tag values escape `&`, `<` and `>`**, as they already escaped
+  `"`: a description of `Fish & Chips <b>` renders as
+  `content="Fish &amp; Chips &lt;b&gt;"`.
+- **JSON front matter stays out of the page.** A page that opens with
+  a JSON object had that object rendered as its first paragraph; the
+  body now starts after it.
+- **Front matter after a UTF-8 byte order mark is read.** Such a page
+  stopped the build with "No valid front matter found"; it now
+  compiles with its metadata.
+
+The bundled examples are unaffected: compiling their 351 Markdown
+files (nine content trees) gives byte-identical pages under both
+releases, apart from the build time stamped into `news-sitemap.xml`,
+and the golden files are unchanged.
+
+### Fixed
+
+- **The nightly benchmark run publishes its figures.** Its last step
+  pushed BENCHMARKS.md to `main`, which accepts changes only through a
+  pull request, so GitHub refused the push and the workflow failed
+  every night. The figures now go to the `benchmark-results` branch,
+  one commit per night, and `main`'s BENCHMARKS.md points there.
+- **The cargo vet exemption ratchet holds.** The baseline file said
+  555 while `supply-chain/config.toml` held 377 exemptions, and the CI
+  step only failed above the baseline, so 178 new exemptions would
+  have passed it. The baseline now matches the count and the step also
+  fails below it, so every burn-down lowers the baseline in the same
+  pull request.
+- **The scaling gate compares like with like.** `perf_budgets` failed
+  on `windows-latest` for #805 at 3.32x and passed on the rerun of the
+  same commit, after v0.0.67 had interleaved its samples. It compared
+  the fastest 100-page build with the fastest 500-page build, and a
+  short build can fit between bursts of runner interference where a
+  long one cannot. Each round now times five 100-page builds against
+  one 500-page build, the same number of pages, and the gate asserts
+  the median of the five rounds' ratios. The corpus is written once
+  before any timing, the timing tests no longer run alongside each
+  other, and a failure prints every round. A simulated bursty runner
+  read up to 4.20x before the change and at most 1.38x after; O(n^2)
+  and O(n^1.5) costs still read 5.00x and 2.24x and fail.
+- **A build no longer leaves a copy of its content in the temp
+  directory.** Since v0.0.45 the content stager has copied every page
+  to `ssg-staging-<pid>-<hash>-content` under the system temp directory
+  before compiling, and nothing removed it, so every `ssg` build left a
+  full copy of the site's content behind, and one run of the
+  `perf_budgets` tests left 44. The copy is now removed once the
+  compile step finishes, whether it succeeded or failed, and two tests
+  check both cases.
+
+### Changed
+
+- **The MSRV is now Rust 1.89.0** (was 1.88.0). No dependency needs
+  it: the dependency floor is still 1.88. It is a maintainer decision,
+  one floor shared across the maintainer's Rust crates, recorded as
+  [ADR-0010](docs/adr/0010-msrv-1.89-shared-floor.md). Every workspace
+  manifest, `build.rs`, the README, the guides and the Docker builder
+  image (`rust:1.89-slim`) state 1.89.
+- **The MSRV and beta CI legs build on the toolchain they name.**
+  `rust-toolchain.toml` pins `stable`, and rustup prefers that file over
+  the toolchain the job installs, so the `1.88` and `beta` entries in
+  `ci.yml` and the `1.88` portability legs in `scheduled.yml` were
+  building on stable. They now set `RUSTUP_TOOLCHAIN` and check
+  `rustc --version` before building. On the real floor the test suite
+  cannot build (`serial_test` 4, a dev-dependency, needs rustc
+  1.93.1), so the MSRV legs build the library and binaries, which is
+  what the floor promises users; tests stay on stable and beta.
+- **Dependencies.** noyalib 0.0.51 to 0.0.56, frontmatter-gen 0.0.11
+  to 0.0.12 and staticdatagen 0.0.21 to 0.0.22, which brings comrak
+  0.55, html-generator 0.0.12, mdx-gen 0.0.6 and metadata-gen 0.0.8;
+  comrak 0.52 and 0.54, html-generator 0.0.11, mdx-gen 0.0.5,
+  metadata-gen 0.0.7 and noyalib 0.0.37 leave both lockfiles. The new
+  versions carry cargo vet records, and the exemptions for the
+  versions that left are pruned.
+- **`osv-scanner.toml` lists only advisories the lockfiles can
+  match.** Six ignores for crates no longer in either lockfile
+  (yaml-rust, fxhash, the quick-xml <0.41 pair, proc-macro-error2, rkyv
+  0.7) are gone, so the OpenSSF Scorecard scan would report those
+  crates if they came back.
+
+### Documentation
+
+- **Security claims match the build.** README no longer says
+  `cargo audit` runs with zero advisories (CI does not run it; a
+  RustSec advisory fails `cargo deny check` instead), and README and
+  SECURITY.md say which crates forbid `unsafe` code, which deny it
+  through the workspace lint, and which two unpublished crates opt
+  out.
+- **The minify plugin is described as it runs.** `MinifyPlugin`'s
+  documentation still described the `minify` feature removed in
+  v0.0.62; it now says the plugin walks the whole output and minifies
+  HTML, CSS and JavaScript in every build. DEVELOPMENT.md no longer
+  tells contributors to reseed goldens with `--features minify`.
+
 ## [0.0.67] - 2026-10-08
 
 ### Fixed

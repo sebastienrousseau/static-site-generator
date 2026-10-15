@@ -45,11 +45,15 @@ jobs:
     name: ${{ matrix.os }} · ${{ matrix.toolchain }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
+    env:
+      # rust-toolchain.toml pins `stable`; without this the "1.89" leg
+      # built on stable.
+      RUSTUP_TOOLCHAIN: ${{ matrix.toolchain }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        toolchain: [stable, "1.88"]
+        toolchain: [stable, "1.89"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -61,8 +65,25 @@ jobs:
         with:
           shared-key: scheduled-${{ matrix.os }}-${{ matrix.toolchain }}
           save-if: ${{ github.event_name == 'schedule' }}
-      - run: cargo build --all-targets --locked
-      - run: cargo test --lib --locked
+      - name: The matrix toolchain is the one in use
+        shell: bash
+        env:
+          WANT: ${{ matrix.toolchain }}
+        run: |
+          v=$(rustc --version)
+          echo "$v"
+          case "$WANT" in
+            stable) [[ $v != *-beta* && $v != *-nightly* ]] ;;
+            *) [[ $v == "rustc $WANT."* || $v == "rustc $WANT "* ]] ;;
+          esac
+      # On the MSRV only the library and binaries build: serial_test 4,
+      # a dev-dependency, needs rustc 1.93.1.
+      - if: matrix.toolchain == 'stable'
+        run: cargo build --all-targets --locked
+      - if: matrix.toolchain != 'stable'
+        run: cargo build --lib --bins --locked
+      - if: matrix.toolchain == 'stable'
+        run: cargo test --lib --locked
       - name: Doc build (deny warnings)
         env: { RUSTDOCFLAGS: -D warnings }
         run: cargo doc --no-deps -p ssg
@@ -202,7 +223,7 @@ jobs:
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
         with:
           shared-key: a11y
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
 
@@ -312,14 +333,14 @@ jobs:
           echo "SPDX version: $(jq -r .spdxVersion ssg.spdx.json)"
           echo "Packages: $(jq '.packages | length' ssg.spdx.json)"
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sbom-cyclonedx
           path: ./*.cdx.json
           if-no-files-found: warn
           retention-days: 90
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sbom-spdx
           path: ./ssg.spdx.json
@@ -351,7 +372,7 @@ jobs:
       - name: Run scalability benchmarks
         run: cargo bench --bench bench -- scalability
       - name: Upload benchmark results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: benchmark-results
           path: target/criterion/

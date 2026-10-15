@@ -31,11 +31,12 @@ Architecture — how the pipeline actually fits together — is in
 | Requirement | Value | Enforced by |
 |---|---|---|
 | Rust channel | `stable` | `rust-toolchain.toml` |
-| MSRV | **1.88.0** | `rust-version` in `Cargo.toml`; `cargo-semver-checks` in CI |
+| MSRV | **1.89.0** | `rust-version` in `Cargo.toml`; `cargo-semver-checks` in CI |
 | Components | `rustfmt`, `clippy` | `rust-toolchain.toml` |
 
-The MSRV floor is set by transitive dependencies (`time-macros`,
-`staticdatagen`, `oxc_*`), not by this crate's own source. Raising it is a
+The dependency-driven floor is 1.88 (`time-macros`, `staticdatagen`,
+`oxc_*`); 1.89.0 is one floor shared with the maintainer's other Rust
+crates ([ADR-0010](docs/adr/0010-msrv-1.89-shared-floor.md)). Raising it is a
 dependency decision; record the reason in an ADR under `docs/adr/` when
 it moves.
 
@@ -82,7 +83,8 @@ asserts that, so this table cannot quietly drift from the workflow.
 | no-shellout lint | `./tools/lint-no-shellout.sh` |
 | ADR citation graph | `./tools/lint-adr.sh` |
 | feature powerset | `cargo hack check --feature-powerset --depth 2 --no-dev-deps` |
-| unit and integration tests (3 OS on stable; MSRV `1.88` and beta on Linux) | `cargo test --tests --features test-fault-injection` |
+| unit and integration tests (3 OS on stable; beta on Linux) | `cargo test --tests --features test-fault-injection` |
+| library and binaries on the MSRV `1.89` (Linux, under `RUSTUP_TOOLCHAIN`) | `cargo build --locked --lib --bins` |
 | example outputs | `cargo build --examples --quiet` then `cargo test --test example_outputs -- --test-threads=1` |
 | coverage gate | `make coverage` |
 | docs lint (text) | `typos` (v1.50.1 — CI pins the matching action), `npx markdownlint-cli2`, `./scripts/check-docs-tracked.sh`, `./scripts/check-typos-allowlist.sh`, `reuse lint` |
@@ -104,7 +106,9 @@ the first misses lints in `tests/` and `examples/`, which is precisely
 how several rounds of green-locally / red-in-CI happened.
 
 **The test matrix is 5 jobs, not 9.** Every OS runs on stable; the MSRV
-floor (`1.88`) and beta run on Linux only. Those two toolchains answer a
+floor (`1.89`) and beta run on Linux only. The MSRV leg builds the
+library and binaries; the test suite needs rustc 1.93.1 because of the
+`serial_test` 4 dev-dependency. Those two toolchains answer a
 compiler question rather than a platform one — "does this still build on
 the floor we claim, and is it about to break on the next release?" —
 so paying for them three times buys nothing. beta is
@@ -170,9 +174,10 @@ what it measured.
 
 The goldens under `tests/golden/` are byte-for-byte snapshots compared by
 `tests/golden_files.rs`. To reseed them after an intentional output change,
-run the suite with `UPDATE_GOLDEN=1` in the environment, once per feature
-set (`--features minify` writes the `.minify` variants); libtest rejects
-unknown flags, so there is no `--update-golden` switch. Seed on one platform
+run the suite with `UPDATE_GOLDEN=1` in the environment; libtest rejects
+unknown flags, so there is no `--update-golden` switch. There is one set
+of goldens: the `minify` feature, and the `.minify` variants it wrote, went
+when minification became ssg's own code in v0.0.62. Seed on one platform
 and re-run the suite on the other before committing — the suite has caught
 ordering that differed between APFS and ext4 — for example inside
 `docker run --rm -v "$PWD":/work -w /work rust:1.90` on macOS. A run that

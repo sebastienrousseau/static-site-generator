@@ -58,8 +58,8 @@ user-login = "hsivonen"
 user-name = "Henri Sivonen"
 
 [[publisher.frontmatter-gen]]
-version = "0.0.11"
-when = "2026-09-07"
+version = "0.0.12"
+when = "2026-10-09"
 user-id = 186843
 user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
@@ -71,21 +71,23 @@ user-id = 186843
 user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
+[[publisher.inventory]]
+version = "0.3.25"
+when = "2026-10-07"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
 [[publisher.metadata-gen]]
-version = "0.0.7"
-when = "2026-09-07"
+version = "0.0.8"
+when = "2026-10-09"
 user-id = 186843
 user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
 [[publisher.noyalib]]
-version = "0.0.37"
-when = "2026-09-06"
-trusted-publisher = "github:sebastienrousseau/noyalib"
-
-[[publisher.noyalib]]
-version = "0.0.51"
-when = "2026-09-22"
+version = "0.0.56"
+when = "2026-10-08"
 trusted-publisher = "github:sebastienrousseau/noyalib"
 
 [[publisher.rss-gen]]
@@ -95,6 +97,13 @@ user-id = 186843
 user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
+[[publisher.serde_spanned]]
+version = "1.1.2"
+when = "2026-10-08"
+user-id = 6743
+user-login = "epage"
+user-name = "Ed Page"
+
 [[publisher.sitemap-gen]]
 version = "0.0.5"
 when = "2026-08-13"
@@ -103,8 +112,8 @@ user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
 [[publisher.staticdatagen]]
-version = "0.0.21"
-when = "2026-10-01"
+version = "0.0.22"
+when = "2026-10-10"
 trusted-publisher = "github:sebastienrousseau/staticdatagen"
 
 [[publisher.staticweaver]]
@@ -141,6 +150,34 @@ when = "2026-09-23"
 user-id = 3618
 user-login = "dtolnay"
 user-name = "David Tolnay"
+
+[[publisher.toml]]
+version = "1.1.8+spec-1.1.0"
+when = "2026-10-09"
+user-id = 6743
+user-login = "epage"
+user-name = "Ed Page"
+
+[[publisher.toml_datetime]]
+version = "1.1.2+spec-1.1.0"
+when = "2026-10-08"
+user-id = 6743
+user-login = "epage"
+user-name = "Ed Page"
+
+[[publisher.toml_parser]]
+version = "1.1.5+spec-1.1.0"
+when = "2026-10-09"
+user-id = 6743
+user-login = "epage"
+user-name = "Ed Page"
+
+[[publisher.toml_writer]]
+version = "1.1.3+spec-1.1.0"
+when = "2026-10-08"
+user-id = 6743
+user-login = "epage"
+user-name = "Ed Page"
 
 [[publisher.unicode-normalization]]
 version = "0.1.25"
@@ -1014,18 +1051,6 @@ notes = "Very few changes, mostly removes support for older Rust versions.  Some
 who = "Bobby Holley <bobbyholley@gmail.com>"
 criteria = "safe-to-deploy"
 delta = "1.0.17 -> 1.0.16"
-
-[[audits.mozilla.audits.serde_spanned]]
-who = "Ben Dean-Kawamura <bdk@mozilla.com>"
-criteria = "safe-to-deploy"
-version = "1.0.3"
-notes = "Relatively simple Serde trait implementations.  No IO or unsafe code."
-
-[[audits.mozilla.audits.serde_spanned]]
-who = "Ben Dean-Kawamura <bdk@mozilla.com>"
-criteria = "safe-to-deploy"
-delta = "1.0.3 -> 1.1.1"
-notes = "No code changes, just dependency updates."
 
 [[audits.mozilla.audits.sharded-slab]]
 who = "Mark Hammond <mhammond@skippinet.com.au>"

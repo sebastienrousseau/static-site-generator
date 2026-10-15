@@ -47,7 +47,7 @@ use std::process;
 /// }
 /// ```
 fn main() {
-    let min_version = "1.88";
+    let min_version = "1.89";
 
     if !matches!(version_check::is_min_version(min_version), Some(true)) {
         eprintln!("'ssg' requires Rustc version >= {min_version}");

@@ -23,8 +23,8 @@ the advisory unless you prefer otherwise.
 
 | Version | Supported |
 |---|---|
-| 0.0.67 (latest) | ✅ Security fixes |
-| < 0.0.67 | ❌ Upgrade required |
+| 0.0.68 (latest) | ✅ Security fixes |
+| < 0.0.68 | ❌ Upgrade required |
 
 `0.0.x` is pre-1.0; only the latest release receives security patches,
 so the table above names the current version rather than a fixed floor.
@@ -40,9 +40,10 @@ focuses on:
 - **Local privilege elevation** — a malicious site source must not
   exfiltrate secrets from the build environment or escape the output
   directory via path traversal.
-- **Supply-chain integrity** — every dependency is pinned and audited
-  via `cargo deny check` on every CI run; GitHub Actions are pinned
-  to commit SHAs (not tags).
+- **Supply-chain integrity** — every dependency is pinned and checked
+  by `cargo deny check` and `cargo vet` on every CI run, and a
+  vulnerability advisory against any crate in the graph fails the
+  build; GitHub Actions are pinned to commit SHAs (not tags).
 - **Output integrity** — generated HTML must not echo unsanitised
   user content into HTML attributes or JavaScript contexts.
 
@@ -57,7 +58,7 @@ Out of scope:
 
 | Control | Default | Configuration |
 |---|---|---|
-| `unsafe` Rust | `#![forbid(unsafe_code)]` at every crate root | not configurable |
+| `unsafe` Rust | `#![forbid(unsafe_code)]` at the roots of `ssg`, `ssg-core`, `ssg-a11y` and `ssg-search`; the workspace lint `unsafe_code = "deny"` covers `ssg-i18n`, `ssg-mcp`, `ssg-rpc` and `ssg-rpc-macro`. Two unpublished crates opt out: `ssg-wasm` allows it at its root (its own source has no `unsafe` block) and `ssg-heap-probe`, a test tool, implements a counting allocator, which is `unsafe` by trait definition | not configurable |
 | Path traversal | `is_safe_path()` checks every output path against site root | not configurable |
 | CSP | Inline `<style>`/`<script>` extracted to external files with SRI hashes; `unsafe-inline` not emitted | `CspPlugin` |
 | HSTS | `Strict-Transport-Security: max-age=31536000` in deploy configs | `DeployPlugin` |

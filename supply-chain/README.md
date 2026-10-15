@@ -117,10 +117,11 @@ Declined (kept as exemption, with reason):
 ## Exemption ratchet (CI)
 
 `supply-chain/exemptions-baseline.txt` records the current exemption
-count (533). The `vet` job in `ci.yml` fails any PR whose
-`[[exemptions.*]]` entry count in `config.toml` **exceeds** that
-baseline — the ratchet only moves downward. When you burn exemptions
-down, lower the baseline file in the same PR; never raise it.
+count. The `vet` job in `ci.yml` fails any PR whose
+`[[exemptions.*]]` entry count in `config.toml` differs from that
+baseline: above it is a new exemption, below it is a burn-down that
+must lower the baseline file in the same PR. The ratchet only moves
+downward; never raise it.
 
 ## CI integration
 
@@ -134,8 +135,9 @@ down, lower the baseline file in the same PR; never raise it.
 - A pinned audit file URL is unreachable.
 
 Adding a new dep that triggers a vet failure: run
-`cargo vet suggest` for guidance, then either `cargo vet certify` or
-`cargo vet exemption add` with a rationale.
+`cargo vet suggest` for guidance, then `cargo vet certify` or
+`cargo vet trust`. An exemption is not an option: the ratchet above
+fails the PR, as `AGENTS.md` says.
 
 ## See also
 

@@ -6,7 +6,7 @@ SSG supports multiple installation methods across macOS, Linux, and Windows.
 
 ## Requirements
 
-- **Rust 1.88.0+** (only for building from source or `cargo install`)
+- **Rust 1.89.0+** (only for building from source or `cargo install`)
 - No runtime dependencies for prebuilt binaries
 
 ## Quick Install (Prebuilt Binary)
@@ -104,7 +104,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ssg = "0.0.67"
+ssg = "0.0.68"
 ```
 
 ## WSL2 / GitHub Codespaces

@@ -5,9 +5,8 @@
 //!
 //! Ready-to-use plugins for common static site generation tasks.
 //!
-//! - `MinifyPlugin` — Minifies HTML files in the site output directory.
-//!   With the `minify` feature enabled, also minifies `.css` and `.js`
-//!   assets and walks the site directory recursively.
+//! - `MinifyPlugin` — Minifies the HTML, CSS and JavaScript files in the
+//!   site output directory, walking it recursively.
 //! - `ImageOptiPlugin` — Logs image files for optimization (stub for external tooling).
 //! - `DeployPlugin` — Logs deployment target after build (stub for CI integration).
 
@@ -18,20 +17,13 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-/// Minifies HTML files and (with the `minify` feature) JS/CSS assets.
+/// Minifies the HTML, CSS and JavaScript files in the site output.
 ///
-/// Runs during the `after_compile` hook.
-///
-/// * **Default build:** processes only top-level `.html` files in
-///   `site_dir`, falling back to a whitespace-collapsing pass that
-///   short-circuits on any document containing `<pre`.
-/// * **`minify` feature:** walks `site_dir` recursively (via `walkdir`)
-///   and uses
-///   [`minify-html`](https://crates.io/crates/minify-html) for HTML,
-///   [`oxc_minifier`](https://crates.io/crates/oxc_minifier) for JS, and
-///   [`lightningcss`](https://crates.io/crates/lightningcss) for CSS.
-///   `<pre>` content is preserved bit-identically by `minify-html`'s
-///   native handling.
+/// Runs during the `after_compile` hook. It walks `site_dir`
+/// recursively without following symlinks, skips files the plugin cache
+/// reports unchanged, and rewrites `.html` files with [`minify_html`],
+/// `.css` files with [`minify_css`] and `.js` files with [`minify_js`],
+/// ssg's own minifiers.
 ///
 /// # Example
 ///
@@ -182,26 +174,6 @@ fn collect_minifiable_files(
     Ok((html, css, js))
 }
 
-/// HTML minification.
-///
-/// * With the `minify` feature: delegates to `minify-html` configured
-///   with `keep_comments: false`, `do_not_minify_doctype: true`. CSS
-///   inside `<style>` and JS inside `<script>` are passed through
-///   without inline minification (the dedicated asset-file passes
-///   handle that, and avoid double-minification of inline blocks that
-///   may contain template-specific syntax).
-/// * Without the feature: falls back to a whitespace-collapsing pass
-///   that short-circuits when any `<pre` substring is present so
-///   user-visible whitespace in code blocks is preserved.
-///
-/// # Examples
-///
-/// ```rust
-/// use ssg::plugins::minify_html;
-///
-/// let out = minify_html("<html>   <body>hi</body>  </html>");
-/// assert!(out.len() <= "<html>   <body>hi</body>  </html>".len());
-/// ```
 /// Elements whose text content must survive byte for byte.
 ///
 /// `pre` and `textarea` render whitespace literally; `script` and `style`
@@ -1139,7 +1111,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------
-    // `minify` feature — happy paths (only compiled with the feature)
+    // `minify_html` — happy paths
     // -----------------------------------------------------------------
 
     #[test]

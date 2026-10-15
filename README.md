@@ -15,9 +15,9 @@
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.67-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.68-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
   <a href="#license"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg?style=for-the-badge" alt="License: MIT OR Apache-2.0" /></a>
-  <a href="#minimum-supported-rust-version"><img src="https://img.shields.io/badge/MSRV-1.88.0-dea584.svg?style=for-the-badge&logo=rust" alt="MSRV 1.88.0" /></a>
+  <a href="#minimum-supported-rust-version"><img src="https://img.shields.io/badge/MSRV-1.89.0-dea584.svg?style=for-the-badge&logo=rust" alt="MSRV 1.89.0" /></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/static-site-generator?style=for-the-badge&label=openssf%20scorecard" alt="OpenSSF Scorecard" /></a>
   <a href="https://www.bestpractices.dev/projects/14540"><img src="https://img.shields.io/cii/level/14540?style=for-the-badge&label=OpenSSF%20Best%20Practices&logo=openssf" alt="OpenSSF Best Practices" /></a>
 </p>
@@ -59,7 +59,7 @@
 
 ```toml
 [dependencies]
-ssg = "0.0.67"
+ssg = "0.0.68"
 ```
 
 ### Prebuilt binaries
@@ -75,7 +75,7 @@ brew install --formula https://raw.githubusercontent.com/sebastienrousseau/stati
 cargo install ssg
 
 # Debian / Ubuntu (amd64 or arm64)
-sudo dpkg -i ssg_0.0.67_amd64.deb
+sudo dpkg -i ssg_0.0.68_amd64.deb
 
 # Arch Linux (AUR)
 yay -S ssg
@@ -92,7 +92,7 @@ cd static-site-generator
 make          # check + clippy + test
 ```
 
-Requires **Rust 1.88.0+**. Tested on Linux, macOS, and Windows.
+Requires **Rust 1.89.0+**. Tested on Linux, macOS, and Windows.
 
 ### System install (packagers)
 
@@ -142,7 +142,7 @@ SSG generates static websites from Markdown content, YAML frontmatter, and `Mini
 - **Incremental builds** -- content fingerprinting via FNV-1a hashing and dependency graph
 - **Bounded-memory batch compilation** -- configurable memory budgets for 100K+ page sites
 - **WCAG 2.2 AA** -- accessibility checked on every build (non-blocking by default; reports written to `accessibility-report.json` + `wcag-compliance.json`) and gated in CI by axe-core. Build-failure on a11y violations is opt-in via the `STRICT_A11Y` env var (implemented in v0.0.40)
-- **Zero unsafe code** -- `#![forbid(unsafe_code)]` across the entire codebase
+- **Zero unsafe code** -- `unsafe` code forbidden or denied in every published crate (details in [`SECURITY.md`](SECURITY.md))
 
 ---
 
@@ -170,8 +170,9 @@ Three choices follow from that, and each has a cost worth stating:
    is heavier per connection than an async runtime would be. The
    reasoning is recorded in [`docs/adr/`](docs/adr/).
 
-3. **`#![forbid(unsafe_code)]` workspace-wide.** No `unsafe` block exists
-   in the tree. Memory-safety review is therefore a property of the
+3. **No `unsafe` in the shipped crates.** No published crate contains an
+   `unsafe` block; the only one in the tree is the counting allocator of
+   `ssg-heap-probe`, an unpublished test tool. Memory-safety review is therefore a property of the
    compiler rather than of code review, and the Miri job
    ([`.github/workflows/miri.yml`](.github/workflows/miri.yml)) checks the
    dependency surface rather than our own. The cost is that a few
@@ -221,14 +222,14 @@ graph TD
 | Metric | Value |
 | :--- | :--- |
 | **Source** | 143,000+ lines across 10 workspace crates (`ssg`, `ssg-core`, `ssg-a11y`, `ssg-i18n`, `ssg-search`, `ssg-mcp`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`, and the unpublished `ssg-heap-probe`) |
-| **Test suite** | 3,773 unit tests (`cargo test --lib`) + 62 integration test targets |
+| **Test suite** | 3,773 unit tests (`cargo test --lib`) + 64 integration test targets |
 | **Coverage** | 98% region, 98% line, 98% function (CI-gated); measured 99.31 / 99.29 / 99.24 |
 | **Plugin pipeline** | 32 plugins, Rayon-parallelised |
 | **Audit gates** | 15 (WCAG 2.2 AAA, JSON-LD, hreflang, lang consistency, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity) |
 | **Examples** | 8 branded sites + 2 edge-runtime adapters (Cloudflare Workers, Vercel Edge) |
 | **Edge runtimes** | Cloudflare Workers + Vercel Edge with ISR (`ssg-wasm`) |
 | **Search** | Browser-native int8 vector embeddings via `ssg-search` (WASM, ≤2 MB gzipped budget) |
-| **MSRV** | Rust 1.88.0 |
+| **MSRV** | Rust 1.89.0 |
 
 ### Build performance
 
@@ -651,13 +652,16 @@ still tested, and warning via `LEGACY_DEPRECATION_WARNING`.
 
 ## Minimum supported Rust version
 
-**Rust 1.88.0.**
+**Rust 1.89.0.**
 
 ### The policy
 
-The MSRV is a *floor set by dependencies*, not a target chosen
-independently. It currently comes from `time-macros`, `staticdatagen`
-and the `oxc_*` crates.
+The MSRV is normally a *floor set by dependencies*, not a target chosen
+independently. The dependency floor is 1.88, from `time-macros`,
+`staticdatagen` and the `oxc_*` crates. The current 1.89.0 is the one
+exception: a maintainer decision to share one floor with his other Rust
+crates, recorded in
+[ADR-0010](docs/adr/0010-msrv-1.89-shared-floor.md).
 
 - It may rise in **any release**, because a `0.0.z` release carries no
   compatibility promise (see above).
@@ -667,7 +671,8 @@ and the `oxc_*` crates.
 - Each rise is recorded in the CHANGELOG for that release, with the
   reason and the crate that forced it.
 - The floor is CI-enforced: `scheduled.yml` builds against
-  `[stable, 1.88]`, so a change that quietly needs a newer compiler
+  `[stable, 1.89]` (library and binaries on 1.89; the test suite's
+  dev-dependencies need a newer compiler), so a change that quietly needs a newer compiler
   fails rather than being discovered by a user.
 
 ### On distro compatibility
@@ -748,11 +753,11 @@ guidelines.
 <details>
 <summary><b>Safety guarantees and compliance</b></summary>
 
-- `#![forbid(unsafe_code)]` across the entire codebase
+- `unsafe` code forbidden or denied in every published crate (details in [`SECURITY.md`](SECURITY.md))
 - CSP build-time extraction: all inline styles and scripts moved to external files with SRI hashes. Zero `unsafe-inline`
 - Path traversal prevention with `..` detection and symlink rejection
 - File size limits and directory depth bounds
-- `cargo audit` with zero advisories
+- A published vulnerability advisory against any crate in the graph fails CI (`cargo deny check`); the unmaintained-crate warnings it accepts are listed with reasons in `deny.toml`
 - `cargo deny` -- license, advisory, ban, and source checks
 - `cargo vet` -- per-crate audit attestation; imports Mozilla Firefox, Bytecode Alliance, and Google trust sets. See [`supply-chain/README.md`](supply-chain/README.md)
 - `CycloneDX` SBOM generated as release artifact with Sigstore attestation
