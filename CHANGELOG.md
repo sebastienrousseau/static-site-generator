@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.68] - 2026-10-14
+## [0.0.68] - 2026-10-15
 
 ### Security
 
@@ -103,8 +103,8 @@ and the golden files are unchanged.
 ### Changed
 
 - **The MSRV is now Rust 1.89.0** (was 1.88.0). No dependency needs
-  it: the dependency floor is still 1.88. It is a maintainer decision to
-  share one floor with his other Rust crates, recorded as
+  it: the dependency floor is still 1.88. It is a maintainer decision,
+  one floor shared across the maintainer's Rust crates, recorded as
   [ADR-0010](docs/adr/0010-msrv-1.89-shared-floor.md). Every workspace
   manifest, `build.rs`, the README, the guides and the Docker builder
   image (`rust:1.89-slim`) state 1.89.
