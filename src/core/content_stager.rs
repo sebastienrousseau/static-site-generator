@@ -315,7 +315,7 @@ fn recreate_staging_dir(staging_dir: &Path) -> Result<(), io::Error> {
 /// The hash is FNV-1a 64-bit rather than `DefaultHasher` to keep the
 /// path deterministic across runs (good for debugging) while staying
 /// well-distributed across the `usize` space.
-fn staging_root_for(suffix: &str, build_dir: &Path) -> PathBuf {
+pub(crate) fn staging_root_for(suffix: &str, build_dir: &Path) -> PathBuf {
     // FNV-1a 64-bit over the build_dir bytes — deterministic and
     // adequate for path disambiguation.
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;

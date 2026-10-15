@@ -818,8 +818,13 @@ pub fn compile_site_with_locales(
     // So keep the behaviour and fix the diagnosis: on a not-found,
     // report the template directory and which of the usual four are
     // absent from it.
-    compile(build_dir, &staged_content, site_dir, template_dir)
-        .map_err(|e| compile_error(&e, build_dir, template_dir))?;
+    let compiled = compile(build_dir, &staged_content, site_dir, template_dir);
+    // The staged copy exists only for `compile`. Remove it whatever the
+    // outcome: it sits under the system temp directory, keyed by process
+    // and build directory, so every build that left it there left a full
+    // copy of the site's content behind.
+    let _ = std::fs::remove_dir_all(&staged_content);
+    compiled.map_err(|e| compile_error(&e, build_dir, template_dir))?;
 
     copy_template_assets(template_dir, site_dir)
 }
@@ -1855,6 +1860,43 @@ mod tests {
         )
         .expect("write template");
         (tmp, content, build, site, templates)
+    }
+
+    /// The staged copy of the content lives under the system temp
+    /// directory and is only read by `compile`. It used to be left
+    /// there, so every build kept a full copy of the site's content.
+    #[test]
+    fn compile_removes_its_staged_content_after_a_build() {
+        let (_tmp, content, build, site, templates) = build_fixture();
+        let staging =
+            crate::content_stager::staging_root_for("content", &build);
+
+        compile_site(&build, &content, &site, &templates).expect("compile");
+
+        assert!(site.join("index.html").is_file(), "the build ran");
+        assert!(
+            !staging.exists(),
+            "staged content left behind at {}",
+            staging.display()
+        );
+    }
+
+    /// The same when `compile` fails part-way.
+    #[test]
+    fn compile_removes_its_staged_content_after_a_failed_build() {
+        let (_tmp, content, build, site, templates) = build_fixture();
+        let staging =
+            crate::content_stager::staging_root_for("content", &build);
+        std::fs::remove_file(templates.join("page.html")).expect("rm");
+
+        let res = compile_site(&build, &content, &site, &templates);
+
+        assert!(res.is_err(), "a build with no template must fail");
+        assert!(
+            !staging.exists(),
+            "staged content left behind at {}",
+            staging.display()
+        );
     }
 
     /// Test plugin that fails in exactly one pipeline phase.

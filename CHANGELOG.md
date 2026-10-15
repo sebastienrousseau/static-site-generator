@@ -91,6 +91,14 @@ and the golden files are unchanged.
   other, and a failure prints every round. A simulated bursty runner
   read up to 4.20x before the change and at most 1.38x after; O(n^2)
   and O(n^1.5) costs still read 5.00x and 2.24x and fail.
+- **A build no longer leaves a copy of its content in the temp
+  directory.** Since v0.0.45 the content stager has copied every page
+  to `ssg-staging-<pid>-<hash>-content` under the system temp directory
+  before compiling, and nothing removed it, so every `ssg` build left a
+  full copy of the site's content behind, and one run of the
+  `perf_budgets` tests left 44. The copy is now removed once the
+  compile step finishes, whether it succeeded or failed, and two tests
+  check both cases.
 
 ### Changed
 
