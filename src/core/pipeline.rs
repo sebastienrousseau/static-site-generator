@@ -818,66 +818,17 @@ pub fn compile_site_with_locales(
     // So keep the behaviour and fix the diagnosis: on a not-found,
     // report the template directory and which of the usual four are
     // absent from it.
-    compile(build_dir, &staged_content, site_dir, template_dir).map_err(
-        |e| {
-            eprintln!("    Error compiling site: {e:?}");
-            // Portability: the not-found test must not be a match on
-            // English Unix wording. Windows says "The system cannot
-            // find the file specified.", so `contains("No such file or
-            // directory")` silently never fired there and the
-            // diagnostic below was dead on that platform — caught by
-            // the windows-latest leg of CI, not by review.
-            //
-            // Prefer the error kind, which is platform-independent.
-            // Fall back to the platform's *own* text for ENOENT, taken
-            // from the OS at runtime rather than hardcoded, for the
-            // case where the chain has flattened the io::Error into a
-            // formatted string.
-            let enoent = std::io::Error::from_raw_os_error(2).to_string();
-            // "No such file or directory (os error 2)" on Unix; "The
-            // system cannot find the file specified. (os error 2)" on
-            // Windows. Compare on the prose alone — the numeric suffix
-            // is not guaranteed to survive re-formatting.
-            let enoent_prose =
-                enoent.split(" (os error").next().unwrap_or(&enoent);
-            let not_found = e.chain().any(|cause| {
-                cause
-                    .downcast_ref::<std::io::Error>()
-                    .is_some_and(|io| io.kind() == std::io::ErrorKind::NotFound)
-            }) || format!("{e:?}").contains(enoent_prose);
-            if not_found {
-                const USUAL_ROOT_TEMPLATES: [&str; 4] =
-                    ["template.html", "index.html", "page.html", "post.html"];
-                let absent: Vec<&str> = USUAL_ROOT_TEMPLATES
-                    .iter()
-                    .copied()
-                    .filter(|name| !template_dir.join(name).is_file())
-                    .collect();
-                if !absent.is_empty() {
-                    return SsgError::Validation {
-                        field: "templates".to_string(),
-                        message: format!(
-                            "the compile step could not read a template. \
-                             {} does not contain {}. A site needs the \
-                             templates its content asks for at the template \
-                             directory root, plus the MiniJinja set under \
-                             `{}`. Run `ssg --new <name>` to scaffold a \
-                             project with both, or copy them from \
-                             `examples/basic/templates/`.",
-                            template_dir.display(),
-                            absent.join(", "),
-                            template_dir.join("tera").display(),
-                        ),
-                    };
-                }
-            }
-            SsgError::io(
-                std::io::Error::other(format!("Failed to compile site: {e:?}")),
-                build_dir,
-            )
-        },
-    )?;
+    compile(build_dir, &staged_content, site_dir, template_dir)
+        .map_err(|e| compile_error(&e, build_dir, template_dir))?;
 
+    copy_template_assets(template_dir, site_dir)
+}
+
+/// Copies the static assets that sit beside the templates into the site.
+fn copy_template_assets(
+    template_dir: &Path,
+    site_dir: &Path,
+) -> Result<(), SsgError> {
     // Copy any static assets from template_dir (e.g. styles.css, theme-init.js, favicon.ico, images)
     // to site_dir so they are available in public/ and fingerprinted by assets plugin.
     copy_static_template_assets(template_dir, site_dir)?;
@@ -890,6 +841,68 @@ pub fn compile_site_with_locales(
         }
     }
     Ok(())
+}
+
+/// Maps a failed `compile` to the error ssg reports.
+fn compile_error(
+    e: &anyhow::Error,
+    build_dir: &Path,
+    template_dir: &Path,
+) -> SsgError {
+    eprintln!("    Error compiling site: {e:?}");
+    // Portability: the not-found test must not be a match on
+    // English Unix wording. Windows says "The system cannot
+    // find the file specified.", so `contains("No such file or
+    // directory")` silently never fired there and the
+    // diagnostic below was dead on that platform — caught by
+    // the windows-latest leg of CI, not by review.
+    //
+    // Prefer the error kind, which is platform-independent.
+    // Fall back to the platform's *own* text for ENOENT, taken
+    // from the OS at runtime rather than hardcoded, for the
+    // case where the chain has flattened the io::Error into a
+    // formatted string.
+    let enoent = std::io::Error::from_raw_os_error(2).to_string();
+    // "No such file or directory (os error 2)" on Unix; "The
+    // system cannot find the file specified. (os error 2)" on
+    // Windows. Compare on the prose alone — the numeric suffix
+    // is not guaranteed to survive re-formatting.
+    let enoent_prose = enoent.split(" (os error").next().unwrap_or(&enoent);
+    let not_found = e.chain().any(|cause| {
+        cause
+            .downcast_ref::<std::io::Error>()
+            .is_some_and(|io| io.kind() == std::io::ErrorKind::NotFound)
+    }) || format!("{e:?}").contains(enoent_prose);
+    if not_found {
+        const USUAL_ROOT_TEMPLATES: [&str; 4] =
+            ["template.html", "index.html", "page.html", "post.html"];
+        let absent: Vec<&str> = USUAL_ROOT_TEMPLATES
+            .iter()
+            .copied()
+            .filter(|name| !template_dir.join(name).is_file())
+            .collect();
+        if !absent.is_empty() {
+            return SsgError::Validation {
+                field: "templates".to_string(),
+                message: format!(
+                    "the compile step could not read a template. \
+                     {} does not contain {}. A site needs the \
+                     templates its content asks for at the template \
+                     directory root, plus the MiniJinja set under \
+                     `{}`. Run `ssg --new <name>` to scaffold a \
+                     project with both, or copy them from \
+                     `examples/basic/templates/`.",
+                    template_dir.display(),
+                    absent.join(", "),
+                    template_dir.join("tera").display(),
+                ),
+            };
+        }
+    }
+    SsgError::io(
+        std::io::Error::other(format!("Failed to compile site: {e:?}")),
+        build_dir,
+    )
 }
 
 fn copy_static_template_assets(src: &Path, dst: &Path) -> Result<(), SsgError> {
