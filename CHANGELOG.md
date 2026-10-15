@@ -79,6 +79,18 @@ and the golden files are unchanged.
   have passed it. The baseline now matches the count and the step also
   fails below it, so every burn-down lowers the baseline in the same
   pull request.
+- **The scaling gate compares like with like.** `perf_budgets` failed
+  on `windows-latest` for #805 at 3.32x and passed on the rerun of the
+  same commit, after v0.0.67 had interleaved its samples. It compared
+  the fastest 100-page build with the fastest 500-page build, and a
+  short build can fit between bursts of runner interference where a
+  long one cannot. Each round now times five 100-page builds against
+  one 500-page build, the same number of pages, and the gate asserts
+  the median of the five rounds' ratios. The corpus is written once
+  before any timing, the timing tests no longer run alongside each
+  other, and a failure prints every round. A simulated bursty runner
+  read up to 4.20x before the change and at most 1.38x after; O(n^2)
+  and O(n^1.5) costs still read 5.00x and 2.24x and fail.
 
 ### Changed
 
