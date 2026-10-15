@@ -173,6 +173,12 @@ criteria = "safe-to-deploy"
 version = "0.5.2"
 notes = "Reviewed full source: tiny no-dep, no-unsafe unit formatter."
 
+[[audits.uuid]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.26.1 -> 1.28.0"
+notes = "Delta 1.26.1 -> 1.28.0 (8 files, +591/-131; 5 .rs files); no unsafe added or removed; no build.rs change; dependency changes: uuid-rng-internal-lib 1.26.1 -> 1.28.0."
+
 [[trusted.anyhow]]
 criteria = "safe-to-deploy"
 user-id = 3618 # David Tolnay (dtolnay)
@@ -225,6 +231,12 @@ user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
 start = "2024-10-13"
 end = "2027-08-22"
 
+[[trusted.inventory]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-08-15"
+end = "2027-10-15"
+
 [[trusted.metadata-gen]]
 criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
@@ -249,6 +261,12 @@ criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
 start = "2024-09-28"
 end = "2027-07-26"
+
+[[trusted.serde_spanned]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2023-01-20"
+end = "2027-10-15"
 
 [[trusted.sitemap-gen]]
 criteria = "safe-to-deploy"
@@ -295,3 +313,27 @@ user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-10-09"
 end = "2027-09-30"
 notes = "Extends this repo's existing trust in dtolnay to thiserror-impl."
+
+[[trusted.toml]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2022-12-14"
+end = "2027-10-15"
+
+[[trusted.toml_datetime]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2022-10-21"
+end = "2027-10-15"
+
+[[trusted.toml_parser]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2025-07-08"
+end = "2027-10-15"
+
+[[trusted.toml_writer]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2025-07-08"
+end = "2027-10-15"
