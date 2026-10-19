@@ -2558,7 +2558,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e9f068eba8e7071c5f9511831b44f32c740d5adf574e990f946ddb53db2f314e"
 dependencies = [
  "bitflags 2.13.1",
- "getopts",
  "memchr",
  "pulldown-cmark-escape",
  "unicase",
@@ -3499,9 +3498,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.22"
+version = "0.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "256a05c348a059247907920628e7f42f41a63bc08cf5036e91025d9d9d355a9f"
+checksum = "b34949b98cb182958e3bc5e38575e54c2f416eec8a3fac6bf180181cd3f26651"
 dependencies = [
  "anyhow",
  "comrak",
@@ -3510,7 +3509,6 @@ dependencies = [
  "langweave",
  "log",
  "metadata-gen",
- "pulldown-cmark",
  "quick-xml 0.42.0",
  "rayon",
  "regex",
@@ -3524,7 +3522,6 @@ dependencies = [
  "url",
  "uuid",
  "walkdir",
- "xml-rs",
 ]
 
 [[package]]
