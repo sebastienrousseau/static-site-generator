@@ -118,7 +118,7 @@ version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
 dependencies = [
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -129,7 +129,7 @@ checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1001,7 +1001,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1133,7 +1133,7 @@ checksum = "e9218b3d9cd20730eb38dc3b9c532c860b9f3c6cc10879c1a8b89364f53e2dc8"
 dependencies = [
  "anyhow",
  "log",
- "noyalib",
+ "noyalib 0.0.56",
  "serde",
  "serde_json",
  "thiserror",
@@ -1302,7 +1302,7 @@ dependencies = [
  "indexmap",
  "log",
  "mdx-gen",
- "noyalib",
+ "noyalib 0.0.56",
  "once_cell",
  "pulldown-latex",
  "regex",
@@ -1899,7 +1899,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb5778fb3f3cf30a0399e835c9ac23f890483749678ed15439cc15a69e04015f"
 dependencies = [
  "memchr",
- "noyalib",
+ "noyalib 0.0.56",
  "quick-xml 0.42.0",
  "serde",
  "serde_json",
@@ -2110,6 +2110,21 @@ checksum = "17cb8fe21481880d02e866e6678da0ce313735b659edf3dfd4beb7fdaca06e77"
 dependencies = [
  "hashbrown 0.17.1",
  "indexmap",
+ "libm",
+ "memchr",
+ "rustc-hash",
+ "serde_core",
+ "smallvec",
+]
+
+[[package]]
+name = "noyalib"
+version = "0.0.58"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3fad8f1a552070f6ba5f60f25e880f7b6daeda8fe138f589345141d31a21a3bb"
+dependencies = [
+ "hashbrown 0.17.1",
+ "indexmap",
  "itoa",
  "libm",
  "memchr",
@@ -2126,7 +2141,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2871,7 +2886,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3269,7 +3284,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
 dependencies = [
  "libc",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3300,7 +3315,7 @@ dependencies = [
  "lol_html",
  "minijinja",
  "notify",
- "noyalib",
+ "noyalib 0.0.58",
  "proptest",
  "pulldown-cmark",
  "ravif",
@@ -3343,7 +3358,7 @@ name = "ssg-core"
 version = "0.0.68"
 dependencies = [
  "log",
- "noyalib",
+ "noyalib 0.0.58",
  "pulldown-cmark",
  "serde",
  "serde_json",
@@ -3573,10 +3588,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4279,7 +4294,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
