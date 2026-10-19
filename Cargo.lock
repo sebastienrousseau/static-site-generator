@@ -1182,7 +1182,7 @@ checksum = "e9218b3d9cd20730eb38dc3b9c532c860b9f3c6cc10879c1a8b89364f53e2dc8"
 dependencies = [
  "anyhow",
  "log",
- "noyalib",
+ "noyalib 0.0.56",
  "serde",
  "serde_json",
  "thiserror",
@@ -1351,7 +1351,7 @@ dependencies = [
  "indexmap",
  "log",
  "mdx-gen",
- "noyalib",
+ "noyalib 0.0.56",
  "once_cell",
  "pulldown-latex",
  "regex",
@@ -1948,7 +1948,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb5778fb3f3cf30a0399e835c9ac23f890483749678ed15439cc15a69e04015f"
 dependencies = [
  "memchr",
- "noyalib",
+ "noyalib 0.0.56",
  "quick-xml 0.42.0",
  "serde",
  "serde_json",
@@ -2156,6 +2156,21 @@ name = "noyalib"
 version = "0.0.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "17cb8fe21481880d02e866e6678da0ce313735b659edf3dfd4beb7fdaca06e77"
+dependencies = [
+ "hashbrown 0.17.1",
+ "indexmap",
+ "libm",
+ "memchr",
+ "rustc-hash",
+ "serde_core",
+ "smallvec",
+]
+
+[[package]]
+name = "noyalib"
+version = "0.0.58"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3fad8f1a552070f6ba5f60f25e880f7b6daeda8fe138f589345141d31a21a3bb"
 dependencies = [
  "hashbrown 0.17.1",
  "indexmap",
@@ -3358,7 +3373,7 @@ dependencies = [
  "lol_html",
  "minijinja",
  "notify",
- "noyalib",
+ "noyalib 0.0.58",
  "proptest",
  "pulldown-cmark",
  "ravif",
@@ -3401,7 +3416,7 @@ name = "ssg-core"
 version = "0.0.68"
 dependencies = [
  "log",
- "noyalib",
+ "noyalib 0.0.58",
  "pulldown-cmark",
  "serde",
  "serde_json",
