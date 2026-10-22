@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   value covers the minified bytes. One theme's homepage stylesheet went
   from 46.9 KB to 28.8 KB gzipped.
 
+- **A `<code>` inside `<style>`, `<script>` or a comment is left
+  alone.** The repair that escapes tags inside inline code spans
+  searched the raw page text, so a stylesheet comment mentioning
+  `<code>` had everything up to the next `</code>` escaped. In one
+  theme that turned the selector `pre>code` into `pre&gt;code`, and the
+  browser dropped the whole rule. Those regions are now skipped; inline
+  spans in the page are still repaired.
+
 ## [0.0.68] - 2026-10-15
 
 ### Security
