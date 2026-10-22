@@ -1020,7 +1020,8 @@ pub fn register_default_plugins(
     // `ssg.toml`, so existing sites see no behavioural change.
     plugins.register(postprocess::AgenticDiscoveryPlugin);
 
-    // Syntax highlighting
+    // Syntax highlighting. Before FingerprintPlugin, which renames
+    // `highlight.css` and rewrites the page links to it (#790).
     plugins.register(highlight::HighlightPlugin::default());
 
     // SEO plugins

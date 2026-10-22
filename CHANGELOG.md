@@ -34,6 +34,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   theme that turned the selector `pre>code` into `pre&gt;code`, and the
   browser dropped the whole rule. Those regions are now skipped; inline
   spans in the page are still repaired.
+- **Pages link the highlighting stylesheet the build writes.** Pages
+  with highlighted code linked `/highlight.css`, but only
+  `highlight.<hash>.css` was published: the link was added in
+  `transform_html`, and every `after_compile` hook, fingerprinting
+  included, runs before any transform. The link is now added in
+  `after_compile`, ahead of fingerprinting, so it is rewritten to the
+  published name and carries an `integrity` value like the other
+  stylesheets. A page with no `<head>` gets the link appended rather
+  than none, and a page without highlighted code still links nothing.
+  (#790)
 
 ## [0.0.68] - 2026-10-15
 
