@@ -7,6 +7,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Inline stylesheets are minified.** The CSP pass moves every
+  `<style>` block into `_csp/<hash>.css`, but it runs after the minify
+  pass, which leaves `<style>` contents alone, so those files were
+  written exactly as authored, comments and all. They are now minified
+  with `minify_css` before they are hashed and written, and the SRI
+  value covers the minified bytes. One theme's homepage stylesheet went
+  from 46.9 KB to 28.8 KB gzipped.
+
 ## [0.0.68] - 2026-10-15
 
 ### Security
