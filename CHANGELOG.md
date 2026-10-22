@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   webpki-roots 1.0.10 fixes RUSTSEC-2026-0381: both stop trusting the
   distrusted emSign intermediates and root (through ureq).
 
+### Changed
+
+- **staticdatagen 0.0.26.** news-sitemap.xml starts with its XML
+  declaration again; staticdatagen 0.0.24 and 0.0.25 dropped it when
+  they moved to quick-xml. It also brings comrak 0.56 into the build
+  (several denial-of-service fixes, HTML escaping on memchr-n) and
+  requires Rust 1.89, which matches this crate's minimum.
+
 ### Fixed
 
 - **Inline stylesheets are minified.** The CSP pass moves every

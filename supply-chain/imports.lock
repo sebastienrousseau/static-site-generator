@@ -117,8 +117,8 @@ user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
 [[publisher.staticdatagen]]
-version = "0.0.25"
-when = "2026-10-12"
+version = "0.0.26"
+when = "2026-10-22"
 trusted-publisher = "github:sebastienrousseau/staticdatagen"
 
 [[publisher.staticweaver]]

@@ -48,11 +48,29 @@ criteria = "safe-to-deploy"
 delta = "0.54.0 -> 0.55.0"
 notes = "Delta 0.54.0 -> 0.55.0 (9 files, +194/-110): autolink parser fixes for GHSA-xg9p-p4jc-c46g (stack overflow and quadratic time); tagfilter deprecated; CLI deprecation warning; tests. No new unsafe, build.rs unchanged, no dependency changes."
 
+[[audits.comrak]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.55.0 -> 0.56.0"
+notes = "Full source diff read. No unsafe added or changed; build.rs unchanged; no new fs, network, process or env access in library code. Fixes several DoS cases (table autocomplete cap, emphasis mod-three, relaxed autolink rescans, footnotes, header ids, recursive collect_text). The tagfilter extension is removed (a compile error if used). HTML and href escaping are rewritten on memchr-n with the same byte sets and outputs, so their correctness rests on memchr-n match iteration, audited separately. Default HTML output unchanged except fences indented with tabs."
+
 [[audits.console]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
 delta = "0.15.11 -> 0.16.4"
 notes = "no_std refactor; 1 unsafe = standard termios raw-mode."
+
+[[audits.fearless_simd]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "1.1.0"
+notes = "Read all hand-written source (lib.rs, transmute.rs, macros.rs, kernel_macros.rs, support.rs, math.rs, generated.rs; traits.rs scanned for unsafe) and every unsafe site in src/generated (one vectorize helper per x86 backend, 20 NEON vld4q/vst4q calls on fixed-size array refs); spot-checked about 10 generated functions per backend. Tokens are ZSTs with private fields, made only through cpuid-backed Level::new, the cfg-gated baseline, or #[target_feature] assume_supported; the AVX-512 feature list matches in all five places. Intrinsics run in kernel! inner functions whose target features match the token. Transmutes go through SimdPod with const size and alignment checks. No build.rs, no I/O."
+
+[[audits.fearless_simd_macros]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.1.0"
+notes = "Read all of src/lib.rs. The #[simd] proc macro moves a function body into a closure passed to fearless_simd::__fearless_simd_dispatch!, taking the token through ExtractToken on the first typed parameter. It emits no unsafe itself; the only unsafe is in fearless_simd dispatch_entry, keyed to the genuine token level, and the user body stays outside any unsafe block. Rejects async, const, variadic, naked and track_caller functions. No file, network, process or env access at expansion; include_str of its own README is docs only."
 
 [[audits.frontmatter-gen]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
@@ -114,6 +132,18 @@ criteria = "safe-to-deploy"
 delta = "0.0.5 -> 0.0.6"
 notes = "Delta 0.0.5 -> 0.0.6 (18 files, +134/-23): comrak 0.52 -> 0.55 for GHSA-xg9p-p4jc-c46g; examples gated on syntax_highlighting; tests. Crate keeps forbid(unsafe_code); no new unsafe, no build script, no new dependency."
 
+[[audits.memchr-n]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.1.9"
+notes = "Read all non-test source (lib.rs, search.rs, bitset.rs, swar, vector). Unsafe: get_unchecked(scan_offset..) relying on scan_offset <= len, kept by advance_to clamping and the scan contracts; a private union KernelStorage read only through function-pointer tables built from the same kernel type; assert_unchecked hints on returned indices and counts, checked by hand for every tail path; a ZST fearless_simd token rebuilt with transmute_copy (const-asserted size 0, align 1) inside function pointers reachable only after scan_ops received a real token. Relies on fearless_simd masks being 0 or -1 and on to_bitmask width, both checked per backend. No build.rs, no I/O."
+
+[[audits.memchr-n]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.9 -> 0.1.10"
+notes = "One kernel change in src/vector/kernels.rs: OneRange checks start <= b <= last as (b - start) wrapping <= (last - start), equivalent whenever start <= last. Every path into OneRange::new guarantees that: as_contiguous_range builds it from the lowest and highest set bits, the member path requires a filled sorted span, and add_byte_range drops inverted ranges. fearless_simd u8 sub wraps (fallback wrapping_sub, SSE2 _mm_sub_epi8) and simd_le on u8 is an unsigned compare. No unsafe, I/O or build script changes; CI action pin bumps."
+
 [[audits.metadata-gen]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
@@ -137,6 +167,30 @@ who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
 version = "0.0.12"
 notes = 'Same-author crate, reviewed from the published crates.io source. #![forbid(unsafe_code)] enforced at lib.rs:342 — all grep hits for the string "unsafe" are doc comments describing this guarantee, not code. build.rs runs only `rustc --version` (via the RUSTC env var) to detect a nightly toolchain for an optional SIMD feature gate; no network access, no arbitrary command execution. No unsafe FFI, no ambient file/network I/O outside the documented YAML parse/serialize surface.'
+
+[[audits.phf]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.13.1 -> 0.14.0"
+notes = "No unsafe, no I/O. Lookups use the new PhfEq trait instead of PhfBorrow; entries are still bounds-checked. Adds an optional ptrhash layout (off by default) and cfg-resolving macro_rules helpers for phf_macros. MSRV 1.85, edition 2024."
+
+[[audits.phf_codegen]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.13.1 -> 0.14.0"
+notes = "No unsafe. No file, env or process I/O of its own: it formats generated Rust through Display and the calling build script writes the file. Default CHD output unchanged. Optional quote ToTokens support and ptrhash output, both off by default."
+
+[[audits.phf_generator]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.13.1 -> 0.14.0"
+notes = "No unsafe, no I/O. CHD generator refactored to a flat bucket buffer with deterministic tie-breaking and a usize::MAX empty-slot sentinel; lambda lowered from 5 to 3. Optional ptrhash generator (off by default) retries seeds from a fixed-seed RNG. Build-time only."
+
+[[audits.phf_shared]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.13.1 -> 0.14.0"
+notes = "One new unsafe: casting u8, i8 and bool slices to a byte slice for hashing, sound since these are size 1, align 1 and every value is a valid byte. Hashing is portable across endianness and pointer width and slices are length-prefixed, so hashes differ from 0.13 but are deterministic. Optional ptrhash module is plain arithmetic. No I/O."
 
 [[audits.plist]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
