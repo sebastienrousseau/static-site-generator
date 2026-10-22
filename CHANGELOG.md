@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.69] - 2026-10-22
 
 ### Security
 
@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   they moved to quick-xml. It also brings comrak 0.56 into the build
   (several denial-of-service fixes, HTML escaping on memchr-n) and
   requires Rust 1.89, which matches this crate's minimum.
+
+- **Dependency updates.** noyalib 0.0.58, serde_json 1.0.154, sha2
+  0.11.1, schemars 1.2.3, syn 3.0.9 and proptest 1.12.0 (dev-only);
+  the GitHub Actions group; @playwright/test 1.64.1 and
+  @axe-core/playwright 4.14.0 for the visual tests. Every new crate
+  version has an audit in `supply-chain/audits.toml`.
 
 ### Fixed
 
