@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **HTML sanitising and TLS move past three new advisories.** ammonia
+  4.1.8 (through html-generator and mdx-gen) fixes RUSTSEC-2026-0373:
+  CSS `url()` was matched case-sensitively, so `Url(...)` slipped past
+  URL filtering. rustls-webpki 0.103.16 fixes RUSTSEC-2026-0382 and
+  webpki-roots 1.0.10 fixes RUSTSEC-2026-0381: both stop trusting the
+  distrusted emSign intermediates and root (through ureq).
+
 ### Fixed
 
 - **Inline stylesheets are minified.** The CSP pass moves every
@@ -18,7 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with `minify_css` before they are hashed and written, and the SRI
   value covers the minified bytes. One theme's homepage stylesheet went
   from 46.9 KB to 28.8 KB gzipped.
-
 - **A `<code>` inside `<style>`, `<script>` or a comment is left
   alone.** The repair that escapes tags inside inline code spans
   searched the raw page text, so a stylesheet comment mentioning

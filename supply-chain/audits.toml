@@ -12,6 +12,12 @@ who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "4.1.4 -> 4.1.7"
 
+[[audits.ammonia]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "4.1.7 -> 4.1.8"
+notes = "RUSTSEC-2026-0373 fix: style.rs matches the CSS url() function case-insensitively (eq_ignore_ascii_case), plus a test. No unsafe, I/O, network or build script changes."
+
 [[audits.base64]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
@@ -143,6 +149,12 @@ who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "0.23.45 -> 0.23.46"
 
+[[audits.rustls-webpki]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.103.14 -> 0.103.16"
+notes = "RUSTSEC-2026-0382 fix: adds eight emSign intermediate SPKIs (include_bytes! DER under src/data/distrusted) and rejects any path containing one with the new Error::CertDistrusted; drops the in_fips_submission flag so fips() reports try_fips_mode() alone; docs.rs features list. No unsafe, I/O, network or build script changes."
+
 [[audits.staticdatagen]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
@@ -178,6 +190,12 @@ who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "1.26.1 -> 1.28.0"
 notes = "Delta 1.26.1 -> 1.28.0 (8 files, +591/-131; 5 .rs files); no unsafe added or removed; no build.rs change; dependency changes: uuid-rng-internal-lib 1.26.1 -> 1.28.0."
+
+[[audits.webpki-roots]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.9 -> 1.0.10"
+notes = "RUSTSEC-2026-0381 fix: removes the emSign ECC Root CA - G3 trust anchor and adds none; rust-version 1.70 -> 1.71. Data-only change."
 
 [[trusted.anyhow]]
 criteria = "safe-to-deploy"
