@@ -30,6 +30,18 @@ criteria = "safe-to-deploy"
 version = "0.22.1"
 notes = "Reviewed crates.io source. #![forbid(unsafe_code)]; no build.rs, no proc-macro, no network, no process spawning, no env/credential access. Pure base64 engine; `unsafe` grep hits are comments only."
 
+[[audits.borsh]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "1.8.1"
+notes = "Binary serialization (dev-only, via bit-vec under proptest). unsafe is confined to de/mod.rs array deserialization (MaybeUninit buffer with a drop guard counting initialised elements; sound) and two const NonZeroUsize::new_unchecked on non-zero literals. build.rs only sets cfg aliases. The generate_schema_schema binary writes schema_schema.dat in the working directory and is not built as a dependency. No network, process or environment access."
+
+[[audits.borsh-derive]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "1.8.1"
+notes = "Derive macros for borsh: token generation with syn and quote only; no unsafe, file, network, process or environment access."
+
 [[audits.comrak]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
@@ -132,11 +144,29 @@ criteria = "safe-to-deploy"
 delta = "1.9.0 -> 1.10.0"
 notes = "Reviewed by maintainer (delta diff): legitimate advisory/version update; no unsafe/net/proc/fs red flags."
 
+[[audits.proc-macro-crate]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "1.2.1 -> 3.5.0"
+notes = "Resolves a dependency name from Cargo.toml for proc macros: reads CARGO_MANIFEST_DIR and CARGO_TARGET_TMPDIR, stats and parses Cargo.toml with toml_edit, and runs the CARGO binary with locate-project to find the workspace manifest. That is the crate's documented purpose; no unsafe, network access or writes."
+
+[[audits.proptest]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "1.11.0 -> 1.12.0"
+notes = "rand 0.10, rand_xorshift 0.5, bit-set 0.11 and bit-vec 0.10; fixes panics for Duration near the maximum and single-point float ranges; checks CPU support before RDRAND in no_std. No new unsafe, file, network, process or environment access."
+
 [[audits.quick-xml]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
 delta = "0.40.1 -> 0.41.0"
 notes = "Reviewed by maintainer (delta diff): legitimate advisory/version update; no unsafe/net/proc/fs red flags."
+
+[[audits.rand_xorshift]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.4.0 -> 0.5.0"
+notes = "Port to rand_core 0.10 traits; generator arithmetic unchanged. No unsafe, I/O or build script."
 
 [[audits.rss-gen]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
@@ -154,6 +184,30 @@ who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "0.103.14 -> 0.103.16"
 notes = "RUSTSEC-2026-0382 fix: adds eight emSign intermediate SPKIs (include_bytes! DER under src/data/distrusted) and rejects any path containing one with the new Error::CertDistrusted; drops the in_fips_submission flag so fips() reports try_fips_mode() alone; docs.rs features list. No unsafe, I/O, network or build script changes."
+
+[[audits.schemars]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.2.2 -> 1.2.3"
+notes = "Drops the tag field from internally tagged enum properties, reports arbitrary-precision numbers instead of unreachable!(), and removes redundant path qualifications. No unsafe, I/O, network or build script changes."
+
+[[audits.schemars_derive]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.2.2 -> 1.2.3"
+notes = "Path-qualification lint cleanups only (unused_qualifications). No unsafe, I/O, network or build script changes."
+
+[[audits.serde_json]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.151 -> 1.0.154"
+notes = "Keeps -0 as a float, returns None for non-finite f32 conversions, reports precise positions for invalid UTF-8 in RawValue, and adds an optional foldhash hasher for no_std preserve_order maps. No unsafe, I/O, network or build script changes."
+
+[[audits.sha2]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.11.0 -> 0.11.1"
+notes = "Refactor that narrows unsafe: SIMD kernels become safe #[target_feature] functions, with unsafe kept to unaligned loads inside a 64- or 128-byte block (in bounds by construction) and the RISC-V asm; macros become functions; AArch64 round constants load under Stacked Borrows; MSRV 1.88. No I/O, network or build script changes. ssg exact SHA-256/384 SRI vectors pass on aarch64."
 
 [[audits.staticdatagen]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
@@ -343,6 +397,13 @@ criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
 start = "2022-10-21"
 end = "2027-10-15"
+
+[[trusted.toml_edit]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2022-06-01"
+end = "2027-10-15"
+notes = "Extends this repo's existing trust in epage (toml, toml_datetime, toml_parser, toml_writer) to toml_edit."
 
 [[trusted.toml_parser]]
 criteria = "safe-to-deploy"
