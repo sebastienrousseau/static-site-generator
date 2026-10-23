@@ -7,6 +7,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.69] - 2026-10-22
+
+### Security
+
+- **HTML sanitising and TLS move past three new advisories.** ammonia
+  4.1.8 (through html-generator and mdx-gen) fixes RUSTSEC-2026-0373:
+  CSS `url()` was matched case-sensitively, so `Url(...)` slipped past
+  URL filtering. rustls-webpki 0.103.16 fixes RUSTSEC-2026-0382 and
+  webpki-roots 1.0.10 fixes RUSTSEC-2026-0381: both stop trusting the
+  distrusted emSign intermediates and root (through ureq).
+
+### Changed
+
+- **staticdatagen 0.0.26.** news-sitemap.xml starts with its XML
+  declaration again; staticdatagen 0.0.24 and 0.0.25 dropped it when
+  they moved to quick-xml. It also brings comrak 0.56 into the build
+  (several denial-of-service fixes, HTML escaping on memchr-n) and
+  requires Rust 1.89, which matches this crate's minimum.
+
+- **Dependency updates.** noyalib 0.0.58, serde_json 1.0.154, sha2
+  0.11.1, schemars 1.2.3, syn 3.0.9 and proptest 1.12.0 (dev-only);
+  the GitHub Actions group; @playwright/test 1.64.1 and
+  @axe-core/playwright 4.14.0 for the visual tests. Every new crate
+  version has an audit in `supply-chain/audits.toml`.
+
+### Fixed
+
+- **Inline stylesheets are minified.** The CSP pass moves every
+  `<style>` block into `_csp/<hash>.css`, but it runs after the minify
+  pass, which leaves `<style>` contents alone, so those files were
+  written exactly as authored, comments and all. They are now minified
+  with `minify_css` before they are hashed and written, and the SRI
+  value covers the minified bytes. One theme's homepage stylesheet went
+  from 46.9 KB to 28.8 KB gzipped.
+- **A `<code>` inside `<style>`, `<script>` or a comment is left
+  alone.** The repair that escapes tags inside inline code spans
+  searched the raw page text, so a stylesheet comment mentioning
+  `<code>` had everything up to the next `</code>` escaped. In one
+  theme that turned the selector `pre>code` into `pre&gt;code`, and the
+  browser dropped the whole rule. Those regions are now skipped; inline
+  spans in the page are still repaired.
+- **Pages link the highlighting stylesheet the build writes.** Pages
+  with highlighted code linked `/highlight.css`, but only
+  `highlight.<hash>.css` was published: the link was added in
+  `transform_html`, and every `after_compile` hook, fingerprinting
+  included, runs before any transform. The link is now added in
+  `after_compile`, ahead of fingerprinting, so it is rewritten to the
+  published name and carries an `integrity` value like the other
+  stylesheets. A page with no `<head>` gets the link appended rather
+  than none, and a page without highlighted code still links nothing.
+  (#790)
+
 ## [0.0.68] - 2026-10-15
 
 ### Security

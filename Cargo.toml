@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.68"                      # The version of the library
+version = "0.0.69"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.89.0"                 # Minimum supported Rust version (ADR-0010; dependencies alone need 1.88)
@@ -171,13 +171,13 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.68" }
-ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.68", optional = true }
-ssg-core = { path = "crates/ssg-core", version = "0.0.68" }
-ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.68" }
-ssg-search = { path = "crates/ssg-search", version = "0.0.68" }
+ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.69" }
+ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.69", optional = true }
+ssg-core = { path = "crates/ssg-core", version = "0.0.69" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.69" }
+ssg-search = { path = "crates/ssg-search", version = "0.0.69" }
 thiserror = "2"
-staticdatagen = "0.0.22"
+staticdatagen = "0.0.26"
 toml = "1.1.2"
 
 # Real cryptographic hashing for Subresource Integrity (issue #468 follow-up).
@@ -248,7 +248,7 @@ frontmatter-gen = "0.0.12"
 # `ssg-core`'s frontmatter parser) — zero unsafe, no C deps, and
 # deliberately carries no dependency on the unmaintained `serde_yaml`
 # lineage `serde_yaml_ng` forked from.
-noyalib = "0.0.56"
+noyalib = "0.0.58"
 
 # Optional observability stack (issue #422). Both crates are
 # `optional = true` — they enter the build only when the `otel`

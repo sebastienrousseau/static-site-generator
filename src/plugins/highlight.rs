@@ -11,12 +11,12 @@ use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use crate::util::head_dom::inject_before_head_close;
 use std::fs;
-use std::path::Path;
 
 /// Plugin that adds syntax highlighting CSS classes to code blocks.
 ///
 /// Runs in `after_compile`. Finds `<pre><code class="language-X">`
-/// blocks and injects classes. Also generates `highlight.css`.
+/// blocks, injects classes and links `highlight.css` from each page
+/// that has one. Also generates `highlight.css`.
 #[derive(Debug, Clone)]
 pub struct HighlightPlugin {
     theme: String,
@@ -73,30 +73,22 @@ impl Plugin for HighlightPlugin {
         "highlight"
     }
 
-    fn has_transform(&self) -> bool {
-        true
-    }
-
-    fn transform_html(
-        &self,
-        html: &str,
-        _path: &Path,
-        _ctx: &PluginContext,
-    ) -> Result<String, SsgError> {
-        let result = add_highlight_markup(html);
-        if result == html {
-            return Ok(html.to_string());
-        }
-        if result.contains("highlight.css") {
-            Ok(result)
-        } else {
-            Ok(inject_css_link(&result))
-        }
-    }
-
     fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
+        }
+
+        // Pages are rewritten here rather than in `transform_html`: every
+        // `after_compile` hook runs before any transform, so by then
+        // `FingerprintPlugin` had renamed `highlight.css` and the injected
+        // link named a file that was never written (#790). Linking it
+        // first lets that pass rename the reference and add SRI with the
+        // rest of the stylesheets.
+        for path in ctx.get_html_files() {
+            let html = fs::read_to_string(&path).with_path(&path)?;
+            if let Some(out) = highlight_page(&html) {
+                fs::write(&path, out).with_path(&path)?;
+            }
         }
 
         // Generate highlight.css
@@ -105,6 +97,20 @@ impl Plugin for HighlightPlugin {
         fs::write(&path, &css).with_path(&path)?;
 
         Ok(())
+    }
+}
+
+/// Adds highlight markup to a page and links `highlight.css` from it.
+///
+/// Returns `None` when the page has no code block to highlight.
+fn highlight_page(html: &str) -> Option<String> {
+    let result = add_highlight_markup(html);
+    if result == html {
+        None
+    } else if result.contains("highlight.css") {
+        Some(result)
+    } else {
+        Some(inject_css_link(&result))
     }
 }
 
@@ -155,11 +161,18 @@ fn add_highlight_markup(html: &str) -> String {
 }
 
 /// Injects a `<link>` to highlight.css before `</head>`.
+///
+/// A page with no `<head>` gets the link appended instead, as the CSP
+/// pass does for its stylesheets, so highlighted code is never left
+/// without its stylesheet.
 fn inject_css_link(html: &str) -> String {
-    inject_before_head_close(
-        html,
-        "<link rel=\"stylesheet\" href=\"/highlight.css\">\n",
-    )
+    let link = "<link rel=\"stylesheet\" href=\"/highlight.css\">\n";
+    let injected = inject_before_head_close(html, link);
+    if injected == html {
+        format!("{html}{link}")
+    } else {
+        injected
+    }
 }
 
 /// Generates a CSS theme for syntax highlighting.
@@ -192,7 +205,9 @@ pre.highlight code {
 }
 
 #[cfg(test)]
-fn collect_html_files(dir: &Path) -> Result<Vec<std::path::PathBuf>, SsgError> {
+fn collect_html_files(
+    dir: &std::path::Path,
+) -> Result<Vec<std::path::PathBuf>, SsgError> {
     crate::walk::walk_files(dir, "html")
 }
 
@@ -257,19 +272,20 @@ mod tests {
     }
 
     #[test]
-    fn transform_html_with_existing_css_link_skips_reinjection() {
+    fn highlight_page_with_existing_css_link_skips_reinjection() {
         // Covers the `result.contains("highlight.css")` true branch of
-        // transform_html: the markup is rewritten but no second <link>
+        // highlight_page: the markup is rewritten but no second <link>
         // is injected.
-        let dir = tempdir().unwrap();
-        let ctx =
-            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
         let html = r#"<html><head><link rel="stylesheet" href="/highlight.css"></head><body><pre><code class="language-rs">x</code></pre></body></html>"#;
-        let out = HighlightPlugin::default()
-            .transform_html(html, &dir.path().join("index.html"), &ctx)
-            .unwrap();
+        let out = highlight_page(html).unwrap();
         assert!(out.contains("highlight language-rs"));
         assert_eq!(out.matches("/highlight.css").count(), 1);
+    }
+
+    #[test]
+    fn highlight_page_without_code_blocks_returns_none() {
+        let html = "<html><head></head><body><p>no code</p></body></html>";
+        assert!(highlight_page(html).is_none());
     }
 
     #[test]
@@ -327,11 +343,14 @@ mod tests {
     }
 
     #[test]
-    fn inject_css_link_without_head_returns_input_unchanged() {
-        // Line 145: the `else` branch of the `</head>` search.
+    fn inject_css_link_without_head_appends_the_link() {
+        // A page with no `<head>` still gets its stylesheet (#790).
         let html = "<body>no head</body>";
         let result = inject_css_link(html);
-        assert_eq!(result, html);
+        assert_eq!(
+            result,
+            "<body>no head</body><link rel=\"stylesheet\" href=\"/highlight.css\">\n"
+        );
     }
 
     #[test]
@@ -364,13 +383,13 @@ mod tests {
 
         let html = r#"<html><head><title>X</title></head><body><pre><code class="language-js">let x = 1;</code></pre></body></html>"#;
 
+        fs::write(site.join("index.html"), html).unwrap();
+
         let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
         HighlightPlugin::default().after_compile(&ctx).unwrap();
 
         assert!(site.join("highlight.css").exists());
-        let output = HighlightPlugin::default()
-            .transform_html(html, &site.join("index.html"), &ctx)
-            .unwrap();
+        let output = fs::read_to_string(site.join("index.html")).unwrap();
         assert!(output.contains("highlight.css"));
         assert!(output.contains("highlight language-js"));
     }

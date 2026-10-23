@@ -338,11 +338,14 @@ fn collect_inline_script_and_style(html: &str) -> (Vec<String>, Vec<String>) {
 
 /// Plugin that extracts inline styles/scripts to external files with SRI.
 ///
-/// Runs in `after_compile` after all other content transforms but before
-/// minification. For each HTML file:
+/// Runs in `transform_html`, after every `after_compile` hook, so
+/// [`MinifyPlugin`](crate::plugins::MinifyPlugin) has already run and
+/// never sees the files written here. For each HTML file:
 ///
 /// 1. Finds `<style>…</style>` and `<script>…</script>` inline blocks
-/// 2. Writes each block to `_csp/<hash>.css` or `_csp/<hash>.js`
+/// 2. Writes each block to `_csp/<hash>.css` or `_csp/<hash>.js`,
+///    minifying stylesheets with [`minify_css`](crate::plugins::minify_css)
+///    on the way (scripts are written as they are)
 /// 3. Replaces the inline block with a `<link>`/`<script src>` tag
 ///    including `integrity` and `crossorigin` attributes — SHA-384 by
 ///    default, configurable via `[security] sri_algorithm` in
@@ -482,6 +485,9 @@ fn extract_inline_blocks(
     while let Some((before, content, after)) =
         find_inline_block(&result, "style")
     {
+        // MinifyPlugin has already run and leaves `<style>` contents alone,
+        // so this is the only place an inline stylesheet can be minified.
+        let content = crate::plugins::minify_css(content);
         let hash = fnv_hash(content.as_bytes());
         let filename = format!("{hash:016x}.css");
         let file_path = csp_dir.join(&filename);
@@ -1218,10 +1224,46 @@ mod tests {
     }
 
     #[test]
+    fn an_extracted_stylesheet_is_minified() {
+        // MinifyPlugin runs in `after_compile`, before this transform, and
+        // leaves `<style>` contents alone, so nothing else ever minifies a
+        // stylesheet that starts inline. One theme's came out at 210 KB.
+        let css = "/* note */\nbody {\n  color: red;\n}\n";
+        let html = format!(
+            "<html><head><style>{css}</style></head><body></body></html>"
+        );
+        let dir = tempdir().unwrap();
+        let csp_dir = dir.path().join("_csp");
+
+        let (result, count) = extract_inline_blocks(
+            &html,
+            &csp_dir,
+            dir.path(),
+            SriAlgorithm::default(),
+            "",
+        )
+        .unwrap();
+
+        assert_eq!(count, 1);
+        let written: Vec<String> = fs::read_dir(&csp_dir)
+            .unwrap()
+            .map(|e| fs::read_to_string(e.unwrap().path()).unwrap())
+            .collect();
+        assert_eq!(written, vec![crate::plugins::minify_css(css)]);
+        assert!(!written[0].contains("note"), "comment kept: {}", written[0]);
+        // The integrity value covers the bytes on disk, not the inline ones.
+        let sri = compute_sri(written[0].as_bytes(), SriAlgorithm::default());
+        assert!(
+            result.contains(&sri),
+            "SRI does not match the file: {result}"
+        );
+    }
+
+    #[test]
     fn extract_style_block_default_sha384_exact_vector() {
-        // Known vector: the style body is written to disk verbatim
-        // (no minification in this plugin), so the integrity value is
-        // exactly base64(SHA-384("body { color: red; }")).
+        // Known vector: the style body is minified to
+        // `body{color:red;}` before it is written, so the integrity value
+        // is exactly base64(SHA-384("body{color:red;}")).
         let html = "<html><head><style>body { color: red; }</style></head><body></body></html>";
         let dir = tempdir().unwrap();
         let csp_dir = dir.path().join("_csp");
@@ -1238,7 +1280,7 @@ mod tests {
         assert_eq!(count, 1);
         assert!(
             result.contains(
-                "integrity=\"sha384-BN8siYsJqlPeNsRFs2pYbTW0uiUBy9v6JVVKpHaS+KNqD0ZFotD5OFKMkI6/s6sb\""
+                "integrity=\"sha384-3x51QY511qAMtrqY6a1lNefFvJ68/Z1IQtkFiRp4Y0PBSanRyJCC0HCjgr1zcYV2\""
             ),
             "expected exact SHA-384 SRI vector; got: {result}"
         );
@@ -1294,7 +1336,8 @@ mod tests {
     fn transform_html_sri_algorithm_config_override_emits_sha256() {
         // `[security] sri_algorithm = "sha256"` back-compat knob
         // (v0.0.47 plan §3 item 2.3), wired through PluginContext
-        // config: exact SHA-256 vector for "body { color: red; }".
+        // config: exact SHA-256 vector for "body{color:red;}", the
+        // minified "body { color: red; }".
         use crate::cmd::{SecurityConfig, SsgConfig};
 
         let html = "<html><head><style>body { color: red; }</style></head><body></body></html>";
@@ -1320,7 +1363,7 @@ mod tests {
             .unwrap();
         assert!(
             out.contains(
-                "integrity=\"sha256-XeYlw2NVzOfB1UCIJqCyGr+0n7bA4fFslFpvKu84IAw=\""
+                "integrity=\"sha256-qGHujruJPON+QdsJZpjz7gs+HNZ4zSFz6Onf591nLc0=\""
             ),
             "expected exact SHA-256 SRI vector; got: {out}"
         );

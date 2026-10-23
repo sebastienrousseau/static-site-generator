@@ -109,11 +109,27 @@ fn apply_html_fixes(html: &str) -> String {
 /// HTML writer), so this repair exists only until WS1 retires the legacy
 /// compiler — at which point the guard above stops matching and the pass costs
 /// nothing.
+///
+/// The bodies of `<style>`, `<script>` and comments are not markup, so a
+/// `<code>` in them is text and is skipped along with everything up to the
+/// region's end. A span that opens before such a region is still repaired,
+/// even when its text is `<script>`: that is the case this repair exists for.
 fn escape_markup_inside_code_spans(html: &str) -> String {
     let mut out = String::with_capacity(html.len());
     let mut rest = html;
+    // ASCII lowercasing keeps every byte offset where it was, so `rest` and
+    // the same suffix of `lower` line up.
+    let lower = html.to_ascii_lowercase();
 
     while let Some(start) = rest.find("<code>") {
+        let rest_lower = &lower[html.len() - rest.len()..];
+        if let Some((_, end)) =
+            first_raw_text_region(rest_lower).filter(|&(open, _)| open < start)
+        {
+            out.push_str(&rest[..end]);
+            rest = &rest[end..];
+            continue;
+        }
         let after_open = start + "<code>".len();
         let Some(close_rel) = rest[after_open..].find("</code>") else {
             break;
@@ -160,6 +176,31 @@ fn escape_markup_inside_code_spans(html: &str) -> String {
 
     out.push_str(rest);
     out
+}
+
+/// Openers and terminators of the regions whose text is not markup.
+const RAW_TEXT_REGIONS: [(&str, &str); 3] = [
+    ("<style", "</style"),
+    ("<script", "</script"),
+    ("<!--", "-->"),
+];
+
+/// Returns the first raw-text region in `lower`, an ASCII-lowercased page,
+/// as the byte offset of its opener and the offset just past its
+/// terminator's `>`, or the end of the page when it is never closed.
+fn first_raw_text_region(lower: &str) -> Option<(usize, usize)> {
+    RAW_TEXT_REGIONS
+        .iter()
+        .filter_map(|&(open, close)| {
+            let start = lower.find(open)?;
+            let body = start + open.len();
+            let end = lower[body..].find(close).map_or(lower.len(), |p| {
+                let at = body + p;
+                lower[at..].find('>').map_or(lower.len(), |q| at + q + 1)
+            });
+            Some((start, end))
+        })
+        .min_by_key(|&(start, _)| start)
 }
 
 /// Gives every `<th>` a `scope`.
@@ -732,6 +773,28 @@ mod tests {
         let twice = apply_html_fixes(&once);
         assert_eq!(once, twice, "pass is not idempotent");
         assert!(!twice.contains("&amp;lt;"), "double-escaped: {twice}");
+    }
+
+    /// `<style>` and `<script>` are raw text: a `<code>` there is not an
+    /// element. The sebastienrousseau theme's print stylesheet has a comment
+    /// reading "Inline <code> in print…", and everything from it to a
+    /// `</code>` twenty lines on was escaped, `pre>code` included, which
+    /// invalidated that selector's whole rule.
+    #[test]
+    fn raw_text_elements_are_left_alone() {
+        let style = "<style>/* Inline <code> */ pre>code{color:#000} \
+/* `<pre><code>…</code></pre>` */</style>";
+        let script = "<script>const s = '<code><b>x</b></code>';</script>";
+        let comment = "<!-- <code><b>y</b></code> -->";
+        let html = format!(
+            "<head>{style}{script}</head><body>{comment}\
+<p><code><img></code></p></body>"
+        );
+        let out = apply_html_fixes(&html);
+        assert!(out.contains(style), "style rewritten: {out}");
+        assert!(out.contains(script), "script rewritten: {out}");
+        assert!(out.contains(comment), "comment rewritten: {out}");
+        assert!(out.contains("<code>&lt;img&gt;</code>"), "got: {out}");
     }
 
     #[test]
