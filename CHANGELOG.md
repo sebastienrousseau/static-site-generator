@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   webpki-roots 1.0.10 fixes RUSTSEC-2026-0381: both stop trusting the
   distrusted emSign intermediates and root (through ureq).
 
+- **The fuzz workspace gets the same fixes.** `fuzz/Cargo.lock` still
+  locked ammonia 4.1.7, rustls-webpki 0.103.15 and webpki-roots 1.0.9,
+  because `cargo deny check` in CI only reads the root workspace. The
+  lockfile now matches, and CI checks the fuzz workspace's advisories.
+
 ### Changed
 
 - **staticdatagen 0.0.26.** news-sitemap.xml starts with its XML

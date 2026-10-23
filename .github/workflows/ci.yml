@@ -523,6 +523,10 @@ jobs:
         run: cargo install cargo-deny --locked
       - name: Run cargo-deny check
         run: cargo deny check
+      # fuzz/ is its own workspace with its own lockfile, which the check
+      # above never reads; v0.0.69 merged with three advisories there.
+      - name: Run cargo-deny advisories on the fuzz workspace
+        run: cargo deny --manifest-path fuzz/Cargo.toml --config deny.toml check advisories
 
   # ── Phase 2d: install contract (REPO-STANDARD §3) ───────────────────
   # The standard's acceptance criterion is "`make DESTDIR=/tmp/stage
