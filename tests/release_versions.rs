@@ -221,15 +221,14 @@ fn published_members_list_matches_the_release_workflow() {
 
 /// Packaging manifests that pin a version must match `Cargo.toml`.
 ///
-/// Scoop, `WinGet` and the AUR `PKGBUILD` each hard-code the version.
-/// All three sat at `0.0.37` while the crate was at `0.0.58` — twenty-one
+/// The AUR `PKGBUILD` hard-codes the version. It, Scoop and `WinGet`
+/// all sat at `0.0.37` while the crate was at `0.0.58` — twenty-one
 /// releases of drift, discovered by reading them rather than by any
 /// gate, because nothing compared them to anything.
 ///
-/// The Homebrew formula is deliberately absent from this check: it
-/// resolves `releases/latest` rather than pinning, so it cannot go
-/// stale. A manifest that does not state a version has nothing to
-/// verify.
+/// The Homebrew, Scoop and `WinGet` manifests are absent from this
+/// check: they are templates that `scripts/render-packaging.sh` fills
+/// in from each release's own checksums, tested below.
 #[test]
 fn packaging_manifests_match_the_crate_version() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -237,8 +236,6 @@ fn packaging_manifests_match_the_crate_version() {
 
     // (path, what a version line looks like there)
     let manifests: &[(&str, &str)] = &[
-        ("packaging/scoop/ssg.json", "\"version\""),
-        ("packaging/winget/ssg.yaml", "PackageVersion"),
         ("packaging/arch/PKGBUILD", "pkgver"),
         // Not an install channel, but it is version metadata the world
         // reads: CITATION.cff shipped 0.0.62 through the 0.0.63 bump
@@ -277,6 +274,72 @@ fn packaging_manifests_match_the_crate_version() {
          through that channel.",
         stale.join("\n  ")
     );
+}
+
+/// The Homebrew, Scoop and `WinGet` manifests render from a release's
+/// checksums with nothing left to fill in.
+///
+/// They were hand-edited, so they drifted: Scoop and `WinGet` named the
+/// v0.0.37 archive with an empty hash through v0.0.69, and the Homebrew
+/// formula named `ssg-latest-*` archives no release has ever had. Now
+/// `release.yml` renders them from the artifacts it built. This runs the
+/// renderer on stand-in checksum files and checks each output names the
+/// version, carries every checksum, and keeps no placeholder.
+#[cfg(unix)]
+#[test]
+fn packaging_templates_render_from_release_checksums() {
+    let version = env!("CARGO_PKG_VERSION");
+    let targets = [
+        ("aarch64-apple-darwin", "tar.gz"),
+        ("x86_64-apple-darwin", "tar.gz"),
+        ("aarch64-unknown-linux-gnu", "tar.gz"),
+        ("x86_64-unknown-linux-musl", "tar.gz"),
+        ("x86_64-pc-windows-msvc", "zip"),
+    ];
+    let tmp = std::env::temp_dir()
+        .join(format!("ssg-render-packaging-{}", std::process::id()));
+    let artifacts = tmp.join("artifacts");
+    let out = tmp.join("out");
+    fs::create_dir_all(&artifacts).unwrap();
+
+    let mut sums = Vec::new();
+    for (i, (target, ext)) in targets.iter().enumerate() {
+        let name = format!("ssg-v{version}-{target}.{ext}");
+        let sum = format!("{i:x}").repeat(64);
+        fs::write(
+            artifacts.join(format!("{name}.sha256")),
+            format!("{sum}  {name}\n"),
+        )
+        .unwrap();
+        sums.push((*target, sum));
+    }
+
+    let status = std::process::Command::new("bash")
+        .arg(workspace().join("scripts/render-packaging.sh"))
+        .args([version.as_ref(), artifacts.as_os_str(), out.as_os_str()])
+        .status()
+        .expect("run scripts/render-packaging.sh");
+    assert!(status.success(), "render-packaging.sh failed: {status}");
+
+    let rendered: String = ["ssg.rb", "ssg.json", "ssg.winget.yaml"]
+        .iter()
+        .map(|f| {
+            let text = read(&out.join(f));
+            assert!(
+                !text.contains("@VERSION@") && !text.contains("@SHA256_"),
+                "{f} keeps a placeholder:\n{text}"
+            );
+            assert!(
+                text.contains(&format!("/download/v{version}/ssg-v{version}-")),
+                "{f} does not name the v{version} archives"
+            );
+            text
+        })
+        .collect();
+    for (target, sum) in &sums {
+        assert!(rendered.contains(sum), "no checksum for {target} rendered");
+    }
+    let _ = fs::remove_dir_all(&tmp);
 }
 
 /// `SECURITY.md`'s supported-version table must name the current

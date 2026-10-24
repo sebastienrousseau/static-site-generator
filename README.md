@@ -69,7 +69,7 @@ ssg = "0.0.69"
 curl -fsSL https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/scripts/install.sh | sh
 
 # Homebrew
-brew install --formula https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/packaging/homebrew/ssg.rb
+brew install sebastienrousseau/tap/ssg
 
 # Cargo
 cargo install ssg

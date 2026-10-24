@@ -44,87 +44,60 @@ cd packaging/arch
 makepkg -si    # builds and installs locally
 ```
 
-## Scoop (Windows)
+## Homebrew, Scoop and winget
 
-The manifest is at `packaging/scoop/ssg.json`.
+The files under `packaging/homebrew`, `packaging/scoop` and
+`packaging/winget` are templates. At release time,
+`scripts/render-packaging.sh` fills in the version and the SHA-256 of
+each archive from the `.sha256` files the build wrote, and
+`release.yml` attaches the results to the release:
 
-### Submitting to the Scoop bucket
+| Asset | Channel |
+| :--- | :--- |
+| `ssg.rb` | Homebrew formula |
+| `ssg.json` | Scoop manifest |
+| `ssg.winget.yaml` | winget manifest |
 
-1. Fork the Scoop extras bucket or maintain your own bucket repo
-2. Copy `packaging/scoop/ssg.json` to the bucket
-3. Update `version`, `url`, and `hash` fields to match the latest release
-4. Submit a PR to the bucket repository
-
-### Users install with
-
-```powershell
-scoop bucket add ssg https://github.com/sebastienrousseau/static-site-generator
-scoop install ssg
-```
-
-### Updating
-
-Update `version`, `url`, and `hash` in `ssg.json` for each release.
-
-## winget (Windows)
-
-The manifest is at `packaging/winget/ssg.yaml`.
-
-### Submitting to winget-pkgs
-
-1. Fork https://github.com/microsoft/winget-pkgs
-2. Create the manifest directory:
-   ```
-   manifests/s/sebastienrousseau/ssg/0.0.37/
-   ```
-3. Copy `packaging/winget/ssg.yaml` as the installer manifest
-4. Validate:
-   ```powershell
-   winget validate manifests/s/sebastienrousseau/ssg/0.0.37/
-   ```
-5. Submit a PR to `microsoft/winget-pkgs`
-
-### Using wingetcreate
-
-```powershell
-wingetcreate submit --id sebastienrousseau.ssg --version 0.0.37 --urls https://github.com/sebastienrousseau/static-site-generator/releases/download/v0.0.37/ssg-windows-amd64.zip
-```
-
-### Updating
-
-For new versions, use `wingetcreate update`:
-
-```powershell
-wingetcreate update sebastienrousseau.ssg --version 0.0.37 --urls <new-release-url>
-```
-
-## Homebrew
-
-The formula is at `packaging/homebrew/ssg.rb` in the repository root.
-
-### Submitting to Homebrew core
-
-1. Fork https://github.com/Homebrew/homebrew-core
-2. Add the formula to `Formula/s/ssg.rb`
-3. Test locally:
-   ```sh
-   brew install --build-from-source ./packaging/homebrew/ssg.rb
-   brew test ssg
-   brew audit --strict ssg
-   ```
-4. Submit a PR to `Homebrew/homebrew-core`
-
-### Self-hosted formula
-
-Users can install directly from the repo:
+To render them by hand for a published release, put its `.sha256`
+files in a directory and run:
 
 ```sh
-brew install --formula https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/packaging/homebrew/ssg.rb
+scripts/render-packaging.sh <version> <dir-with-sha256-files> <out-dir>
 ```
 
-### Updating
+### Homebrew
 
-Update the `url`, `sha256`, and `version` in `packaging/homebrew/ssg.rb` for each release.
+The tap at https://github.com/sebastienrousseau/homebrew-tap copies
+`ssg.rb` from the latest release into `Formula/ssg.rb`. Users install
+with:
+
+```sh
+brew install sebastienrousseau/tap/ssg
+```
+
+Homebrew no longer installs a formula from a URL or a local file
+outside a tap, so the tap is the supported route.
+
+### Scoop
+
+Users install straight from the release's manifest:
+
+```powershell
+scoop install https://github.com/sebastienrousseau/static-site-generator/releases/latest/download/ssg.json
+```
+
+The manifest's `checkver` and `autoupdate` sections (hash from the
+archive's `.sha256` file) let a Scoop bucket keep it current.
+
+### winget
+
+SSG is not in `microsoft/winget-pkgs` yet. To submit a release:
+
+1. Fork https://github.com/microsoft/winget-pkgs
+2. Copy the release's `ssg.winget.yaml` to
+   `manifests/s/sebastienrousseau/ssg/<version>/sebastienrousseau.ssg.yaml`
+3. Validate: `winget validate manifests/s/sebastienrousseau/ssg/<version>/`
+4. Submit a PR to `microsoft/winget-pkgs`
 
 ## Debian (.deb)
 
@@ -149,11 +122,8 @@ sudo dpkg -i ssg_0.0.37_amd64.deb
 ## Release Checklist
 
 1. Update version in `Cargo.toml`
-2. Update `packaging/scoop/ssg.json` (version, url, hash)
-3. Update `packaging/winget/ssg.yaml` (version, url)
-4. Update `packaging/arch/PKGBUILD` (pkgver, checksums)
-5. Update `packaging/homebrew/ssg.rb` (version, url, sha256)
-6. Build `.deb` with `packaging/deb/build.sh`
-7. Tag the release and push
-8. Attach binaries and `.deb` to the GitHub Release
-9. Submit PRs to AUR, winget-pkgs, Homebrew core, and Scoop bucket
+2. Update `packaging/arch/PKGBUILD` (pkgver, checksums)
+3. Build `.deb` with `packaging/deb/build.sh`
+4. Tag the release and push; `release.yml` renders `ssg.rb`, `ssg.json`
+   and `ssg.winget.yaml` and attaches them with the binaries
+5. Submit PRs to AUR and winget-pkgs

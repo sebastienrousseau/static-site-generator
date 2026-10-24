@@ -26,7 +26,7 @@ export PATH="$HOME/.local/bin:$PATH"
 ## Homebrew (macOS / Linux)
 
 ```sh
-brew install --formula https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/packaging/homebrew/ssg.rb
+brew install sebastienrousseau/tap/ssg
 ```
 
 ## Cargo
@@ -69,19 +69,18 @@ makepkg -si
 ## Windows (Scoop)
 
 ```powershell
-scoop bucket add ssg https://github.com/sebastienrousseau/static-site-generator
-scoop install ssg
+scoop install https://github.com/sebastienrousseau/static-site-generator/releases/latest/download/ssg.json
 ```
 
-The Scoop manifest lives at `packaging/scoop/ssg.json`.
+Each release attaches its Scoop manifest as `ssg.json`, rendered from
+`packaging/scoop/ssg.json`.
 
 ## Windows (winget)
 
-```powershell
-winget install sebastienrousseau.ssg
-```
-
-The winget manifest lives at `packaging/winget/ssg.yaml`.
+SSG is not in the winget community repository yet. Each release
+attaches a winget manifest as `ssg.winget.yaml`, rendered from
+`packaging/winget/ssg.yaml`, ready for submission. Until then, use
+Scoop, the MSI or the manual install below.
 
 ## Windows (Manual)
 

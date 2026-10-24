@@ -7,6 +7,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Homebrew, Scoop and winget install again.** The formula pointed at
+  `ssg-latest-*` archives that no release has, and current Homebrew
+  refuses to install a formula from a URL anyway, so the documented
+  `brew install --formula <url>` failed. The Scoop and winget
+  manifests named the v0.0.37 archive, which 404s, with empty hashes.
+  The three files are now templates that `scripts/render-packaging.sh`
+  fills in from each release's own checksums, and every release
+  attaches them as `ssg.rb`, `ssg.json` and `ssg.winget.yaml`. Install
+  with `brew install sebastienrousseau/tap/ssg`, or on Windows with
+  `scoop install <release>/ssg.json`. The winget manifest is ready for
+  a winget-pkgs submission; the guide no longer claims SSG is there.
+
 ## [0.0.69] - 2026-10-22
 
 ### Security
