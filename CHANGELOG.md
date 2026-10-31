@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **pulldown-cmark 0.13.6 and tokio 1.54.1.** Updates `pulldown-cmark` to
+  0.13.6 (`RUSTSEC-2026-0414`) and `tokio` to 1.54.1 (`RUSTSEC-2026-0386`)
+  in both the root and `fuzz` workspaces.
+
 ### Changed
 
 - **oxml 0.0.13.** `audit::gates::feeds` and `plugins::postprocess::atom`

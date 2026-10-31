@@ -216,6 +216,12 @@ criteria = "safe-to-run"
 delta = "1.11.0 -> 1.12.0"
 notes = "rand 0.10, rand_xorshift 0.5, bit-set 0.11 and bit-vec 0.10; fixes panics for Duration near the maximum and single-point float ranges; checks CPU support before RDRAND in no_std. No new unsafe, file, network, process or environment access."
 
+[[audits.pulldown-cmark]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.13.4 -> 0.13.6"
+notes = "RUSTSEC-2026-0414 fix: prevents exponential event growth on wikilinks with empty display text (`[[a|]]`). No unsafe, I/O, network or build script changes."
+
 [[audits.quick-xml]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
@@ -292,6 +298,12 @@ who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
 version = "0.0.2"
 notes = "Same-author crate, reviewed from the exact published crates.io source. #![forbid(unsafe_code)]; no build.rs; zero unsafe blocks; no process spawning; no fs deletion. Network access exists only behind the non-default `remote-templates` feature (reqwest GET of a caller-supplied template URL with 10 s timeout, 1 MiB body cap, and content-type check); staticdatagen 0.0.9 consumes it with default features, so no network code is compiled into this workspace."
+
+[[audits.tokio]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.53.1 -> 1.54.1"
+notes = "RUSTSEC-2026-0386 fix: deprecates safe AsyncFd::new/with_interest/try_new/try_with_interest constructors in favor of unsafe AsyncFd::register/register_with_interest requiring valid owned file descriptors. No build.rs, network, or process changes."
 
 [[audits.unit-prefix]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
