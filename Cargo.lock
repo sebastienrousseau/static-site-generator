@@ -2352,6 +2352,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 
 [[package]]
+name = "oxml"
+version = "0.0.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "396a52ae51fc990e11a3333ec3ed6e218cfc9135595ff687e048d4643a48d1f1"
+
+[[package]]
 name = "page_size"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3457,6 +3463,7 @@ dependencies = [
  "minijinja",
  "notify",
  "noyalib 0.0.58",
+ "oxml",
  "proptest",
  "pulldown-cmark",
  "ravif",

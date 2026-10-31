@@ -168,6 +168,12 @@ criteria = "safe-to-deploy"
 version = "0.0.12"
 notes = 'Same-author crate, reviewed from the published crates.io source. #![forbid(unsafe_code)] enforced at lib.rs:342 — all grep hits for the string "unsafe" are doc comments describing this guarantee, not code. build.rs runs only `rustc --version` (via the RUSTC env var) to detect a nightly toolchain for an optional SIMD feature gate; no network access, no arbitrary command execution. No unsafe FFI, no ambient file/network I/O outside the documented YAML parse/serialize surface.'
 
+[[audits.oxml]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.0.13"
+notes = "Same-author crate (sebastienrousseau/xmlschema). #![forbid(unsafe_code)]; zero external dependencies; no build.rs, proc-macro, network, filesystem, process, or environment access."
+
 [[audits.phf]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
@@ -381,6 +387,20 @@ trusted-publisher = "github:sebastienrousseau/noyalib"
 start = "2026-09-01"
 end = "2027-09-30"
 notes = "The maintainer's own crate, published by GitHub trusted publishing from sebastienrousseau/noyalib."
+
+[[trusted.oxml]]
+criteria = "safe-to-deploy"
+user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
+start = "2026-10-01"
+end = "2027-10-31"
+notes = "Same-author crate."
+
+[[trusted.oxml]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:sebastienrousseau/xmlschema"
+start = "2026-10-01"
+end = "2027-10-31"
+notes = "The maintainer's own crate, published by GitHub trusted publishing from sebastienrousseau/xmlschema."
 
 [[trusted.rss-gen]]
 criteria = "safe-to-deploy"

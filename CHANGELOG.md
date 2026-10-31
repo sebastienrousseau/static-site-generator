@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **oxml 0.0.13.** `audit::gates::feeds` and `plugins::postprocess::atom`
+  now parse RSS 2.0 and Atom 1.0 feeds with `oxml` 0.0.13 instead of
+  manual XML string scanning.
+
 ### Fixed
 
 - **Homebrew, Scoop and winget install again.** The formula pointed at

@@ -56,6 +56,18 @@ impl AuditGate for FeedsGate {
                 continue;
             };
             let rel = site.rel(path);
+            if let Ok(doc) = oxml::parse(&text) {
+                match classify_doc(&doc) {
+                    FeedKind::Rss2 => {
+                        check_rss2_doc(&doc, &rel, &mut findings);
+                    }
+                    FeedKind::Atom1 => {
+                        check_atom1_doc(&doc, &rel, &mut findings);
+                    }
+                    FeedKind::Sitemap | FeedKind::Unknown => {}
+                }
+                continue;
+            }
             let kind = classify(&text);
             match kind {
                 FeedKind::Rss2 => check_rss2(&text, &rel, &mut findings),
@@ -78,6 +90,125 @@ enum FeedKind {
     Atom1,
     Sitemap,
     Unknown,
+}
+
+fn classify_doc(doc: &oxml::Document) -> FeedKind {
+    let Some(root) = doc.root_element() else {
+        return FeedKind::Unknown;
+    };
+    let Some(name) = doc.element_name(root) else {
+        return FeedKind::Unknown;
+    };
+    let local = name.local.to_ascii_lowercase();
+    match local.as_str() {
+        "rss" => FeedKind::Rss2,
+        "feed"
+            if name
+                .namespace
+                .as_deref()
+                .is_some_and(|ns| ns.to_ascii_lowercase().contains("atom")) =>
+        {
+            FeedKind::Atom1
+        }
+        "urlset" | "sitemapindex" => FeedKind::Sitemap,
+        _ => FeedKind::Unknown,
+    }
+}
+
+fn check_rss2_doc(
+    doc: &oxml::Document,
+    rel: &str,
+    findings: &mut Vec<Finding>,
+) {
+    let Some(root) = doc.root_element() else {
+        return;
+    };
+    let channel = doc.children(root).iter().copied().find(|&child| {
+        doc.element_name(child)
+            .is_some_and(|n| n.local.eq_ignore_ascii_case("channel"))
+    });
+    let Some(channel) = channel else {
+        findings.push(
+            Finding::new(NAME, Severity::Error, "RSS feed missing <channel>")
+                .with_code("RSS-CHANNEL")
+                .with_path(rel.to_string()),
+        );
+        return;
+    };
+    for required in ["title", "link", "description"] {
+        let present = doc.children(channel).iter().any(|&child| {
+            doc.element_name(child)
+                .is_some_and(|n| n.local.eq_ignore_ascii_case(required))
+        });
+        if !present {
+            findings.push(
+                Finding::new(
+                    NAME,
+                    Severity::Error,
+                    format!("RSS <channel> missing <{required}>"),
+                )
+                .with_code(format!("RSS-{}", required.to_uppercase()))
+                .with_path(rel.to_string()),
+            );
+        }
+    }
+    let has_item = doc.children(channel).iter().any(|&child| {
+        doc.element_name(child)
+            .is_some_and(|n| n.local.eq_ignore_ascii_case("item"))
+    });
+    if !has_item {
+        findings.push(
+            Finding::new(
+                NAME,
+                Severity::Warn,
+                "RSS feed contains zero <item> entries",
+            )
+            .with_code("RSS-EMPTY")
+            .with_path(rel.to_string()),
+        );
+    }
+}
+
+fn check_atom1_doc(
+    doc: &oxml::Document,
+    rel: &str,
+    findings: &mut Vec<Finding>,
+) {
+    let Some(root) = doc.root_element() else {
+        return;
+    };
+    for required in ["title", "id", "updated"] {
+        let present = doc.children(root).iter().any(|&child| {
+            doc.element_name(child)
+                .is_some_and(|n| n.local.eq_ignore_ascii_case(required))
+        });
+        if !present {
+            findings.push(
+                Finding::new(
+                    NAME,
+                    Severity::Error,
+                    format!("Atom feed missing <{required}>"),
+                )
+                .with_code(format!("ATOM-{}", required.to_uppercase()))
+                .with_path(rel.to_string()),
+            );
+        }
+    }
+    let has_entry = doc.children(root).iter().any(|&child| {
+        doc.element_name(child)
+            .is_some_and(|n| n.local.eq_ignore_ascii_case("entry"))
+    });
+    if !has_entry {
+        findings.push(
+            Finding::new(
+                NAME,
+                Severity::Warn,
+                "Atom feed contains zero <entry> elements",
+            )
+            .with_code("ATOM-EMPTY")
+            .with_path(rel.to_string()),
+        );
+    }
 }
 
 fn classify(text: &str) -> FeedKind {

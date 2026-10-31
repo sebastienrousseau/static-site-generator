@@ -249,6 +249,7 @@ frontmatter-gen = "0.0.12"
 # deliberately carries no dependency on the unmaintained `serde_yaml`
 # lineage `serde_yaml_ng` forked from.
 noyalib = "0.0.58"
+oxml = { version = "0.0.13", default-features = false, features = ["std"] }
 
 # Optional observability stack (issue #422). Both crates are
 # `optional = true` — they enter the build only when the `otel`
