@@ -7,6 +7,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.70] - 2026-10-31
+
+### Security
+
+- **pulldown-cmark 0.13.6 and tokio 1.54.1.** Updates `pulldown-cmark` to
+  0.13.6 (`RUSTSEC-2026-0414`) and `tokio` to 1.54.1 (`RUSTSEC-2026-0386`)
+  in both the root and `fuzz` workspaces.
+
+### Changed
+
+- **oxml 0.0.13.** `audit::gates::feeds` and `plugins::postprocess::atom`
+  now parse RSS 2.0 and Atom 1.0 feeds with `oxml` 0.0.13 instead of
+  manual XML string scanning.
+
+### Fixed
+
+- **Search button accessible name.** Removes the redundant `aria-label`
+  from all 174 localized `nav-search` buttons so the accessible name comes
+  from the button's visible text, clearing the `label-content-name-mismatch`
+  axe-core finding (#817).
+- **Homebrew, Scoop and winget install again.** The formula pointed at
+  `ssg-latest-*` archives that no release has, and current Homebrew
+  refuses to install a formula from a URL anyway, so the documented
+  `brew install --formula <url>` failed. The Scoop and winget
+  manifests named the v0.0.37 archive, which 404s, with empty hashes.
+  The three files are now templates that `scripts/render-packaging.sh`
+  fills in from each release's own checksums, and every release
+  attaches them as `ssg.rb`, `ssg.json` and `ssg.winget.yaml`. Install
+  with `brew install sebastienrousseau/tap/ssg`, or on Windows with
+  `scoop install <release>/ssg.json`. The winget manifest is ready for
+  a winget-pkgs submission; the guide no longer claims SSG is there.
+
 ## [0.0.69] - 2026-10-22
 
 ### Security

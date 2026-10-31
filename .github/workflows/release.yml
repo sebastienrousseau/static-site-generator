@@ -557,6 +557,14 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      # Homebrew, Scoop and winget manifests, filled in from the
+      # checksums of the archives this release built, so they always
+      # name this release's files. They upload with everything else as
+      # ssg.rb, ssg.json and ssg.winget.yaml; the Homebrew tap copies
+      # ssg.rb from the latest release.
+      - name: Render package manifests
+        run: scripts/render-packaging.sh "${GITHUB_REF_NAME#v}" artifacts artifacts
+
       - name: List artifacts
         run: find artifacts -type f | sort
 
@@ -569,7 +577,7 @@ jobs:
 
           **Homebrew (macOS / Linux):**
           ```sh
-          brew install --formula https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/packaging/homebrew/ssg.rb
+          brew install sebastienrousseau/tap/ssg
           ```
 
           **One-liner (macOS / Linux):**
@@ -598,6 +606,11 @@ jobs:
           ```
 
           **Windows (MSI):** download `ssg-*.msi`, double-click to install.
+
+          **Windows (Scoop):**
+          ```powershell
+          scoop install https://github.com/sebastienrousseau/static-site-generator/releases/download/${{ github.ref_name }}/ssg.json
+          ```
 
           **Arch Linux (AUR):**
           ```sh

@@ -1,12 +1,12 @@
 {
-    "version": "0.0.69",
+    "version": "@VERSION@",
     "description": "Fast, SEO-optimised static site generator built in Rust",
     "homepage": "https://github.com/sebastienrousseau/static-site-generator",
     "license": "MIT|Apache-2.0",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/sebastienrousseau/static-site-generator/releases/download/v0.0.37/ssg-v0.0.37-x86_64-pc-windows-msvc.zip",
-            "hash": ""
+            "url": "https://github.com/sebastienrousseau/static-site-generator/releases/download/v@VERSION@/ssg-v@VERSION@-x86_64-pc-windows-msvc.zip",
+            "hash": "@SHA256_x86_64-pc-windows-msvc@"
         }
     },
     "bin": "ssg.exe",
@@ -16,7 +16,10 @@
     "autoupdate": {
         "architecture": {
             "64bit": {
-                "url": "https://github.com/sebastienrousseau/static-site-generator/releases/download/v$version/ssg-v$version-x86_64-pc-windows-msvc.zip"
+                "url": "https://github.com/sebastienrousseau/static-site-generator/releases/download/v$version/ssg-v$version-x86_64-pc-windows-msvc.zip",
+                "hash": {
+                    "url": "$url.sha256"
+                }
             }
         }
     }

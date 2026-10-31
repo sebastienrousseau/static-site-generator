@@ -1,5 +1,9 @@
+# Rendered from packaging/winget/ssg.yaml in static-site-generator by
+# scripts/render-packaging.sh, which fills in the version and the
+# archive's SHA-256 at release time. Each release attaches the result
+# as ssg.winget.yaml, ready for a winget-pkgs submission.
 PackageIdentifier: sebastienrousseau.ssg
-PackageVersion: 0.0.69
+PackageVersion: "@VERSION@"
 PackageName: SSG
 Publisher: Sebastien Rousseau
 License: MIT OR Apache-2.0
@@ -7,8 +11,12 @@ ShortDescription: Fast, SEO-optimised static site generator built in Rust
 PackageUrl: https://github.com/sebastienrousseau/static-site-generator
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/sebastienrousseau/static-site-generator/releases/download/v0.0.37/ssg-v0.0.37-x86_64-pc-windows-msvc.zip
+    InstallerUrl: https://github.com/sebastienrousseau/static-site-generator/releases/download/v@VERSION@/ssg-v@VERSION@-x86_64-pc-windows-msvc.zip
     InstallerType: zip
-    InstallerSha256: ""
+    NestedInstallerType: portable
+    NestedInstallerFiles:
+      - RelativeFilePath: ssg.exe
+        PortableCommandAlias: ssg
+    InstallerSha256: "@SHA256_x86_64-pc-windows-msvc@"
 ManifestVersion: 1.6.0
 ManifestType: singleton

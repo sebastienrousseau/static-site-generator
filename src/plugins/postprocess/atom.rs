@@ -257,9 +257,13 @@ pub(super) fn extract_entries_from_rss(
         return Vec::new();
     };
 
+    if let Ok(doc) = oxml::parse(&rss_content) {
+        return extract_entries_from_rss_doc(&doc);
+    }
+
     let mut entries = Vec::new();
 
-    // Simple XML parsing: extract <item>…</item> blocks
+    // Simple XML parsing fallback: extract <item>…</item> blocks
     let mut search_from = 0;
     while let Some(item_start) = rss_content[search_from..].find("<item>") {
         let abs_start = search_from + item_start;
@@ -301,6 +305,95 @@ pub(super) fn extract_entries_from_rss(
     }
 
     entries
+}
+
+/// Extracts RSS `<item>` entries from a parsed `oxml::Document`.
+fn extract_entries_from_rss_doc(
+    doc: &oxml::Document,
+) -> Vec<(String, std::collections::HashMap<String, String>)> {
+    let mut entries = Vec::new();
+    let Some(root) = doc.root_element() else {
+        return entries;
+    };
+    let Some(&channel) = doc.children(root).iter().find(|&&child| {
+        doc.element_name(child)
+            .is_some_and(|n| n.local.eq_ignore_ascii_case("channel"))
+    }) else {
+        return entries;
+    };
+
+    for &item in doc.children(channel) {
+        if !doc
+            .element_name(item)
+            .is_some_and(|n| n.local.eq_ignore_ascii_case("item"))
+        {
+            continue;
+        }
+        let mut meta = std::collections::HashMap::new();
+        let mut link_val = None;
+
+        for &field in doc.children(item) {
+            let Some(name) = doc.element_name(field) else {
+                continue;
+            };
+            let text = element_text(doc, field);
+            let trimmed = text.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            match name.local.as_str() {
+                "title" => {
+                    let _ =
+                        meta.insert("title".to_string(), xml_escape(trimmed));
+                }
+                "description" => {
+                    let _ = meta
+                        .insert("description".to_string(), xml_escape(trimmed));
+                }
+                "pubDate" => {
+                    let _ = meta.insert(
+                        "item_pub_date".to_string(),
+                        xml_escape(trimmed),
+                    );
+                }
+                "author" => {
+                    let _ =
+                        meta.insert("author".to_string(), xml_escape(trimmed));
+                }
+                "link" => {
+                    link_val = Some(trimmed.to_string());
+                }
+                _ => {}
+            }
+        }
+
+        let rel_path = link_val
+            .map(|link| {
+                link.trim_end_matches('/')
+                    .rsplit('/')
+                    .next()
+                    .unwrap_or("")
+                    .to_string()
+            })
+            .unwrap_or_default();
+
+        if !rel_path.is_empty() && meta.contains_key("title") {
+            entries.push((rel_path, meta));
+        }
+    }
+
+    entries
+}
+
+/// Concatenates direct text/CDATA children of an element in `doc`.
+fn element_text(doc: &oxml::Document, elem: oxml::NodeId) -> String {
+    let mut out = String::new();
+    for &child in doc.children(elem) {
+        if let Some(t) = doc.text_content(child) {
+            out.push_str(t);
+        }
+    }
+    out
 }
 
 /// Extracts text content from a simple XML tag.

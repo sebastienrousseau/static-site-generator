@@ -168,6 +168,12 @@ criteria = "safe-to-deploy"
 version = "0.0.12"
 notes = 'Same-author crate, reviewed from the published crates.io source. #![forbid(unsafe_code)] enforced at lib.rs:342 — all grep hits for the string "unsafe" are doc comments describing this guarantee, not code. build.rs runs only `rustc --version` (via the RUSTC env var) to detect a nightly toolchain for an optional SIMD feature gate; no network access, no arbitrary command execution. No unsafe FFI, no ambient file/network I/O outside the documented YAML parse/serialize surface.'
 
+[[audits.oxml]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.0.13"
+notes = "Same-author crate (sebastienrousseau/xmlschema). #![forbid(unsafe_code)]; zero external dependencies; no build.rs, proc-macro, network, filesystem, process, or environment access."
+
 [[audits.phf]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
@@ -209,6 +215,12 @@ who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-run"
 delta = "1.11.0 -> 1.12.0"
 notes = "rand 0.10, rand_xorshift 0.5, bit-set 0.11 and bit-vec 0.10; fixes panics for Duration near the maximum and single-point float ranges; checks CPU support before RDRAND in no_std. No new unsafe, file, network, process or environment access."
+
+[[audits.pulldown-cmark]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.13.4 -> 0.13.6"
+notes = "RUSTSEC-2026-0414 fix: prevents exponential event growth on wikilinks with empty display text (`[[a|]]`). No unsafe, I/O, network or build script changes."
 
 [[audits.quick-xml]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
@@ -286,6 +298,12 @@ who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
 version = "0.0.2"
 notes = "Same-author crate, reviewed from the exact published crates.io source. #![forbid(unsafe_code)]; no build.rs; zero unsafe blocks; no process spawning; no fs deletion. Network access exists only behind the non-default `remote-templates` feature (reqwest GET of a caller-supplied template URL with 10 s timeout, 1 MiB body cap, and content-type check); staticdatagen 0.0.9 consumes it with default features, so no network code is compiled into this workspace."
+
+[[audits.tokio]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.53.3 -> 1.54.1"
+notes = "RUSTSEC-2026-0386 fix: deprecates safe AsyncFd::new/with_interest/try_new/try_with_interest constructors in favor of unsafe AsyncFd::register/register_with_interest requiring valid owned file descriptors. No build.rs, network, or process changes."
 
 [[audits.unit-prefix]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
@@ -381,6 +399,20 @@ trusted-publisher = "github:sebastienrousseau/noyalib"
 start = "2026-09-01"
 end = "2027-09-30"
 notes = "The maintainer's own crate, published by GitHub trusted publishing from sebastienrousseau/noyalib."
+
+[[trusted.oxml]]
+criteria = "safe-to-deploy"
+user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
+start = "2026-10-01"
+end = "2027-10-31"
+notes = "Same-author crate."
+
+[[trusted.oxml]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:sebastienrousseau/xmlschema"
+start = "2026-10-01"
+end = "2027-10-31"
+notes = "The maintainer's own crate, published by GitHub trusted publishing from sebastienrousseau/xmlschema."
 
 [[trusted.rss-gen]]
 criteria = "safe-to-deploy"
