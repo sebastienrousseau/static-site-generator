@@ -302,7 +302,7 @@ notes = "Same-author crate, reviewed from the exact published crates.io source. 
 [[audits.tokio]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
-delta = "1.53.1 -> 1.54.1"
+delta = "1.53.3 -> 1.54.1"
 notes = "RUSTSEC-2026-0386 fix: deprecates safe AsyncFd::new/with_interest/try_new/try_with_interest constructors in favor of unsafe AsyncFd::register/register_with_interest requiring valid owned file descriptors. No build.rs, network, or process changes."
 
 [[audits.unit-prefix]]

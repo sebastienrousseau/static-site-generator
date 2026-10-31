@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.70] - 2026-10-31
 
 ### Security
 
@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Search button accessible name.** Removes the redundant `aria-label`
+  from all 174 localized `nav-search` buttons so the accessible name comes
+  from the button's visible text, clearing the `label-content-name-mismatch`
+  axe-core finding (#817).
 - **Homebrew, Scoop and winget install again.** The formula pointed at
   `ssg-latest-*` archives that no release has, and current Homebrew
   refuses to install a formula from a URL anyway, so the documented
