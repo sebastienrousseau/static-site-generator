@@ -43,12 +43,12 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
 name = "ammonia"
-version = "4.1.8"
+version = "4.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f6660fb4ff692ef4937b1b4e74ab3d378653d8588389587d91f96a296907ea0"
+checksum = "1f45dfa685e1ec33b1bf1a3b93b8047cbdbef41b6040deebbe6bea7720a45574"
 dependencies = [
- "cssparser 0.37.0",
- "html5ever",
+ "cssparser 0.38.0",
+ "html5ever 0.40.1",
  "maplit",
  "url",
 ]
@@ -404,23 +404,6 @@ checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 
 [[package]]
 name = "comrak"
-version = "0.55.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "daa3d1ea6b01ce72405fa3f826768f51c7a44917527c89b37856ffdd17ee57e4"
-dependencies = [
- "caseless",
- "entities",
- "finl_unicode",
- "jetscii",
- "phf 0.13.1",
- "phf_codegen 0.13.1",
- "rustc-hash",
- "smallvec",
- "typed-arena",
-]
-
-[[package]]
-name = "comrak"
 version = "0.56.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2544c4d6b6da7d54e95ac2833b464bf3dffa0666237868f2bf4ec5e11c9ba8cc"
@@ -544,6 +527,17 @@ dependencies = [
  "dtoa-short",
  "itoa",
  "phf 0.13.1",
+ "smallvec",
+]
+
+[[package]]
+name = "cssparser"
+version = "0.38.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11119743ad110e8c1bdccd930d7f5c30c99e5fc76a7b63ec9807e84eef0c5f59"
+dependencies = [
+ "dtoa-short",
+ "itoa",
  "smallvec",
 ]
 
@@ -816,6 +810,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "euxis-commons"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42141f7a7bc6d35b09a0e035116d46be0d08a69c9a8851e955a36d136f38422c"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
 name = "fancy-regex"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1062,23 +1065,23 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "html-escape"
-version = "0.2.15"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9356095b4b41197bba32173600e1582792cda618f65d12f68e2e77d273413c5"
+checksum = "491194d601b4fa9fac3c9571e014070a0ad1bc3392d1bc10419695196a8b3cc3"
 
 [[package]]
 name = "html-generator"
-version = "0.0.12"
+version = "0.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff5f5f9a3861aea24212e49ccdf129033e30d4c82962c4889143c2595282aec7"
+checksum = "4327ec2e74af6f30b84751699bc6a3a7a554237fea962ef8c95cb97e820b9997"
 dependencies = [
  "ammonia",
- "comrak 0.55.0",
+ "comrak",
  "getrandom 0.3.4",
  "indexmap",
  "log",
  "mdx-gen",
- "noyalib 0.0.56",
+ "noyalib 0.0.58",
  "once_cell",
  "pulldown-latex",
  "regex",
@@ -1096,7 +1099,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46a1761807faccc9a19e86944bbf40610014066306f96edcdedc2fb714bcb7b8"
 dependencies = [
  "log",
- "markup5ever",
+ "markup5ever 0.39.0",
+]
+
+[[package]]
+name = "html5ever"
+version = "0.40.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "456a1a377e608e555d22ddab27ac0114bc7a7b4199078108e34c2aeae6c9b130"
+dependencies = [
+ "log",
+ "markup5ever 0.40.0",
+ "memchr",
 ]
 
 [[package]]
@@ -1111,13 +1125,13 @@ dependencies = [
 
 [[package]]
 name = "http-handle"
-version = "0.0.7"
+version = "0.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e5903ce8b7fe4344c6cc6df63602d9593077651d31576906f1dfa6a46f4a00b"
+checksum = "a68fabd4d53431f3a061625abf9863a0b0179fee872661eb08354df7500f45d7"
 dependencies = [
  "crossbeam-channel",
  "ctrlc",
- "euxis-commons",
+ "euxis-commons 0.0.6",
  "log",
  "memchr",
  "regex",
@@ -1368,12 +1382,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
-name = "jetscii"
-version = "0.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47f142fe24a9c9944451e8349de0a56af5f3e7226dc46f3ed4d4ecc0b85af75e"
-
-[[package]]
 name = "jiff"
 version = "0.2.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1452,13 +1460,12 @@ dependencies = [
 
 [[package]]
 name = "langweave"
-version = "0.0.2"
+version = "0.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96e0dc69b9de07e0b3b7d3135cd9f5345c21d875801b5d59f79f886cec7cb2e0"
+checksum = "4920c298ff15e7e3562594d05650009d73cc110b7639f028bea50d3b897b864c"
 dependencies = [
  "async-trait",
  "log",
- "once_cell",
  "regex",
  "serde",
  "serde_json",
@@ -1553,7 +1560,18 @@ checksum = "7122d987ec5f704ee56f6e5b41a7d93722e9aae27ae07cafa4036c4d3f9757de"
 dependencies = [
  "log",
  "tendril",
- "web_atoms",
+ "web_atoms 0.2.6",
+]
+
+[[package]]
+name = "markup5ever"
+version = "0.40.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ab3dc68ac4a0f5719e560136778c1ee716e296030d75dbd4484e37e39e3a842"
+dependencies = [
+ "log",
+ "tendril",
+ "web_atoms 0.3.0",
 ]
 
 [[package]]
@@ -1568,12 +1586,12 @@ dependencies = [
 
 [[package]]
 name = "mdx-gen"
-version = "0.0.6"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af73bcb7bde476cc627a6cc8654ac833d0b4f8af228a569b618e0ff6998cb820"
+checksum = "780920585d9fbabf6f378bf7677e6f6919715923edcb5bfc4b93fe3d724abda5"
 dependencies = [
  "ammonia",
- "comrak 0.55.0",
+ "comrak",
  "html-escape",
  "log",
  "regex",
@@ -1606,12 +1624,13 @@ checksum = "38d1115007560874e373613744c6fba374c17688327a71c1476d1a5954cc857b"
 
 [[package]]
 name = "metadata-gen"
-version = "0.0.8"
+version = "0.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb5778fb3f3cf30a0399e835c9ac23f890483749678ed15439cc15a69e04015f"
+checksum = "ce21822cfa1ac19023e4b69ee3f4045053c514e5780388dcfc1f3553cdc920f6"
 dependencies = [
  "memchr",
- "noyalib 0.0.56",
+ "noyalib 0.0.58",
+ "oxml",
  "serde",
  "serde_json",
  "thiserror",
@@ -2491,7 +2510,7 @@ dependencies = [
  "cssparser 0.37.0",
  "ego-tree",
  "getopts",
- "html5ever",
+ "html5ever 0.39.0",
  "precomputed-hash",
  "selectors 0.38.0",
  "tendril",
@@ -2691,7 +2710,7 @@ dependencies = [
  "clap",
  "dtt",
  "env_logger",
- "euxis-commons",
+ "euxis-commons 0.0.2",
  "indicatif",
  "log",
  "oxml",
@@ -2726,7 +2745,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.71"
+version = "0.0.72"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -2762,7 +2781,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-a11y"
-version = "0.0.71"
+version = "0.0.72"
 dependencies = [
  "serde",
  "serde_json",
@@ -2770,7 +2789,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.0.71"
+version = "0.0.72"
 dependencies = [
  "log",
  "noyalib 0.0.58",
@@ -2793,14 +2812,14 @@ dependencies = [
 
 [[package]]
 name = "ssg-i18n"
-version = "0.0.71"
+version = "0.0.72"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "ssg-rpc"
-version = "0.0.71"
+version = "0.0.72"
 dependencies = [
  "inventory",
  "schemars",
@@ -2812,7 +2831,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc-macro"
-version = "0.0.71"
+version = "0.0.72"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2821,7 +2840,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-search"
-version = "0.0.71"
+version = "0.0.72"
 dependencies = [
  "serde",
  "serde_json",
@@ -2835,12 +2854,12 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.28"
+version = "0.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8f0bbb3a4d20e8f68dada7ec3f02015b5a459986afeda78acd496b742cdffba"
+checksum = "6f0791569361f6d01a80604f903abb6ac66fc07e54b29821aff43a8bb548c86b"
 dependencies = [
  "anyhow",
- "comrak 0.56.0",
+ "comrak",
  "html-generator",
  "idna",
  "langweave",
@@ -2863,9 +2882,9 @@ dependencies = [
 
 [[package]]
 name = "staticweaver"
-version = "0.0.6"
+version = "0.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3f2df1b07224ed8e78e673ad9094aa15ee5ba053b9b6f2d975a559f7a8eb087"
+checksum = "3e13e1682f0844ab981d46caa76c6326f831e1f8296c28c18015f6679567896b"
 dependencies = [
  "fnv",
  "thiserror",
@@ -2884,6 +2903,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "string_cache"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffa8a5dbe8b3f0bbe29d4c3225daafaeead63afdc1b65fc4c01a1384166038e6"
+dependencies = [
+ "new_debug_unreachable",
+ "parking_lot",
+ "phf_shared 0.14.0",
+ "precomputed-hash",
+]
+
+[[package]]
 name = "string_cache_codegen"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2891,6 +2922,18 @@ checksum = "585635e46db231059f76c5849798146164652513eb9e8ab2685939dd90f29b69"
 dependencies = [
  "phf_generator 0.13.1",
  "phf_shared 0.13.1",
+ "proc-macro2",
+ "quote",
+]
+
+[[package]]
+name = "string_cache_codegen"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "928dcdf75e47626b3617a976ec205d9f057584c371c1f23b782129268d0e6edc"
+dependencies = [
+ "phf_generator 0.14.0",
+ "phf_shared 0.14.0",
  "proc-macro2",
  "quote",
 ]
@@ -3361,8 +3404,20 @@ checksum = "ba8b815c1b593dc0baf78dd0f4fc8fdb2de53198fb1163738093e9a311c33fb3"
 dependencies = [
  "phf 0.13.1",
  "phf_codegen 0.13.1",
- "string_cache",
- "string_cache_codegen",
+ "string_cache 0.9.0",
+ "string_cache_codegen 0.6.1",
+]
+
+[[package]]
+name = "web_atoms"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7572660c8890448ba236b7376f27e389c6a7e1c70195622faced601f855c0ada"
+dependencies = [
+ "phf 0.14.0",
+ "phf_codegen 0.14.0",
+ "string_cache 0.11.0",
+ "string_cache_codegen 0.11.2",
 ]
 
 [[package]]
