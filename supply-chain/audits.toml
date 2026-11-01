@@ -18,6 +18,12 @@ criteria = "safe-to-deploy"
 delta = "4.1.7 -> 4.1.8"
 notes = "RUSTSEC-2026-0373 fix: style.rs matches the CSS url() function case-insensitively (eq_ignore_ascii_case), plus a test. No unsafe, I/O, network or build script changes."
 
+[[audits.ammonia]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "4.1.8 -> 4.2.4"
+notes = "Delta 4.1.8 -> 4.2.4: security release for RUSTSEC-2021-0157 and RUSTSEC-2021-0158 (CSS url() escaping and SVG animation href rewriting) and html5ever 0.40 bump; unsafe-mentioning lines +0/-0, no build.rs."
+
 [[audits.base64]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
@@ -60,6 +66,12 @@ criteria = "safe-to-deploy"
 delta = "0.15.11 -> 0.16.4"
 notes = "no_std refactor; 1 unsafe = standard termios raw-mode."
 
+[[audits.euxis-commons]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.0.2 -> 0.0.6"
+notes = 'Same-author crate (sebastienrousseau/commons), consumed via http-handle with default-features = false, features = ["error", "time"]. #![forbid(unsafe_code)]; no build.rs, proc-macro, network, or process access.'
+
 [[audits.fearless_simd]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
@@ -77,6 +89,12 @@ who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
 version = "0.0.6"
 notes = "Same-author crate, reviewed from the exact published crates.io source. #![forbid(unsafe_code)]; build.rs is a version_check rustc-version gate only; no network, no process spawning, no proc-macro. std::env reads are documented config knobs (MAX_FRONTMATTER_SIZE, MAX_NESTING_DEPTH, VALIDATE_STRUCTURE) with parse-or-default fallback. Filesystem removal (ssg.rs remove_dir_all) is limited to the caller-supplied output_dir."
+
+[[audits.html-escape]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.15 -> 0.3.0"
+notes = "Delta 0.2.15 -> 0.3.0: transitive dependency via mdx-gen 0.0.7; no new dependencies or build.rs changes."
 
 [[audits.html-generator]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
@@ -96,6 +114,18 @@ criteria = "safe-to-deploy"
 delta = "0.0.11 -> 0.0.12"
 notes = "Delta 0.0.11 -> 0.0.12: noyalib =0.0.37 -> =0.0.56 (RUSTSEC-2026-0333), mdx-gen 0.0.5 -> 0.0.6 and comrak 0.54 -> 0.55 (GHSA-xg9p-p4jc-c46g), rust-version 1.88; 10 source lines of lint fixes. Crate keeps forbid(unsafe_code); no new unsafe, no build script."
 
+[[audits.html-generator]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.0.12 -> 0.0.15"
+notes = "Same-author crate (sebastienrousseau/html-generator). Delta 0.0.12 -> 0.0.15: bumps noyalib to =0.0.58, comrak to 0.56, mdx-gen to 0.0.7, ammonia to 4.2.4, and rust-version to 1.89.0. Crate keeps forbid(unsafe_code); no build.rs."
+
+[[audits.html5ever]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.39.0 -> 0.40.1"
+notes = "Delta 0.39.0 -> 0.40.1 (5 files, +1613/-566; 4 .rs files): unsafe-mentioning lines +0/-0; no build.rs; adds memchr."
+
 [[audits.http-handle]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
@@ -108,11 +138,29 @@ criteria = "safe-to-deploy"
 version = "0.0.5"
 notes = "Same-author crate (AGPL-3.0; dev-server-only in ssg). Reviewed from the exact published crates.io source. #![deny(unsafe_code)] with documented, safety-commented allow sites: the Linux sendfile FFI path and Rust-2024 test-only env mutations. build.rs is a version_check rustc-version gate only; network use is the declared HTTP-server function; no process spawning; no ambient credential access."
 
+[[audits.http-handle]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.0.7 -> 0.0.10"
+notes = 'Same-author crate (sebastienrousseau/http-handle). Delta 0.0.7 -> 0.0.10: replaces deprecated AtomicUsize::fetch_update with compare_exchange_weak loop, updates euxis-commons to 0.0.6 (features = ["error", "time"]), raises rust-version to 1.89.0.'
+
 [[audits.indicatif]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
 delta = "0.17.11 -> 0.18.6"
 notes = "Reviewed by maintainer (delta diff): legitimate advisory/version update; no unsafe/net/proc/fs red flags."
+
+[[audits.langweave]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.0.2 -> 0.0.4"
+notes = "Same-author crate (sebastienrousseau/langweave). Delta 0.0.2 -> 0.0.4: Edition 2024 and rust-version 1.89.0; #![forbid(unsafe_code)]; build.rs is version_check only."
+
+[[audits.markup5ever]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.39.0 -> 0.40.0"
+notes = "Delta 0.39.0 -> 0.40.0 (1 file, +3/-3; 0 .rs files): unsafe-mentioning lines +0/-0; no build.rs; no dependency added or dropped."
 
 [[audits.mdx-gen]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
@@ -132,6 +180,12 @@ criteria = "safe-to-deploy"
 delta = "0.0.5 -> 0.0.6"
 notes = "Delta 0.0.5 -> 0.0.6 (18 files, +134/-23): comrak 0.52 -> 0.55 for GHSA-xg9p-p4jc-c46g; examples gated on syntax_highlighting; tests. Crate keeps forbid(unsafe_code); no new unsafe, no build script, no new dependency."
 
+[[audits.mdx-gen]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.0.6 -> 0.0.7"
+notes = "Same-author crate (sebastienrousseau/mdx-gen). Delta 0.0.6 -> 0.0.7: comrak 0.55 -> 0.56, serde_json 1.0.154, MSRV 1.89.0; forbid(unsafe_code) preserved, no build.rs."
+
 [[audits.memchr-n]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
@@ -149,6 +203,12 @@ who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
 version = "0.0.4"
 notes = "Same-author crate, reviewed from the exact published crates.io source (5 source files). #![forbid(unsafe_code)]; zero unsafe blocks; build.rs is a version_check rustc-version gate only; no network, no process spawning, no env access, no fs deletion."
+
+[[audits.metadata-gen]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.0.9"
+notes = "Same-author crate (sebastienrousseau/metadata-gen). #![forbid(unsafe_code)]; replaces quick-xml with oxml 0.0.13 and bumps noyalib to 0.0.58; no network or process access."
 
 [[audits.metadata-gen]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
@@ -311,6 +371,12 @@ criteria = "safe-to-deploy"
 delta = "0.0.21 -> 0.0.22"
 notes = "Delta 0.0.21 -> 0.0.22 (21 files, +320/-326): comrak 0.55 (GHSA-xg9p-p4jc-c46g), tagfilter removed with raw HTML off in create_comrak_options, html-generator 0.0.12 and metadata-gen 0.0.8 (RUSTSEC-2026-0333). Crate keeps forbid(unsafe_code); the new 'unsafe' lines are comrak's r#unsafe option set to false."
 
+[[audits.staticdatagen]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.0.28 -> 0.0.30"
+notes = "Same-author crate (sebastienrousseau/staticdatagen). Delta 0.0.28 -> 0.0.30: updates metadata-gen to 0.0.9, html-generator to 0.0.15, http-handle to 0.0.10, langweave to 0.0.4, and staticweaver to 0.0.8; #![forbid(unsafe_code)]."
+
 [[audits.staticweaver]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
@@ -322,6 +388,24 @@ who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 version = "0.0.6"
 notes = "Same-author crate (sebastienrousseau/staticweaver). #![forbid(unsafe_code)]; drops unused tempfile dependency; no build.rs, proc-macro, network, or process access."
+
+[[audits.staticweaver]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.0.6 -> 0.0.8"
+notes = "Same-author crate (sebastienrousseau/staticweaver). Delta 0.0.6 -> 0.0.8: raises rust-version to 1.89; #![forbid(unsafe_code)]; no build.rs, proc-macro, network, or process access."
+
+[[audits.string_cache]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.9.0 -> 0.11.0"
+notes = "Delta 0.9.0 -> 0.11.0 (8 files, +237/-153; 5 .rs files): unsafe-mentioning lines +18/-9; no build.rs; no dependency added or dropped."
+
+[[audits.string_cache_codegen]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.6.1 -> 0.11.2"
+notes = "Delta 0.6.1 -> 0.11.2 (2 files, +65/-47; 1 .rs file): unsafe-mentioning lines +0/-0; no build.rs; no dependency added or dropped."
 
 [[audits.tokio]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
@@ -340,6 +424,12 @@ who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "1.26.1 -> 1.28.0"
 notes = "Delta 1.26.1 -> 1.28.0 (8 files, +591/-131; 5 .rs files); no unsafe added or removed; no build.rs change; dependency changes: uuid-rng-internal-lib 1.26.1 -> 1.28.0."
+
+[[audits.web_atoms]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.6 -> 0.3.0"
+notes = "Delta 0.2.6 -> 0.3.0 (3 files, +9/-7): unsafe-mentioning lines +0/-0; build.rs unchanged; no dependency added or dropped."
 
 [[audits.webpki-roots]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"

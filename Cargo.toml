@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.71"                      # The version of the library
+version = "0.0.72"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.89.0"                 # Minimum supported Rust version (ADR-0010; dependencies alone need 1.88)
@@ -163,7 +163,7 @@ tracing-test = "0.2"
 # Required dependencies for building and running the project.
 anyhow = "1.0.102"
 clap = { version = "4.6.1", features = ["derive", "cargo", "env"] }
-http-handle = "0.0.7"
+http-handle = "0.0.10"
 log = { version = "0.4.29", features = ["std"] }
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 # adr: ADR-0002 — Rayon is the build-pipeline CPU scheduler.
@@ -171,13 +171,13 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.71" }
-ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.71", optional = true }
-ssg-core = { path = "crates/ssg-core", version = "0.0.71" }
-ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.71" }
-ssg-search = { path = "crates/ssg-search", version = "0.0.71" }
+ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.72" }
+ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.72", optional = true }
+ssg-core = { path = "crates/ssg-core", version = "0.0.72" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.72" }
+ssg-search = { path = "crates/ssg-search", version = "0.0.72" }
 thiserror = "2"
-staticdatagen = "0.0.28"
+staticdatagen = "0.0.30"
 toml = "1.1.2"
 
 # Real cryptographic hashing for Subresource Integrity (issue #468 follow-up).

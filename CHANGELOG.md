@@ -7,6 +7,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.72] - 2026-11-01
+
+### Changed
+
+- **staticdatagen 0.0.30 & http-handle 0.0.10.** Updates `staticdatagen` from `0.0.28` to `0.0.30` (`html-generator 0.0.15`, `mdx-gen 0.0.7`, `metadata-gen 0.0.9`, `langweave 0.0.4`, `staticweaver 0.0.8`) and `http-handle` from `0.0.7` to `0.0.10` (`euxis-commons 0.0.6`), removing duplicate `comrak 0.55` and `noyalib 0.0.56` from the dependency graph.
+
 ## [0.0.71] - 2026-10-31
 
 ### Changed
