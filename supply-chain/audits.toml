@@ -240,6 +240,12 @@ criteria = "safe-to-deploy"
 version = "0.0.5"
 notes = "Same-author crate, reviewed from the exact published crates.io source. #![forbid(unsafe_code)]; zero unsafe blocks; build.rs is a version_check rustc-version gate only; no network, no process spawning, no env access, no fs deletion. Pure RSS/Atom XML generation and parsing."
 
+[[audits.rss-gen]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.0.13"
+notes = "Same-author crate (sebastienrousseau/rssgen). #![forbid(unsafe_code)]; replaces quick-xml and xml-rs with oxml 0.0.13; no build.rs, proc-macro, network, or process access."
+
 [[audits.rustls]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
@@ -275,11 +281,23 @@ criteria = "safe-to-deploy"
 delta = "0.11.0 -> 0.11.1"
 notes = "Refactor that narrows unsafe: SIMD kernels become safe #[target_feature] functions, with unsafe kept to unaligned loads inside a 64- or 128-byte block (in bounds by construction) and the RISC-V asm; macros become functions; AArch64 round constants load under Stacked Borrows; MSRV 1.88. No I/O, network or build script changes. ssg exact SHA-256/384 SRI vectors pass on aarch64."
 
+[[audits.sitemap-gen]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.0.7"
+notes = "Same-author crate (sebastienrousseau/sitemap-gen). #![forbid(unsafe_code)]; replaces quick-xml with oxml 0.0.13; no build.rs, proc-macro, network, or process access."
+
 [[audits.staticdatagen]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
 version = "0.0.9"
 notes = "Same-author crate, reviewed from the exact published crates.io source (37 files). #![forbid(unsafe_code)]; build.rs is a version_check rustc-version gate only; no network. Finding disclosed: macros/shell_macros.rs exposes CommandExecutor, an opt-in API that runs caller-supplied strings via `sh -c` with an explicit no-sanitization warning in its docs. It executes nothing on its own, is not reachable from ssg's build pipeline (ssg CI enforces a no-shellout lint), and is safe as long as callers pass trusted strings. fs::remove_dir_all calls operate only on caller-supplied directories (public_dir cleanup)."
+
+[[audits.staticdatagen]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.0.28"
+notes = "Same-author crate (sebastienrousseau/staticdatagen). #![forbid(unsafe_code)]; replaces quick-xml with oxml 0.0.13 across element, file, news_sitemap, and json modules, updates rss-gen to 0.0.13 and sitemap-gen to 0.0.7, and trims metadata-gen features to drop quick-xml and tokio."
 
 [[audits.staticdatagen]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
@@ -298,6 +316,12 @@ who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
 version = "0.0.2"
 notes = "Same-author crate, reviewed from the exact published crates.io source. #![forbid(unsafe_code)]; no build.rs; zero unsafe blocks; no process spawning; no fs deletion. Network access exists only behind the non-default `remote-templates` feature (reqwest GET of a caller-supplied template URL with 10 s timeout, 1 MiB body cap, and content-type check); staticdatagen 0.0.9 consumes it with default features, so no network code is compiled into this workspace."
+
+[[audits.staticweaver]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.0.6"
+notes = "Same-author crate (sebastienrousseau/staticweaver). #![forbid(unsafe_code)]; drops unused tempfile dependency; no build.rs, proc-macro, network, or process access."
 
 [[audits.tokio]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
@@ -420,6 +444,13 @@ user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
 start = "2024-09-28"
 end = "2027-07-26"
 
+[[trusted.rss-gen]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:sebastienrousseau/rssgen"
+start = "2026-10-01"
+end = "2027-10-31"
+notes = "The maintainer's own crate, published by GitHub trusted publishing from sebastienrousseau/rssgen."
+
 [[trusted.serde_spanned]]
 criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
@@ -432,6 +463,13 @@ user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
 start = "2024-10-10"
 end = "2027-07-26"
 
+[[trusted.sitemap-gen]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:sebastienrousseau/sitemap-gen"
+start = "2026-10-01"
+end = "2027-10-31"
+notes = "The maintainer's own crate, published by GitHub trusted publishing from sebastienrousseau/sitemap-gen."
+
 [[trusted.staticdatagen]]
 criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
@@ -442,7 +480,7 @@ end = "2027-07-26"
 criteria = "safe-to-deploy"
 trusted-publisher = "github:sebastienrousseau/staticdatagen"
 start = "2026-09-06"
-end = "2027-07-26"
+end = "2027-10-31"
 notes = "Same-author crate. From 0.0.18 the crate is published by its own GitHub release workflow through crates.io Trusted Publishing, so the publisher record is the repository rather than the user-id trusted above; both are the owner's."
 
 [[trusted.staticweaver]]
@@ -450,6 +488,13 @@ criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
 start = "2024-10-17"
 end = "2027-07-26"
+
+[[trusted.staticweaver]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:sebastienrousseau/staticweaver"
+start = "2026-09-01"
+end = "2027-10-31"
+notes = "The maintainer's own crate, published by GitHub trusted publishing from sebastienrousseau/staticweaver."
 
 [[trusted.syn]]
 criteria = "safe-to-deploy"

@@ -33,7 +33,7 @@ by tools that are not SSG.
 
 ```toml
 [dependencies]
-ssg-i18n = "0.0.70"
+ssg-i18n = "0.0.71"
 ```
 
 ## Content negotiation
