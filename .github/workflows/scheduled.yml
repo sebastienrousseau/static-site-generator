@@ -88,6 +88,22 @@ jobs:
         env: { RUSTDOCFLAGS: -D warnings }
         run: cargo doc --no-deps -p ssg
 
+  portability-all:
+    # Branch protection requires this check by name. It stands for every
+    # leg of the portability matrix, so adding or dropping a version never
+    # renames a required check.
+    name: portability (all)
+    if: always()
+    needs: portability
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Every leg of the matrix passed
+        env:
+          RESULT: ${{ needs.portability.result }}
+        run: test "$RESULT" = success
+
   # ── Multi-OS example_outputs validators (resolves #473) ─────────────
   # Mirrors the `examples` job in ci.yml but on macOS + Windows runners.
   # Kept out of the per-PR `examples` job because the cargo build of every

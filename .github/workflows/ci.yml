@@ -266,6 +266,22 @@ jobs:
         # reachable from a workflow, so this cannot drift back.
         run: cargo test --tests --features test-fault-injection
 
+  test-all:
+    # Branch protection requires this check by name. It stands for every
+    # leg of the test matrix, so adding or dropping a version never
+    # renames a required check.
+    name: test (all)
+    if: always()
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Every leg of the matrix passed
+        env:
+          RESULT: ${{ needs.test.result }}
+        run: test "$RESULT" = success
+
   # ── Phase 1b: documentation gates (REPO-STANDARD §2) ────────────────
   # These suites also run inside `cargo test --tests`, but they fail for a
   # different reason than a code test does — documentation drifted from
