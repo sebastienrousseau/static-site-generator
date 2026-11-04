@@ -316,7 +316,7 @@ jobs:
       - name: Markdown lint
         # Globs and every rule exclusion live in
         # .markdownlint-cli2.jsonc, each with a stated reason.
-        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
+        uses: DavidAnson/markdownlint-cli2-action@696eb3f2509270d7b882d2aa68347bc676e7af34 # v25.0.0
       - name: docs/ files are not hidden by .gitignore
         run: ./scripts/check-docs-tracked.sh
       # An allow-list is a set of suppressions, and suppressions rot.
