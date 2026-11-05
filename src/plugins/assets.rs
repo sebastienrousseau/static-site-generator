@@ -583,41 +583,13 @@ pub fn minify_css(css: &str) -> String {
         }
 
         if ch == ' ' {
-            if !in_block {
-                // Selector or at-rule prelude. Keep one space unless it
-                // sits against punctuation that already separates the
-                // tokens: a combinator, a comma, or a brace. Keeping it
-                // around `>` would be valid too, but those few bytes are
-                // worth reclaiming where the meaning cannot change.
-                //
-                // Neighbours are the last character *emitted* and the
-                // next *non-space* character, so a run of whitespace
-                // collapses to one rather than being judged space by
-                // space — `body   {` kept two of its three otherwise.
-                let mut j = i;
-                while j < chars.len() && chars[j] == ' ' {
-                    j += 1;
-                }
-                let next_sel = chars.get(j).copied();
-                let last = clean.chars().next_back();
-                let separator = |c: Option<char>| {
-                    matches!(c, Some('{' | '}' | ',' | '>' | '~' | '+' | ';'))
-                        || c.is_none()
-                };
-                if !separator(last) && !separator(next_sel) && last != Some(' ')
-                {
-                    clean.push(' ');
-                }
-                i = j;
-                continue;
-            }
-            // Judge a run of whitespace as one gap, exactly as the selector
-            // branch above does: the last character *emitted* and the next
-            // *non-space* character. Reading raw neighbours meant that in a
-            // run (`1.125rem  + 0.55vw`, aligned columns) neither space saw a
-            // word character on both sides, so the space before `+` was
-            // dropped and `1.125rem+ 0.55vw` voided the whole clamp().
-            // The same flaw turned `margin: 0  -1px` into `0-1px` and
+            // A run of whitespace is judged as one gap: its neighbours are
+            // the last character *emitted* and the next *non-space*
+            // character. Judged space by space, `body   {` kept two of its
+            // three, and in a declaration neither space of
+            // `1.125rem  + 0.55vw` saw a word on both sides, so the one
+            // before `+` was dropped and the clamp() became invalid. The
+            // same flaw turned `margin: 0  -1px` into `0-1px` and
             // `@media (a)  and (b)` into `(a)and (b)`.
             let mut j = i;
             while j < chars.len() && chars[j] == ' ' {
@@ -625,6 +597,22 @@ pub fn minify_css(css: &str) -> String {
             }
             let prev = clean.chars().next_back();
             let next = chars.get(j).copied();
+            i = j;
+            if !in_block {
+                // Selector or at-rule prelude. Keep one space unless it
+                // sits against punctuation that already separates the
+                // tokens: a combinator, a comma, or a brace. Keeping it
+                // around `>` would be valid too, but those few bytes are
+                // worth reclaiming where the meaning cannot change.
+                let separator = |c: Option<char>| {
+                    matches!(c, Some('{' | '}' | ',' | '>' | '~' | '+' | ';'))
+                        || c.is_none()
+                };
+                if !separator(prev) && !separator(next) && prev != Some(' ') {
+                    clean.push(' ');
+                }
+                continue;
+            }
 
             // `+` counts as a word character here for one reason: CSS math
             // functions require whitespace around `+` and `-`, and dropping it
@@ -674,36 +662,11 @@ pub fn minify_css(css: &str) -> String {
 
             let is_needed = joins_prelude_tokens
                 || math_operator_boundary
-                || match (prev, next) {
-                    (Some(p), Some(n)) => {
-                        let is_p_word = p.is_alphanumeric()
-                            || p == '-'
-                            || p == '+'
-                            || p == '_'
-                            || p == '#'
-                            || p == '.'
-                            || p == '@'
-                            || p == '%'
-                            || p == '*'
-                            || p == '$';
-                        let is_n_word = n.is_alphanumeric()
-                            || n == '-'
-                            || n == '+'
-                            || n == '_'
-                            || n == '#'
-                            || n == '.'
-                            || n == '@'
-                            || n == '%'
-                            || n == '*'
-                            || n == '$';
-                        is_p_word && is_n_word
-                    }
-                    _ => false,
-                };
+                || (prev.is_some_and(is_css_word_char)
+                    && next.is_some_and(is_css_word_char));
             if is_needed {
                 clean.push(' ');
             }
-            i = j;
             continue;
         } else {
             clean.push(ch);
@@ -712,6 +675,14 @@ pub fn minify_css(css: &str) -> String {
     }
 
     clean.trim().to_string()
+}
+
+/// Whether `c` belongs to a token that a following or preceding token
+/// would merge with if the space between them were dropped. See the
+/// `minify_css` value branch for why `+`, `-` and `*` are included.
+fn is_css_word_char(c: char) -> bool {
+    c.is_alphanumeric()
+        || matches!(c, '-' | '+' | '_' | '#' | '.' | '@' | '%' | '*' | '$')
 }
 
 /// Asset extensions we content-fingerprint. Matches the
