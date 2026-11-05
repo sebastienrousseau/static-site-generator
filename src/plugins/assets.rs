@@ -583,7 +583,6 @@ pub fn minify_css(css: &str) -> String {
         }
 
         if ch == ' ' {
-            let prev = if i > 0 { Some(chars[i - 1]) } else { None };
             if !in_block {
                 // Selector or at-rule prelude. Keep one space unless it
                 // sits against punctuation that already separates the
@@ -612,11 +611,20 @@ pub fn minify_css(css: &str) -> String {
                 i = j;
                 continue;
             }
-            let next = if i + 1 < chars.len() {
-                Some(chars[i + 1])
-            } else {
-                None
-            };
+            // Judge a run of whitespace as one gap, exactly as the selector
+            // branch above does: the last character *emitted* and the next
+            // *non-space* character. Reading raw neighbours meant that in a
+            // run (`1.125rem  + 0.55vw`, aligned columns) neither space saw a
+            // word character on both sides, so the space before `+` was
+            // dropped and `1.125rem+ 0.55vw` voided the whole clamp().
+            // The same flaw turned `margin: 0  -1px` into `0-1px` and
+            // `@media (a)  and (b)` into `(a)and (b)`.
+            let mut j = i;
+            while j < chars.len() && chars[j] == ' ' {
+                j += 1;
+            }
+            let prev = clean.chars().next_back();
+            let next = chars.get(j).copied();
 
             // `+` counts as a word character here for one reason: CSS math
             // functions require whitespace around `+` and `-`, and dropping it
@@ -695,6 +703,8 @@ pub fn minify_css(css: &str) -> String {
             if is_needed {
                 clean.push(' ');
             }
+            i = j;
+            continue;
         } else {
             clean.push(ch);
         }
@@ -1637,6 +1647,29 @@ mod tests {
             out.contains("1.75rem + 1.6vw"),
             "whitespace around `+` was dropped: {out}"
         );
+    }
+
+    #[test]
+    fn minify_css_keeps_math_whitespace_after_a_run_of_spaces() {
+        // Aligned columns put two spaces before the operator. Judged space
+        // by space, neither saw a word on both sides and the one before `+`
+        // was dropped: `1.125rem+ 0.5556vw`, which voids the clamp().
+        let css = "h1 { font-size: clamp(1.25rem,   1.125rem  + 0.5556vw, 1.625rem); }";
+        let out = minify_css(css);
+        assert!(out.contains("1.125rem + 0.5556vw"), "got: {out}");
+        assert!(!out.contains("rem+"), "space before `+` dropped: {out}");
+        let css = "a { width: calc(100%   -   2rem); }";
+        assert!(minify_css(css).contains("100% - 2rem"));
+    }
+
+    #[test]
+    fn minify_css_keeps_list_separator_after_a_run_of_spaces() {
+        let out = minify_css("p { margin: 0   -1px; }");
+        assert!(out.contains("0 -1px"), "got: {out}");
+        let out = minify_css(
+            "@media (min-width: 1px)   and   (max-width: 2px) { a { b: c } }",
+        );
+        assert!(out.contains(") and ("), "got: {out}");
     }
 
     #[test]

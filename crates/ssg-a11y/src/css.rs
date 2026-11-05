@@ -126,6 +126,19 @@ pub(crate) fn strip_at_rules(css: &str) -> String {
                 }
                 k += 1;
             }
+            // `@layer name { … }` is a cascade-ordering wrapper, not a
+            // condition: its rules always apply. Dropping it with the
+            // conditional at-rules hid every rule a site moved into a
+            // layer (a whole legacy stylesheet under `@layer legacy`)
+            // from the target-size and focus-appearance checks. Unwrap
+            // it instead, recursively, so nested `@media print` inside a
+            // layer is still discarded.
+            if is_layer_block(&css[i..j]) {
+                let inner_end = k.saturating_sub(1).max(j + 1);
+                out.push(' ');
+                out.push_str(&strip_at_rules(&css[j + 1..inner_end]));
+                out.push(' ');
+            }
             i = k;
             continue;
         }
@@ -133,6 +146,14 @@ pub(crate) fn strip_at_rules(css: &str) -> String {
         i += 1;
     }
     out
+}
+
+/// Whether an at-rule prelude (`@…` up to, not including, `{`) is a
+/// cascade-layer block. Input is already lowercased by `preprocess_css`.
+fn is_layer_block(prelude: &str) -> bool {
+    let rest = prelude.trim_start_matches('@');
+    rest.starts_with("layer")
+        && rest[5..].chars().next().is_none_or(|c| c.is_whitespace())
 }
 
 /// Splits CSS into `(selector, body)` pairs at the top level. Comments
@@ -271,6 +292,32 @@ mod tests {
         assert!(!stripped.contains("@media"));
         // The print rule's `color: blue` declaration must be gone.
         assert!(!stripped.contains("blue"));
+    }
+
+    #[test]
+    fn strip_at_rules_unwraps_layer_blocks() {
+        let css = "@layer legacy { button { width: 10px } @media print { a { color: blue } } } b { c: d }";
+        let stripped = strip_at_rules(css);
+        assert!(stripped.contains("button { width: 10px }"), "{stripped}");
+        assert!(stripped.contains("b { c: d }"));
+        assert!(!stripped.contains("@layer") && !stripped.contains("@media"));
+        assert!(
+            !stripped.contains("blue"),
+            "print rule inside a layer must still go"
+        );
+        let rules = parse_top_level_rules(&stripped);
+        assert!(rules
+            .iter()
+            .any(|(s, b)| s == "button" && b.contains("10px")));
+    }
+
+    #[test]
+    fn strip_at_rules_drops_layer_statements_and_layered_names_only() {
+        // `@layer a, b;` is a bare statement; `@layers-foo` is not a layer.
+        let css = "@layer a, b; @layerx { x { y: z } } q { r: s }";
+        let stripped = strip_at_rules(css);
+        assert!(!stripped.contains("x { y: z }"));
+        assert!(stripped.contains("q { r: s }"));
     }
 
     #[test]
