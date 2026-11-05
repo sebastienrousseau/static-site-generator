@@ -1650,6 +1650,34 @@ mod tests {
         assert!(out.contains("100% - 2rem"), "got: {out}");
     }
 
+    mod math_whitespace_properties {
+        use super::minify_css;
+        use proptest::prelude::*;
+
+        proptest! {
+            #![proptest_config(ProptestConfig::with_cases(1000))]
+
+            /// Whatever run of spaces surrounds a math operator, the
+            /// minified clamp() keeps exactly one space either side of it,
+            /// and minifying the output again changes nothing.
+            #[test]
+            fn clamp_operator_spacing_survives_whitespace_runs(
+                a in 0u16..100, b in 0u16..100, c in 0u16..100, d in 0u16..100,
+                op in prop::sample::select(vec!['+', '-']),
+                w1 in " {1,4}", w2 in " {1,4}", w3 in " {1,4}",
+            ) {
+                let css = format!(
+                    "h1 {{ font-size: clamp({a}rem,{w1}{b}rem{w2}{op}{w3}{c}vw, {d}rem); }}"
+                );
+                let out = minify_css(&css);
+                let expected = format!("{b}rem {op} {c}vw");
+                prop_assert!(out.contains(&expected), "got: {}", out);
+                prop_assert!(out.contains(&format!("rem {op} ")), "got: {}", out);
+                prop_assert_eq!(minify_css(&out), out);
+            }
+        }
+    }
+
     #[test]
     fn minify_css_still_collapses_ordinary_whitespace() {
         let out = minify_css("body   {   color :  red ;  }");
