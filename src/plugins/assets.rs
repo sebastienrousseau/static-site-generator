@@ -668,9 +668,8 @@ pub fn minify_css(css: &str) -> String {
                 clean.push(' ');
             }
             continue;
-        } else {
-            clean.push(ch);
         }
+        clean.push(ch);
         i += 1;
     }
 
