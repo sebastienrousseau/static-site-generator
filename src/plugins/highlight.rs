@@ -119,45 +119,43 @@ fn highlight_page(html: &str) -> Option<String> {
 /// Transforms `<pre><code class="language-X">` into
 /// `<pre class="highlight"><code class="language-X" data-lang="X">`.
 fn add_highlight_markup(html: &str) -> String {
+    const PRE: &str = "<pre>";
     let mut result = String::with_capacity(html.len());
     let mut pos = 0;
 
-    while pos < html.len() {
-        if let Some(pre_start) = html[pos..].find("<pre>") {
-            let abs_pre = pos + pre_start;
-            let after_pre = abs_pre + 5; // len("<pre>")
-
-            // Check if next element is <code class="language-
-            let remaining = &html[after_pre..];
-            if remaining.starts_with("<code class=\"language-") {
-                // Extract language name
-                let lang_start = "language-".len();
-                let code_attr = &remaining["<code class=\"".len()..];
-                let lang_end = code_attr.find('"').unwrap_or(0);
-                let lang = &code_attr[lang_start..lang_end];
-
-                // Write the enhanced pre tag
-                result.push_str(&html[pos..abs_pre]);
-                result.push_str(&format!(
-                    "<pre class=\"highlight language-{lang}\">"
-                ));
-                result.push_str(&format!(
-                    "<code class=\"language-{lang}\" data-lang=\"{lang}\">"
-                ));
-
-                // Skip past the original <pre><code class="language-X">
-                let code_tag_end = remaining.find('>').unwrap_or(0);
-                pos = after_pre + code_tag_end + 1;
-                continue;
-            }
+    // A `<pre>` that is not a tagged code block is copied as is and the
+    // scan continues after it. Stopping there (#823) left every later
+    // block on the page unmarked, including when the `<pre>` was only
+    // text in a CSS comment in the layout's `<head>`.
+    while let Some(found) = html[pos..].find(PRE) {
+        let after_pre = pos + found + PRE.len();
+        result.push_str(&html[pos..pos + found]);
+        if let Some((markup, consumed)) = tagged_code_open(&html[after_pre..]) {
+            result.push_str(&markup);
+            pos = after_pre + consumed;
+        } else {
+            result.push_str(PRE);
+            pos = after_pre;
         }
-
-        // No match — copy rest and break
-        result.push_str(&html[pos..]);
-        break;
     }
-
+    result.push_str(&html[pos..]);
     result
+}
+
+/// For the text right after a `<pre>`, returns the highlighted
+/// `<pre …><code …>` opening and the byte length of the original
+/// `<code …>` tag, or `None` when it is not `<code class="language-X">`.
+fn tagged_code_open(rest: &str) -> Option<(String, usize)> {
+    let attr = rest.strip_prefix("<code class=\"language-")?;
+    let lang = &attr[..attr.find('"')?];
+    let consumed = rest.find('>')? + 1;
+    Some((
+        format!(
+            "<pre class=\"highlight language-{lang}\">\
+             <code class=\"language-{lang}\" data-lang=\"{lang}\">"
+        ),
+        consumed,
+    ))
 }
 
 /// Injects a `<link>` to highlight.css before `</head>`.
@@ -223,6 +221,36 @@ mod tests {
         let result = add_highlight_markup(html);
         assert!(result.contains("class=\"highlight language-rust\""));
         assert!(result.contains("data-lang=\"rust\""));
+    }
+
+    #[test]
+    fn add_highlight_markup_continues_past_an_untagged_pre() {
+        // #823: an untagged block, or `<pre>` in a CSS comment, used to
+        // end the scan and leave every later tagged block unmarked.
+        let html = concat!(
+            "<style>/* <pre> */</style>",
+            "<pre><code>plain</code></pre>",
+            r#"<pre><code class="language-python">print()</code></pre>"#,
+        );
+        let out = add_highlight_markup(html);
+        assert!(
+            out.contains(concat!(
+                r#"<pre class="highlight language-python">"#,
+                r#"<code class="language-python" data-lang="python">"#,
+            )),
+            "{out}"
+        );
+        assert!(
+            out.contains("/* <pre> */") && out.contains("<pre><code>plain")
+        );
+        let page = highlight_page(html).expect("page has a tagged block");
+        assert!(page.contains("highlight.css"), "{page}");
+    }
+
+    #[test]
+    fn add_highlight_markup_leaves_an_unterminated_class_alone() {
+        let html = r#"<pre><code class="language-rust"#;
+        assert_eq!(add_highlight_markup(html), html);
     }
 
     #[test]
