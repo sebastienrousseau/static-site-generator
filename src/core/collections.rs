@@ -67,8 +67,8 @@
 
 use anyhow::{Context, Result};
 use serde::de::DeserializeOwned;
+use std::fs;
 use std::path::{Path, PathBuf};
-use std::{fs, io};
 
 /// One parsed entry from a content collection.
 ///
@@ -190,21 +190,22 @@ pub fn get_entry<T: DeserializeOwned>(
     Ok(None)
 }
 
-fn walk_markdown(dir: &Path, out: &mut Vec<PathBuf>) -> io::Result<()> {
-    if !dir.is_dir() {
-        return Ok(());
-    }
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_dir() {
-            walk_markdown(&path, out)?;
-        } else if path.extension().is_some_and(|e| {
-            e.eq_ignore_ascii_case("md") || e.eq_ignore_ascii_case("markdown")
-        }) {
-            out.push(path);
-        }
-    }
+/// Appends every `.md` / `.markdown` file under `dir`, sorted, to `out`.
+///
+/// Delegates to the shared walker, which bounds the depth at
+/// [`crate::MAX_DIR_DEPTH`] and enters each real directory once, so a
+/// symlink loop in the content tree cannot repeat or multiply entries.
+fn walk_markdown(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
+    out.extend(crate::walk::collect_files_matching(
+        dir,
+        crate::MAX_DIR_DEPTH,
+        |p| {
+            p.extension().is_some_and(|e| {
+                e.eq_ignore_ascii_case("md")
+                    || e.eq_ignore_ascii_case("markdown")
+            })
+        },
+    )?);
     Ok(())
 }
 
@@ -426,6 +427,65 @@ mod tests {
         let posts: Vec<Entry<Post>> = get_collection(dir.path()).unwrap();
         assert_eq!(posts.len(), 1);
         assert_eq!(posts[0].slug, "long");
+    }
+
+    /// Lists what `walk_markdown` finds under `root`, relative to it.
+    #[cfg(unix)]
+    fn walk_relative(root: &Path) -> Vec<PathBuf> {
+        let mut files = Vec::new();
+        walk_markdown(root, &mut files).unwrap();
+        files
+            .iter()
+            .map(|p| p.strip_prefix(root).unwrap().to_path_buf())
+            .collect()
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn walk_markdown_does_not_follow_a_symlink_loop() {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+        fs::create_dir_all(root.join("sub/deep")).unwrap();
+        for rel in ["zeta.md", "alpha.md", "sub/deep/beta.markdown"] {
+            fs::write(root.join(rel), "x").unwrap();
+        }
+        // `sub/loop` points back at the content root.
+        symlink(root, root.join("sub/loop")).unwrap();
+
+        assert_eq!(
+            walk_relative(root),
+            ["alpha.md", "sub/deep/beta.markdown", "zeta.md"]
+                .map(PathBuf::from),
+            "each file once, sorted, nothing reached through the loop"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn walk_markdown_terminates_on_branching_symlink_loops() {
+        use std::os::unix::fs::symlink;
+        use std::sync::mpsc;
+        use std::time::Duration;
+
+        // Two links back to the root in one directory make the
+        // followed tree branch at every level: 2^n paths at depth n.
+        let dir = tempdir().unwrap();
+        let root = dir.path().to_path_buf();
+        fs::write(root.join("a.md"), "x").unwrap();
+        symlink(&root, root.join("l1")).unwrap();
+        symlink(&root, root.join("l2")).unwrap();
+
+        let (tx, rx) = mpsc::channel();
+        let walk_root = root.clone();
+        let _ = std::thread::spawn(move || {
+            let _ = tx.send(walk_relative(&walk_root));
+        });
+        let found = rx
+            .recv_timeout(Duration::from_secs(10))
+            .expect("walk did not finish within 10 s");
+        assert_eq!(found, [PathBuf::from("a.md")]);
     }
 
     #[test]
