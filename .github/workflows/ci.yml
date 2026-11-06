@@ -312,7 +312,7 @@ jobs:
         # passed locally and failed here, which is the exact
         # local/CI divergence DEVELOPMENT.md exists to prevent. When
         # bumping, bump the version in DEVELOPMENT.md too.
-        uses: crate-ci/typos@7f9d0819ca1c008ade73f4b41fa9d258d48f605b # v1.51.1
+        uses: crate-ci/typos@4c8b7f51ca60df14e3c5ca82770dfbbe6c3dae85 # v1.52.0
       - name: Markdown lint
         # Globs and every rule exclusion live in
         # .markdownlint-cli2.jsonc, each with a stated reason.
@@ -432,7 +432,7 @@ jobs:
           fi
       - name: Upload SARIF to GitHub Code Scanning (#562)
         if: always()
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@1fc58d04a4d4374f921bdac573c3811c240f9c26 # v4.39.2
         with:
           sarif_file: ssg-audit.sarif
           category: ssg-audit
