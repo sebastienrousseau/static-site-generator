@@ -20,8 +20,18 @@
 //! All variants return `Ok(Vec::new())` when the root directory does
 //! not exist or is not a directory — matching the convention used by
 //! every previous local collector in the crate.
+//!
+//! ## Symlinks
+//!
+//! The collecting walkers follow symlinked directories, but enter each
+//! real directory (by canonical path) at most once. A link back to an
+//! ancestor is therefore skipped instead of walked again, so a symlink
+//! loop can neither repeat files nor make the walk branch without end.
+//! Subdirectories are visited in sorted order, so when one directory is
+//! reachable by two names the name kept is the same on every platform.
 
 use crate::error::{PathErrorExt, SsgError};
+use std::collections::HashSet;
 use std::ffi::OsString;
 use std::{
     fs,
@@ -50,24 +60,7 @@ pub fn walk_files(
     dir: &Path,
     extension: &str,
 ) -> Result<Vec<PathBuf>, SsgError> {
-    let mut files = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-    while let Some(current) = stack.pop() {
-        if !current.is_dir() {
-            continue;
-        }
-        for entry in fs::read_dir(&current).with_path(&current)? {
-            let entry = entry.with_path(&current)?;
-            let path = entry.path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if path.extension().is_some_and(|e| e == extension) {
-                files.push(path);
-            }
-        }
-    }
-    files.sort();
-    Ok(files)
+    collect_files_matching(dir, usize::MAX, |p| has_extension(p, extension))
 }
 
 /// Recursively collects files matching any of `extensions` under `dir`.
@@ -93,27 +86,9 @@ pub fn walk_files_multi(
     dir: &Path,
     extensions: &[&str],
 ) -> Result<Vec<PathBuf>, SsgError> {
-    let mut files = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-    while let Some(current) = stack.pop() {
-        if !current.is_dir() {
-            continue;
-        }
-        for entry in fs::read_dir(&current).with_path(&current)? {
-            let entry = entry.with_path(&current)?;
-            let path = entry.path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if let Some(ext) = path.extension() {
-                let ext_lower = ext.to_string_lossy().to_lowercase();
-                if extensions.contains(&ext_lower.as_str()) {
-                    files.push(path);
-                }
-            }
-        }
-    }
-    files.sort();
-    Ok(files)
+    collect_files_matching(dir, usize::MAX, |p| {
+        has_any_extension_ignore_case(p, extensions)
+    })
 }
 
 /// Visits every file with extension `ext` under `dir`, in a deterministic
@@ -214,24 +189,74 @@ pub fn walk_files_bounded_depth(
     extension: &str,
     max_depth: usize,
 ) -> Result<Vec<PathBuf>, SsgError> {
+    collect_files_matching(dir, max_depth, |p| has_extension(p, extension))
+}
+
+/// Collects every file under `dir` for which `matches` returns `true`,
+/// descending at most `max_depth` directories below `dir`.
+///
+/// The one walk behind [`walk_files`], [`walk_files_multi`] and
+/// [`walk_files_bounded_depth`]: iterative, sorted output, and each real
+/// directory entered at most once (see the module's *Symlinks* notes).
+///
+/// # Errors
+///
+/// Returns the first I/O error from reading a directory or an entry.
+pub(crate) fn collect_files_matching(
+    dir: &Path,
+    max_depth: usize,
+    matches: impl Fn(&Path) -> bool,
+) -> Result<Vec<PathBuf>, SsgError> {
     let mut files = Vec::new();
+    let mut seen = SeenDirs::default();
     let mut stack: Vec<(PathBuf, usize)> = vec![(dir.to_path_buf(), 0)];
     while let Some((current, depth)) = stack.pop() {
-        if depth > max_depth || !current.is_dir() {
+        if depth > max_depth || !current.is_dir() || !seen.first_visit(&current)
+        {
             continue;
         }
+        let mut subdirs = Vec::new();
         for entry in fs::read_dir(&current).with_path(&current)? {
-            let entry = entry.with_path(&current)?;
-            let path = entry.path();
+            let path = entry.with_path(&current)?.path();
             if path.is_dir() {
-                stack.push((path, depth + 1));
-            } else if path.extension().is_some_and(|e| e == extension) {
+                subdirs.push(path);
+            } else if matches(&path) {
                 files.push(path);
             }
         }
+        // Reverse-sorted onto the stack, so subdirectories pop in order.
+        subdirs.sort_unstable_by(|a, b| b.cmp(a));
+        stack.extend(subdirs.into_iter().map(|p| (p, depth + 1)));
     }
     files.sort();
     Ok(files)
+}
+
+/// The real directories a walk has already entered.
+#[derive(Default)]
+struct SeenDirs(HashSet<PathBuf>);
+
+impl SeenDirs {
+    /// Records `dir` and reports whether this is its first visit.
+    ///
+    /// A directory whose canonical path cannot be resolved is entered,
+    /// so that reading it reports the underlying error as before.
+    fn first_visit(&mut self, dir: &Path) -> bool {
+        fs::canonicalize(dir).map_or(true, |real| self.0.insert(real))
+    }
+}
+
+/// Whether `path` has exactly the extension `extension`.
+fn has_extension(path: &Path, extension: &str) -> bool {
+    path.extension().is_some_and(|e| e == extension)
+}
+
+/// Whether `path`'s extension, lowercased, is one of `extensions`.
+fn has_any_extension_ignore_case(path: &Path, extensions: &[&str]) -> bool {
+    path.extension().is_some_and(|ext| {
+        let lower = ext.to_string_lossy().to_lowercase();
+        extensions.contains(&lower.as_str())
+    })
 }
 
 /// Recursively collects files matching `extension`, capped at
@@ -260,13 +285,14 @@ pub fn walk_files_bounded_count(
     max_files: usize,
 ) -> Result<Vec<PathBuf>, SsgError> {
     let mut files = Vec::new();
+    let mut seen = SeenDirs::default();
     let mut stack = vec![dir.to_path_buf()];
 
     while let Some(current) = stack.pop() {
         if files.len() >= max_files {
             break;
         }
-        if !current.is_dir() {
+        if !current.is_dir() || !seen.first_visit(&current) {
             continue;
         }
         let entries = fs::read_dir(&current).with_path(&current)?;
@@ -527,6 +553,80 @@ mod tests {
         }
         let result = walk_files_bounded_count(dir.path(), "html", 2).unwrap();
         assert!(result.len() <= 4);
+    }
+
+    // -------------------------------------------------------------------
+    // symlink loops (unix-only)
+    // -------------------------------------------------------------------
+
+    /// A tree with one file per level and two links back to the root,
+    /// so a walk that follows links blindly branches at every level.
+    #[cfg(unix)]
+    fn tree_with_symlink_loops() -> tempfile::TempDir {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+        fs::create_dir_all(root.join("sub")).unwrap();
+        fs::write(root.join("b.md"), "").unwrap();
+        fs::write(root.join("sub/a.md"), "").unwrap();
+        symlink(root, root.join("sub/up1")).unwrap();
+        symlink(root, root.join("sub/up2")).unwrap();
+        dir
+    }
+
+    /// Runs `walk` on a thread and fails if it does not return promptly.
+    #[cfg(unix)]
+    fn relative_within_deadline(
+        root: &Path,
+        walk: fn(&Path) -> Vec<PathBuf>,
+    ) -> Vec<PathBuf> {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let walk_root = root.to_path_buf();
+        let _ = std::thread::spawn(move || {
+            let _ = tx.send(walk(&walk_root));
+        });
+        let found = rx
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("walk did not finish within 10 s");
+        found
+            .iter()
+            .map(|p| p.strip_prefix(root).unwrap().to_path_buf())
+            .collect()
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn collecting_walkers_enter_each_directory_once() {
+        let dir = tree_with_symlink_loops();
+        let expected = ["b.md", "sub/a.md"].map(PathBuf::from);
+        let walkers: [fn(&Path) -> Vec<PathBuf>; 4] = [
+            |r| walk_files(r, "md").unwrap(),
+            |r| walk_files_multi(r, &["md"]).unwrap(),
+            |r| walk_files_bounded_depth(r, "md", 128).unwrap(),
+            |r| {
+                let mut v = walk_files_bounded_count(r, "md", 1000).unwrap();
+                v.sort();
+                v
+            },
+        ];
+        for walk in walkers {
+            assert_eq!(relative_within_deadline(dir.path(), walk), expected);
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn collecting_walk_still_follows_a_symlinked_directory() {
+        use std::os::unix::fs::symlink;
+
+        let outside = tempdir().unwrap();
+        fs::write(outside.path().join("shared.md"), "").unwrap();
+        let dir = tempdir().unwrap();
+        symlink(outside.path(), dir.path().join("linked")).unwrap();
+
+        let found = walk_files(dir.path(), "md").unwrap();
+        assert_eq!(found, [dir.path().join("linked/shared.md")]);
     }
 
     // -------------------------------------------------------------------

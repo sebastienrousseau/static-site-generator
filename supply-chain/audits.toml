@@ -156,6 +156,12 @@ criteria = "safe-to-deploy"
 delta = "0.0.2 -> 0.0.4"
 notes = "Same-author crate (sebastienrousseau/langweave). Delta 0.0.2 -> 0.0.4: Edition 2024 and rust-version 1.89.0; #![forbid(unsafe_code)]; build.rs is version_check only."
 
+[[audits.lol_html]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "3.0.1 -> 3.0.3"
+notes = "Parser, lexer and selector fixes in 17 source files; no unsafe added or removed, no process, network, env or file I/O, no dependency changes."
+
 [[audits.markup5ever]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
@@ -222,11 +228,29 @@ criteria = "safe-to-deploy"
 delta = "0.2.1 -> 0.3.0"
 notes = "Delta 0.2.1 -> 0.3.0 (6 files, +163/-135): edition 2024 and rust-version 1.88; clap optional behind a new cli feature so the library no longer pulls it; model state shared through an Arc; as_chunks replaces chunks_exact for tensor decoding; layout probing folded into one candidate table. No unsafe, no build script, no new dependency; ssg-search's local-only feature keeps it off the network."
 
+[[audits.notify]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "8.2.0 -> 8.2.1"
+notes = "macOS FSEvents backend moves from fsevent-sys to objc2 bindings: CoreFoundation FFI calls, two C callbacks and two Send wrappers. New file writes and removals are in test modules only. rust-version 1.85."
+
 [[audits.noyalib]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
 version = "0.0.12"
 notes = 'Same-author crate, reviewed from the published crates.io source. #![forbid(unsafe_code)] enforced at lib.rs:342 — all grep hits for the string "unsafe" are doc comments describing this guarantee, not code. build.rs runs only `rustc --version` (via the RUSTC env var) to detect a nightly toolchain for an optional SIMD feature gate; no network access, no arbitrary command execution. No unsafe FFI, no ambient file/network I/O outside the documented YAML parse/serialize surface.'
+
+[[audits.objc2-core-foundation]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.3.2"
+notes = "Generated CoreFoundation bindings from the objc2 project (author of objc2 and dispatch2, already exempted here); no build.rs. Pulled in by notify 8.2.1 on macOS."
+
+[[audits.objc2-core-services]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.3.2"
+notes = "Generated CoreServices bindings from the objc2 project; no build.rs. Pulled in by notify 8.2.1 on macOS for FSEvents."
 
 [[audits.oxml]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
@@ -424,6 +448,12 @@ who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "1.26.1 -> 1.28.0"
 notes = "Delta 1.26.1 -> 1.28.0 (8 files, +591/-131; 5 .rs files); no unsafe added or removed; no build.rs change; dependency changes: uuid-rng-internal-lib 1.26.1 -> 1.28.0."
+
+[[audits.uuid]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.28.0 -> 1.29.0"
+notes = "Adds NonNilUuid constructors for v1-v8; the ten new unsafe new_unchecked calls wrap freshly generated versioned UUIDs, whose non-zero version nibble makes them non-nil."
 
 [[audits.web_atoms]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
