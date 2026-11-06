@@ -178,6 +178,10 @@ ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.72" }
 ssg-search = { path = "crates/ssg-search", version = "0.0.72" }
 thiserror = "2"
 staticdatagen = "0.0.30"
+# Token colours for highlight.css (#822). Already in the graph through
+# staticdatagen -> html-generator, which emits the class-based spans this
+# stylesheet targets; naming it here adds no crate.
+mdx-gen = "0.0.7"
 toml = "1.1.2"
 
 # Real cryptographic hashing for Subresource Integrity (issue #468 follow-up).

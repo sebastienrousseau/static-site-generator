@@ -12,6 +12,9 @@ use crate::plugin::{Plugin, PluginContext};
 use crate::util::head_dom::inject_before_head_close;
 use std::fs;
 
+mod theme;
+use theme::generate_highlight_css;
+
 /// Plugin that adds syntax highlighting CSS classes to code blocks.
 ///
 /// Runs in `after_compile`. Finds `<pre><code class="language-X">`
@@ -173,35 +176,6 @@ fn inject_css_link(html: &str) -> String {
     }
 }
 
-/// Generates a CSS theme for syntax highlighting.
-fn generate_highlight_css(_theme: &str) -> String {
-    r#"/* Syntax highlighting — GitHub-inspired theme */
-pre.highlight {
-  background: #f6f8fa;
-  border: 1px solid #d0d7de;
-  border-radius: 6px;
-  padding: 1em;
-  overflow-x: auto;
-  font-size: 0.875em;
-  line-height: 1.45;
-}
-pre.highlight code {
-  background: none;
-  padding: 0;
-  border: none;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-}
-@media (prefers-color-scheme: dark) {
-  pre.highlight {
-    background: #161b22;
-    border-color: #30363d;
-    color: #e6edf3;
-  }
-}
-"#
-    .to_string()
-}
-
 #[cfg(test)]
 fn collect_html_files(
     dir: &std::path::Path,
@@ -265,13 +239,6 @@ mod tests {
         let html = "<html><head><title>X</title></head><body></body></html>";
         let result = inject_css_link(html);
         assert!(result.contains("highlight.css"));
-    }
-
-    #[test]
-    fn test_generate_css() {
-        let css = generate_highlight_css("github");
-        assert!(css.contains("pre.highlight"));
-        assert!(css.contains("prefers-color-scheme: dark"));
     }
 
     // -------------------------------------------------------------------

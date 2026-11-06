@@ -3467,6 +3467,7 @@ dependencies = [
  "image",
  "log",
  "lol_html",
+ "mdx-gen",
  "minijinja",
  "notify",
  "noyalib 0.0.58",
