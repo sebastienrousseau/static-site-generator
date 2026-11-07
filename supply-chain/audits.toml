@@ -156,6 +156,11 @@ criteria = "safe-to-deploy"
 delta = "0.0.2 -> 0.0.4"
 notes = "Same-author crate (sebastienrousseau/langweave). Delta 0.0.2 -> 0.0.4: Edition 2024 and rust-version 1.89.0; #![forbid(unsafe_code)]; build.rs is version_check only."
 
+[[audits.log]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.34 -> 0.4.35"
+
 [[audits.lol_html]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
