@@ -294,7 +294,8 @@ impl Paths {
     ///
     /// # Errors
     ///
-    /// Returns [`SsgError::PathTraversal`] if any path contains `..`,
+    /// Returns [`SsgError::PathTraversal`] if any path has a `..`
+    /// component,
     /// [`SsgError::Validation`] for malformed paths, or
     /// [`SsgError::SymlinkForbidden`] if a path points at a symlink.
     pub fn validate(&self) -> Result<(), SsgError> {
@@ -305,11 +306,17 @@ impl Paths {
             ("build", &self.build),
             ("template", &self.template),
         ] {
-            // For non-existent paths, validate their components
-            let path_str = path.to_string_lossy();
-            if path_str.contains("..") {
+            // Reject any `..` *component*, the same rule
+            // `create_directories` applies to these paths through
+            // `is_safe_path`. Matching components rather than the
+            // substring means `posts/a..b` is an ordinary name.
+            if path
+                .components()
+                .any(|c| c == std::path::Component::ParentDir)
+            {
                 return Err(SsgError::PathTraversal { path: path.clone() });
             }
+            let path_str = path.to_string_lossy();
             if path_str.contains("//") {
                 return Err(SsgError::Validation {
                     field: name.to_string(),
@@ -3311,6 +3318,34 @@ mod tests {
                 message: String::new(),
             },
         );
+    }
+
+    fn paths_with_content(content: &str) -> Paths {
+        Paths {
+            site: PathBuf::from("public"),
+            content: PathBuf::from(content),
+            build: PathBuf::from("build"),
+            template: PathBuf::from("templates"),
+        }
+    }
+
+    #[test]
+    fn paths_validate_accepts_dotted_names() {
+        // A substring check for ".." used to reject these.
+        for p in ["posts/a..b", "v1..v2", "..hidden"] {
+            assert!(paths_with_content(p).validate().is_ok(), "{p}");
+        }
+    }
+
+    #[test]
+    fn paths_validate_rejects_parent_components() {
+        for p in ["..", "../x", "a/../../x", "a/../b", "/srv/../etc"] {
+            let err = paths_with_content(p).validate().unwrap_err();
+            assert!(
+                matches!(err, SsgError::PathTraversal { .. }),
+                "{p}: {err:?}"
+            );
+        }
     }
 
     #[test]

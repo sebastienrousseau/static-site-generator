@@ -102,8 +102,15 @@ pub(super) fn validate_path_safety(
         });
     }
 
-    // Parent directory traversal check
-    if !path.is_absolute() && path_str.contains("..") {
+    // Parent directory traversal check. A relative path is resolved
+    // lexically against where it starts and refused only if it climbs
+    // above that point, so `a..b.md` and `a/../b` are fine and
+    // `../x` or `a/../../x` are not. Absolute paths are left alone:
+    // the user typed them on the command line or in their own config,
+    // and an absolute path can name any location with or without `..`.
+    if !path.is_absolute()
+        && commons::path::safe_join(Path::new(""), path).is_err()
+    {
         return Err(CliError::InvalidPath {
             field: field.to_string(),
             details: "Path contains parent directory traversal".to_string(),
@@ -313,6 +320,26 @@ mod tests {
     fn test_validate_path_with_traversal() {
         let result = validate_path_safety(Path::new("../etc/passwd"), "test");
         assert_invalid_path(result);
+    }
+
+    #[test]
+    fn dotted_names_are_not_traversal() {
+        // A substring check for ".." used to reject these.
+        for p in ["a..b.md", "content/v1..v2", "..hidden"] {
+            assert!(validate_path_safety(Path::new(p), "test").is_ok(), "{p}");
+        }
+    }
+
+    #[test]
+    fn relative_paths_must_not_climb_out() {
+        for p in ["..", "../x", "a/../../x", "a/./../../x"] {
+            assert_invalid_path(validate_path_safety(Path::new(p), "test"));
+        }
+    }
+
+    #[test]
+    fn backtracking_inside_a_relative_path_is_allowed() {
+        assert!(validate_path_safety(Path::new("a/../b"), "test").is_ok());
     }
 
     #[test]

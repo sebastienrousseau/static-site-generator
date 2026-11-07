@@ -164,6 +164,9 @@ tracing-test = "0.2"
 anyhow = "1.0.102"
 clap = { version = "4.6.1", features = ["derive", "cargo", "env"] }
 http-handle = "0.0.10"
+# Shared path-containment rule (safe_join / is_within). The `path`
+# feature has no dependencies of its own.
+euxis-commons = { version = "0.0.9", default-features = false, features = ["path"] }
 log = { version = "0.4.29", features = ["std"] }
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 # adr: ADR-0002 — Rayon is the build-pipeline CPU scheduler.
