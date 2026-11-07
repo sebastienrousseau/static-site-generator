@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   longer read as empty, and a `>` inside a quoted `src` no longer cuts
   the `[ai]` plugin's tag scan short.
 
+### Changed
+
+- **CI lints the whole workspace.** The clippy steps covered only the
+  `ssg` crate, so clippy errors had built up in the `crates/` members,
+  benches and integration tests. CI now also runs `make lint`, the
+  workspace-wide clippy run, and the errors are fixed.
+
 ## [0.0.74] - 2026-11-07
 
 ### Changed
