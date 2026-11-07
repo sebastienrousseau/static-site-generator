@@ -819,6 +819,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "euxis-commons"
+version = "0.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5fc280f4abcbbb3b453818482c3689639cab5e2a29e827ad8d2d712cf133f3ee"
+
+[[package]]
 name = "fancy-regex"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2745,11 +2751,12 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
  "clap",
+ "euxis-commons 0.0.9",
  "frontmatter-gen",
  "http-handle",
  "image",
@@ -2782,7 +2789,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-a11y"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "serde",
  "serde_json",
@@ -2790,7 +2797,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "log",
  "noyalib 0.0.58",
@@ -2813,14 +2820,14 @@ dependencies = [
 
 [[package]]
 name = "ssg-i18n"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "ssg-rpc"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "inventory",
  "schemars",
@@ -2832,7 +2839,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc-macro"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2841,7 +2848,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-search"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "serde",
  "serde_json",
