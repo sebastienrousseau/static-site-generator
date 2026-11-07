@@ -357,10 +357,6 @@ criteria = "safe-to-deploy"
 version = "0.1.10"
 criteria = "safe-to-deploy"
 
-[[exemptions.euxis-commons]]
-version = "0.0.2"
-criteria = "safe-to-deploy"
-
 [[exemptions.fail]]
 version = "0.5.1"
 criteria = "safe-to-deploy"
