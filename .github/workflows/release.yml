@@ -572,84 +572,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cat > /tmp/release-body.md << 'BODY'
-          ## Install
-
-          **Homebrew (macOS / Linux):**
-          ```sh
-          brew install sebastienrousseau/tap/ssg
-          ```
-
-          **One-liner (macOS / Linux):**
-          ```sh
-          curl -fsSL https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/scripts/install.sh | sh
-          ```
-
-          **Cargo (any platform with Rust):**
-          ```sh
-          cargo install ssg
-          ```
-
-          **Debian / Ubuntu:**
-          ```sh
-          sudo apt install ./ssg_*_amd64.deb
-          ```
-
-          **Fedora / RHEL:**
-          ```sh
-          sudo rpm -i ssg-*.rpm
-          ```
-
-          **macOS (.pkg installer):**
-          ```sh
-          sudo installer -pkg ssg-*.pkg -target /
-          ```
-
-          **Windows (MSI):** download `ssg-*.msi`, double-click to install.
-
-          **Windows (Scoop):**
-          ```powershell
-          scoop install https://github.com/sebastienrousseau/static-site-generator/releases/download/${{ github.ref_name }}/ssg.json
-          ```
-
-          **Arch Linux (AUR):**
-          ```sh
-          yay -S static-site-generator
-          ```
-
-          **Container (GHCR):**
-          ```sh
-          docker pull ghcr.io/sebastienrousseau/static-site-generator:latest
-          ```
-
-          ---
-
-          ## Verify
-
-          Each archive ships a `.sha256` checksum. Where the maintainer has
-          published a GPG key, a `.asc` detached signature is also provided.
-
-          ```sh
-          shasum -a 256 -c ssg-*.tar.gz.sha256
-          gpg --verify ssg-*.tar.gz.asc ssg-*.tar.gz   # if .asc present
-          ```
-
-          **SLSA v1.1 provenance (Level 3, Sigstore-signed):**
-
-          ```sh
-          # Install once: https://github.com/slsa-framework/slsa-verifier
-          slsa-verifier verify-artifact ssg-*.tar.gz \
-            --provenance-path ssg-*.intoto.jsonl \
-            --source-uri github.com/sebastienrousseau/static-site-generator \
-            --source-tag ${{ github.ref_name }}
-          ```
-
-          See [docs/security/sbom-provenance.md](https://github.com/sebastienrousseau/static-site-generator/blob/main/docs/security/sbom-provenance.md)
-          for the full SBOM (CycloneDX + SPDX) and SLSA verification guide.
-
-          ---
-
-          BODY
+          # The title is "ssg <version>", and the body is written by
+          # scripts/release-notes.sh once every asset is attached (below):
+          # the highlights from docs/releases/<tag>.md, What's Changed,
+          # the SHA-256 of every asset and the Full Changelog link. Until
+          # then the page carries a one-line placeholder. This replaced a
+          # fixed Install/Verify body and the title "v<version>", which
+          # left v0.0.73 and v0.0.74 without highlights or checksums.
+          # Install and verification steps live in the README and in
+          # docs/security/sbom-provenance.md.
+          title="ssg ${GITHUB_REF_NAME#v}"
+          echo 'Release notes follow once every asset is attached.' > /tmp/release-body.md
 
           # Idempotent: create the release if it doesn't exist, else
           # edit-in-place and upload artifacts with --clobber. This
@@ -673,14 +606,13 @@ jobs:
                >/dev/null 2>&1; then
             echo "Release $GITHUB_REF_NAME already exists — updating in place"
             gh release edit "$GITHUB_REF_NAME" \
-              --title "$GITHUB_REF_NAME" \
+              --title "$title" \
               --notes-file /tmp/release-body.md
             gh release upload "$GITHUB_REF_NAME" artifacts/* --clobber
           else
             gh release create "$GITHUB_REF_NAME" \
-              --title "$GITHUB_REF_NAME" \
+              --title "$title" \
               --notes-file /tmp/release-body.md \
-              --generate-notes \
               artifacts/*
           fi
 
@@ -697,6 +629,10 @@ jobs:
                  "but $expected were built — something else captured the upload"
             exit 1
           fi
+
+          # Every asset is attached, so the page can carry its checksums.
+          scripts/release-notes.sh "$GITHUB_REF_NAME" > /tmp/release-notes.md
+          gh release edit "$GITHUB_REF_NAME" --notes-file /tmp/release-notes.md
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2

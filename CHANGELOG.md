@@ -27,6 +27,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Release pages are complete when the workflow finishes.** The
+  release workflow titled each release `v<version>` and wrote a fixed
+  Install/Verify body, so v0.0.73 and v0.0.74 shipped without
+  highlights or checksums and were corrected by hand. It now titles the
+  release `ssg <version>` and, once every asset is attached, writes the
+  body with `scripts/release-notes.sh`: the highlights from
+  `docs/releases/<tag>.md`, What's Changed, the SHA-256 of every asset
+  and the Full Changelog link.
 - **CI lints the whole workspace.** The clippy steps covered only the
   `ssg` crate, so clippy errors had built up in the `crates/` members,
   benches and integration tests. CI now also runs `make lint`, the
