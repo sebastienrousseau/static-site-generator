@@ -57,6 +57,23 @@ user-id = 4484
 user-login = "hsivonen"
 user-name = "Henri Sivonen"
 
+[[publisher.euxis-commons]]
+version = "0.0.2"
+when = "2026-03-07"
+user-id = 186843
+user-login = "sebastienrousseau"
+user-name = "Sebastien Rousseau"
+
+[[publisher.euxis-commons]]
+version = "0.0.6"
+when = "2026-11-01"
+trusted-publisher = "github:sebastienrousseau/commons"
+
+[[publisher.euxis-commons]]
+version = "0.0.9"
+when = "2026-11-07"
+trusted-publisher = "github:sebastienrousseau/commons"
+
 [[publisher.frontmatter-gen]]
 version = "0.0.12"
 when = "2026-10-09"
@@ -157,8 +174,8 @@ user-login = "dtolnay"
 user-name = "David Tolnay"
 
 [[publisher.toml]]
-version = "1.1.8+spec-1.1.0"
-when = "2026-10-09"
+version = "1.2.0+spec-1.1.0"
+when = "2026-11-04"
 user-id = 6743
 user-login = "epage"
 user-name = "Ed Page"
@@ -185,8 +202,8 @@ user-login = "epage"
 user-name = "Ed Page"
 
 [[publisher.toml_writer]]
-version = "1.1.3+spec-1.1.0"
-when = "2026-10-08"
+version = "1.2.0+spec-1.1.0"
+when = "2026-11-04"
 user-id = 6743
 user-login = "epage"
 user-name = "Ed Page"

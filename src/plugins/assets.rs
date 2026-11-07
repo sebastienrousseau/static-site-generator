@@ -331,59 +331,17 @@ fn resolve_css_url(
         return None;
     }
 
-    // Build the absolute on-disk path.
-    let candidate = if let Some(stripped) = trimmed.strip_prefix('/') {
-        site_dir.join(stripped)
+    // Express the URL relative to the site directory, then resolve it
+    // lexically (no filesystem access, so already-renamed targets
+    // still resolve). Anything that climbs above the site directory,
+    // even transiently, is refused.
+    let relative = if let Some(stripped) = trimmed.strip_prefix('/') {
+        PathBuf::from(stripped)
     } else {
-        css_dir.join(trimmed)
+        css_dir.strip_prefix(site_dir).ok()?.join(trimmed)
     };
-
-    // Logical canonicalisation: collapse `..` and `.` without
-    // touching the filesystem so non-existent (already-renamed)
-    // targets still resolve.
-    let mut components: Vec<&std::ffi::OsStr> = Vec::new();
-    for c in candidate.components() {
-        match c {
-            std::path::Component::CurDir => {}
-            std::path::Component::ParentDir => {
-                let _ = components.pop();
-            }
-            std::path::Component::Normal(s) => components.push(s),
-            std::path::Component::RootDir | std::path::Component::Prefix(_) => {
-                components.clear();
-            }
-        }
-    }
-    let mut resolved = PathBuf::new();
-    for c in components {
-        resolved.push(c);
-    }
-
     // The manifest stores keys relative to site_dir (no leading slash).
-    let site_components: Vec<&std::ffi::OsStr> = site_dir
-        .components()
-        .filter_map(|c| match c {
-            std::path::Component::Normal(s) => Some(s),
-            _ => None,
-        })
-        .collect();
-    let resolved_components: Vec<&std::ffi::OsStr> = resolved
-        .components()
-        .filter_map(|c| match c {
-            std::path::Component::Normal(s) => Some(s),
-            _ => None,
-        })
-        .collect();
-
-    if resolved_components.len() < site_components.len()
-        || resolved_components[..site_components.len()] != site_components[..]
-    {
-        return None;
-    }
-
-    let rel: PathBuf = resolved_components[site_components.len()..]
-        .iter()
-        .collect();
+    let rel = commons::path::safe_join(Path::new(""), relative).ok()?;
     Some(rel.to_string_lossy().replace('\\', "/"))
 }
 
@@ -1748,6 +1706,31 @@ mod tests {
         let site = Path::new("/abs/site");
         let out = resolve_css_url("img.png", Path::new("./css"), site);
         assert!(out.is_none());
+    }
+
+    #[test]
+    fn resolve_css_url_keeps_dotted_names_and_inside_backtracks() {
+        let site = Path::new("/abs/site");
+        let css_dir = site.join("css");
+        assert_eq!(
+            resolve_css_url("../img/a..b.png", &css_dir, site).as_deref(),
+            Some("img/a..b.png")
+        );
+        assert_eq!(
+            resolve_css_url("/img/./x/../logo.svg", &css_dir, site).as_deref(),
+            Some("img/logo.svg")
+        );
+    }
+
+    #[test]
+    fn resolve_css_url_refuses_climbing_out_even_to_come_back() {
+        // `css/../../site/x.png` leaves the site directory before
+        // re-entering it by name; that is still an escape.
+        let site = Path::new("/abs/site");
+        let css_dir = site.join("css");
+        for url in ["../../x.png", "../../site/x.png", "/../site/x.png"] {
+            assert_eq!(resolve_css_url(url, &css_dir, site), None, "{url}");
+        }
     }
 
     #[test]

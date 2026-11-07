@@ -7,6 +7,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.74] - 2026-11-07
+
+### Changed
+
+- **One path-containment rule, from `euxis-commons`.** ssg now depends
+  on `euxis-commons` 0.0.9 (feature `path` only, no dependencies of its
+  own) and uses its `safe_join` and `is_within` where it carried its own
+  copies: the CLI path check, the CSS `url()` resolver in the assets
+  plugin, and `fs_ops::is_path_within_root`. `fs_ops::is_safe_path`
+  keeps its stricter rule (any `..` component is refused) because the
+  paths it checks may be absolute and have no root to measure against.
+  `is_path_within_root` now names the root, not the path, when the root
+  is the side that does not exist.
+- **Dependencies.** `toml` 1.1.8 to 1.2.0 (#830); `euxis-commons` 0.0.9
+  is new, as above.
+- **CI.** `github/codeql-action` 4.39.2 to 4.39.3 (init, analyze and
+  upload-sarif) (#831).
+
+### Fixed
+
+- **Names containing `..` were refused as traversal.** The CLI path
+  check and `Paths::validate` tested the path string for the substring
+  `..`, so `a..b.md` or `v1..v2` were rejected. Both now look at path
+  components. On the CLI a relative path is refused only when it climbs
+  above where it starts (`../x`, `a/../../x`), so `a/../b` is accepted;
+  `Paths::validate` refuses any `..` component, matching
+  `create_directories`.
+- **CSS `url()` that leaves the site and comes back.** The resolver
+  clamped a `..` above the filesystem root and compared prefixes, so
+  `css/../../site/x.png` resolved to a manifest key when the site
+  directory was named `site`. A URL that climbs above the site directory
+  at any point is now left as written.
+
 ## [0.0.73] - 2026-11-06
 
 ### Fixed

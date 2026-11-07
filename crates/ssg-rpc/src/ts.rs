@@ -781,7 +781,7 @@ mod tests {
         // dispatch.rs tests but is also registered into the live
         // inventory).
         let out = emit_typescript(&opts());
-        assert!(!out.is_empty());
+        assert_ne!(out, "");
     }
 
     #[test]

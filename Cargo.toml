@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.73"                      # The version of the library
+version = "0.0.74"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.89.0"                 # Minimum supported Rust version (ADR-0010; dependencies alone need 1.88)
@@ -164,6 +164,9 @@ tracing-test = "0.2"
 anyhow = "1.0.102"
 clap = { version = "4.6.1", features = ["derive", "cargo", "env"] }
 http-handle = "0.0.10"
+# Shared path-containment rule (safe_join / is_within). The `path`
+# feature has no dependencies of its own.
+euxis-commons = { version = "0.0.9", default-features = false, features = ["path"] }
 log = { version = "0.4.29", features = ["std"] }
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 # adr: ADR-0002 — Rayon is the build-pipeline CPU scheduler.
@@ -171,11 +174,11 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.73" }
-ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.73", optional = true }
-ssg-core = { path = "crates/ssg-core", version = "0.0.73" }
-ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.73" }
-ssg-search = { path = "crates/ssg-search", version = "0.0.73" }
+ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.74" }
+ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.74", optional = true }
+ssg-core = { path = "crates/ssg-core", version = "0.0.74" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.74" }
+ssg-search = { path = "crates/ssg-search", version = "0.0.74" }
 thiserror = "2"
 staticdatagen = "0.0.30"
 # Token colours for highlight.css (#822). Already in the graph through

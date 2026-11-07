@@ -1092,6 +1092,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "euxis-commons"
+version = "0.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5fc280f4abcbbb3b453818482c3689639cab5e2a29e827ad8d2d712cf133f3ee"
+
+[[package]]
 name = "fail"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3455,12 +3461,13 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
  "clap",
  "criterion",
+ "euxis-commons 0.0.9",
  "fail",
  "frontmatter-gen",
  "http-handle",
@@ -3503,7 +3510,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-a11y"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "serde",
  "serde_json",
@@ -3511,7 +3518,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "log",
  "noyalib 0.0.58",
@@ -3525,7 +3532,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-heap-probe"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "ssg",
  "tempfile",
@@ -3533,14 +3540,14 @@ dependencies = [
 
 [[package]]
 name = "ssg-i18n"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "ssg-mcp"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "schemars",
  "serde",
@@ -3550,7 +3557,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "criterion",
  "inventory",
@@ -3563,7 +3570,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc-macro"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3572,7 +3579,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-search"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",
@@ -3586,7 +3593,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-wasm"
-version = "0.0.73"
+version = "0.0.74"
 dependencies = [
  "js-sys",
  "serde-wasm-bindgen",
@@ -3954,9 +3961,9 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "1.1.8+spec-1.1.0"
+version = "1.2.0+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20489e00e4d8741d6be680764cc12e270655e375a20d1011e844a9c3379e678d"
+checksum = "c5ffcdf8f50436dbbfd675c1fe1b8e0854f42b7defea8584bdebe1aee900e561"
 dependencies = [
  "indexmap",
  "serde_core",
@@ -3999,9 +4006,9 @@ dependencies = [
 
 [[package]]
 name = "toml_writer"
-version = "1.1.3+spec-1.1.0"
+version = "1.2.0+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06bdbd8cfc056b8d2e2e85f29b56a3bdbecb527cef81eb39e3e7b98af4652770"
+checksum = "009dbb7700f11c55ef83aebbe4c0e9cf1f1ac0844bd8d6f00dc38f302026e13a"
 
 [[package]]
 name = "tracing"

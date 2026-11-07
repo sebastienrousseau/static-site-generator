@@ -275,6 +275,11 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<(), SsgError> {
 /// (via a symlink) to an arbitrary location. Callers that need that
 /// stronger guarantee should also use [`is_path_within_root`].
 ///
+/// This is deliberately stricter than `commons::path::safe_join`,
+/// which allows a `..` that stays inside its root (`a/../b`): these
+/// paths may be absolute, so there is no root to measure against, and
+/// any `..` is refused instead.
+///
 /// # Examples
 ///
 /// ```rust
@@ -340,9 +345,11 @@ pub fn is_safe_path(path: &Path) -> Result<bool, SsgError> {
 /// assert!(is_path_within_root(&inner, root.path()).unwrap());
 /// ```
 pub fn is_path_within_root(path: &Path, root: &Path) -> Result<bool, SsgError> {
-    let canonical_path = path.canonicalize().with_path(path)?;
-    let canonical_root = root.canonicalize().with_path(root)?;
-    Ok(canonical_path.starts_with(&canonical_root))
+    commons::path::is_within(root, path).map_err(|source| SsgError::Io {
+        // Name whichever side could not be resolved.
+        path: if root.exists() { path } else { root }.to_path_buf(),
+        source,
+    })
 }
 
 /// Verifies the safety of a file for processing.
@@ -910,7 +917,11 @@ mod tests {
     fn is_path_within_root_errors_on_nonexistent_path() {
         let tmp = tempdir().unwrap();
         let missing = tmp.path().join("does-not-exist-yet");
-        assert!(is_path_within_root(&missing, tmp.path()).is_err());
+        let err = is_path_within_root(&missing, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, SsgError::Io { path, .. } if *path == missing),
+            "{err:?}"
+        );
     }
 
     #[test]
@@ -919,7 +930,11 @@ mod tests {
         let existing = tmp.path().join("child");
         fs::create_dir_all(&existing).unwrap();
         let missing_root = tmp.path().join("no-such-root");
-        assert!(is_path_within_root(&existing, &missing_root).is_err());
+        let err = is_path_within_root(&existing, &missing_root).unwrap_err();
+        assert!(
+            matches!(&err, SsgError::Io { path, .. } if *path == missing_root),
+            "{err:?}"
+        );
     }
 
     #[test]

@@ -485,7 +485,7 @@ mod tests {
         let tok = enc.serialize_tokenizer();
         let engine = VectorEngine::new(&model, &tok, &[], 0).unwrap();
         let out = engine.search("anything", 10);
-        assert!(out.is_empty());
+        assert_eq!(out, Vec::<f32>::new());
     }
 
     #[test]
@@ -493,7 +493,7 @@ mod tests {
         let (model, tok, emb, n) = build_corpus(&["a", "b"]);
         let engine = VectorEngine::new(&model, &tok, &emb, n).unwrap();
         let bad = vec![0.0_f32; 5];
-        assert!(engine.search_vec(&bad, 1).is_empty());
+        assert_eq!(engine.search_vec(&bad, 1), Vec::<f32>::new());
     }
 
     #[test]

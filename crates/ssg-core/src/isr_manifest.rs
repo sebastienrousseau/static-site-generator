@@ -557,7 +557,7 @@ mod tests {
         assert_eq!(tdeps, vec!["/a.html", "/b.html"]);
 
         let none = m.urls_for_source("unknown.md");
-        assert!(none.is_empty());
+        assert_eq!(none, Vec::<String>::new());
     }
 
     #[test]

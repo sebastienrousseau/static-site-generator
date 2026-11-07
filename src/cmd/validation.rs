@@ -102,8 +102,20 @@ pub(super) fn validate_path_safety(
         });
     }
 
-    // Parent directory traversal check
-    if !path.is_absolute() && path_str.contains("..") {
+    // Parent directory traversal check. A relative path is resolved
+    // lexically against where it starts and refused only if it climbs
+    // above that point, so `a..b.md` and `a/../b` are fine and
+    // `../x` or `a/../../x` are not. Absolute paths are left alone:
+    // the user typed them on the command line or in their own config,
+    // and an absolute path can name any location with or without `..`.
+    // "Absolute" here means anchored: it starts at a root or a drive
+    // prefix. On Windows `\foo` and `C:foo` are anchored but not
+    // `is_absolute()`, and must be accepted as they were before.
+    let anchored = matches!(
+        path.components().next(),
+        Some(std::path::Component::Prefix(_) | std::path::Component::RootDir)
+    );
+    if !anchored && commons::path::safe_join(Path::new(""), path).is_err() {
         return Err(CliError::InvalidPath {
             field: field.to_string(),
             details: "Path contains parent directory traversal".to_string(),
@@ -316,6 +328,26 @@ mod tests {
     }
 
     #[test]
+    fn dotted_names_are_not_traversal() {
+        // A substring check for ".." used to reject these.
+        for p in ["a..b.md", "content/v1..v2", "..hidden"] {
+            assert!(validate_path_safety(Path::new(p), "test").is_ok(), "{p}");
+        }
+    }
+
+    #[test]
+    fn relative_paths_must_not_climb_out() {
+        for p in ["..", "../x", "a/../../x", "a/./../../x"] {
+            assert_invalid_path(validate_path_safety(Path::new(p), "test"));
+        }
+    }
+
+    #[test]
+    fn backtracking_inside_a_relative_path_is_allowed() {
+        assert!(validate_path_safety(Path::new("a/../b"), "test").is_ok());
+    }
+
+    #[test]
     fn test_validate_path_with_reserved_name() {
         assert_invalid_path(validate_path_safety(Path::new("con"), "test"));
         assert_invalid_path(validate_path_safety(Path::new("aux"), "test"));
@@ -355,6 +387,19 @@ mod tests {
         // `/` has no file stem, covering the `if let Some(stem)` miss
         // branch; it exists and is not a symlink, so the result is Ok.
         assert!(validate_path_safety(Path::new("/"), "test").is_ok());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn validate_path_accepts_windows_anchored_paths() {
+        // Anchored at a root or a drive but not `is_absolute()` on
+        // Windows; 0.0.73 accepted them and so must the safe_join check.
+        for p in [r"\site", r"C:site", r"\..\x"] {
+            assert!(
+                validate_path_safety(Path::new(p), "test").is_ok(),
+                "{p} should be accepted"
+            );
+        }
     }
 
     #[cfg(feature = "test-fault-injection")]

@@ -248,7 +248,7 @@ mod tests {
     #[test]
     fn extract_all_style_blocks_ignores_unterminated_block() {
         let html = "<html><head><style>button{width:8px}";
-        assert!(extract_all_style_blocks(html).is_empty());
+        assert_eq!(extract_all_style_blocks(html), Vec::<String>::new());
     }
 
     #[test]
@@ -280,7 +280,7 @@ mod tests {
     #[test]
     fn parse_top_level_rules_skips_empty_selector() {
         let rules = parse_top_level_rules("{ width: 10px; }");
-        assert!(rules.is_empty());
+        assert_eq!(rules, Vec::<(String, String)>::new());
     }
 
     #[test]
