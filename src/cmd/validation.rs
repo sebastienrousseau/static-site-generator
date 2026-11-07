@@ -108,9 +108,14 @@ pub(super) fn validate_path_safety(
     // `../x` or `a/../../x` are not. Absolute paths are left alone:
     // the user typed them on the command line or in their own config,
     // and an absolute path can name any location with or without `..`.
-    if !path.is_absolute()
-        && commons::path::safe_join(Path::new(""), path).is_err()
-    {
+    // "Absolute" here means anchored: it starts at a root or a drive
+    // prefix. On Windows `\foo` and `C:foo` are anchored but not
+    // `is_absolute()`, and must be accepted as they were before.
+    let anchored = matches!(
+        path.components().next(),
+        Some(std::path::Component::Prefix(_) | std::path::Component::RootDir)
+    );
+    if !anchored && commons::path::safe_join(Path::new(""), path).is_err() {
         return Err(CliError::InvalidPath {
             field: field.to_string(),
             details: "Path contains parent directory traversal".to_string(),
@@ -382,6 +387,19 @@ mod tests {
         // `/` has no file stem, covering the `if let Some(stem)` miss
         // branch; it exists and is not a symlink, so the result is Ok.
         assert!(validate_path_safety(Path::new("/"), "test").is_ok());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn validate_path_accepts_windows_anchored_paths() {
+        // Anchored at a root or a drive but not `is_absolute()` on
+        // Windows; 0.0.73 accepted them and so must the safe_join check.
+        for p in [r"\site", r"C:site", r"\..\x"] {
+            assert!(
+                validate_path_safety(Path::new(p), "test").is_ok(),
+                "{p} should be accepted"
+            );
+        }
     }
 
     #[cfg(feature = "test-fault-injection")]
