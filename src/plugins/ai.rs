@@ -451,20 +451,20 @@ fn collapse_whitespace(s: &str) -> String {
     result
 }
 
-/// Counts `<img>` tags missing alt attributes in an HTML string.
+/// Counts `<img>` tags with no text alternative in an HTML string.
+///
+/// Uses the same rule as the accessibility check (`ssg_a11y`), so an
+/// empty `alt` on a decorative image (`aria-hidden="true"`,
+/// `role="presentation"`) is not counted, and both report the same
+/// images.
 fn count_missing_alt(html: &str) -> usize {
-    let lower = html.to_lowercase();
+    let lower = html.to_ascii_lowercase();
     let mut count = 0;
     let mut pos = 0;
     while let Some(start) = lower[pos..].find("<img") {
         let abs = pos + start;
-        let tag_end =
-            lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
-        let tag = &lower[abs..tag_end];
-
-        let has_alt = tag.contains("alt=");
-        let empty_alt = tag.contains("alt=\"\"") || tag.contains("alt=''");
-        if !has_alt || empty_alt {
+        let tag_end = ssg_a11y::find_tag_end(&lower, abs);
+        if ssg_a11y::img_missing_alt(&lower[abs..tag_end]) {
             count += 1;
         }
         pos = tag_end;
@@ -578,6 +578,33 @@ mod tests {
             ("<p>no images here</p>", 0, "no <img> tags at all"),
             (r#"<IMG SRC="a.jpg" ALT="ok">"#, 0, "case-insensitive ALT"),
             (r#"<IMG SRC="a.jpg">"#, 1, "uppercase tag, no alt"),
+            (
+                "<img class=\"brand-mark\" src=\"/assets/logo.svg\"\n     \
+                 width=\"28\" height=\"28\" alt=\"\" aria-hidden=\"true\" />",
+                0,
+                "empty alt on an aria-hidden image is decorative",
+            ),
+            (
+                r#"<img src="a.jpg" alt="" role="presentation">"#,
+                0,
+                "empty alt on a role=presentation image is decorative",
+            ),
+            (
+                r#"<img src="a.jpg" aria-hidden="true">"#,
+                1,
+                "aria-hidden does not excuse a missing alt attribute",
+            ),
+            (
+                r#"<img src="a.jpg" alt="" aria-hidden="false">"#,
+                1,
+                "aria-hidden=false is not decorative",
+            ),
+            (r#"<img src=a.jpg alt=photo>"#, 0, "unquoted alt"),
+            (
+                r#"<img src="data:image/svg+xml,<svg>" alt="ok">"#,
+                0,
+                "a '>' inside a quoted src does not end the tag",
+            ),
         ];
         for (input, expected, comment) in cases {
             assert_eq!(

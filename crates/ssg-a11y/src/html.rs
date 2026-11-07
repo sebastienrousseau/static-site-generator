@@ -24,20 +24,35 @@ pub(crate) fn has_empty_alt(tag: &str) -> bool {
         && (tag.contains(" alt ")
             || tag.contains(" alt>")
             || tag.ends_with(" alt"));
+    // An unquoted value (`alt=photo`, as minifiers write it) is alt
+    // text; only `alt=` with nothing after it is empty.
     tag.contains("alt=\"\"")
         || tag.contains("alt=''")
         || has_alt_bare
-        || (has_alt_eq && !tag.contains("alt=\"") && !tag.contains("alt='"))
+        || (has_alt_eq
+            && extract_attr_value(tag, "alt").is_some_and(|v| v.is_empty()))
 }
 
-/// Returns `true` if the `<img>` tag is marked as decorative via ARIA roles.
+/// Returns `true` if the `<img>` tag is marked as decorative: an ARIA
+/// role of `presentation` or `none`, or `aria-hidden="true"`, which
+/// removes the image from the accessibility tree. Any quoting style.
 pub(crate) fn is_decorative_img(tag: &str) -> bool {
-    tag.contains("role=\"presentation\"")
-        || tag.contains("role=\"none\"")
-        || tag.contains("role='presentation'")
-        || tag.contains("role='none'")
-        || tag.contains("role=presentation")
-        || tag.contains("role=none")
+    let role = extract_attr_value(tag, "role");
+    matches!(role.as_deref(), Some("presentation" | "none"))
+        || extract_attr_value(tag, "aria-hidden").as_deref() == Some("true")
+}
+
+/// Returns `true` if an `<img>` tag has no text alternative: no `alt`
+/// attribute at all, or an empty one on an image that is not marked
+/// decorative (see [WCAG 1.1.1]).
+///
+/// Expects the tag with ASCII-lowercased attribute names, from `<img` to
+/// its closing `>` (see [`find_tag_end`]).
+///
+/// [WCAG 1.1.1]: https://www.w3.org/WAI/WCAG22/Understanding/non-text-content
+#[must_use]
+pub fn img_missing_alt(tag: &str) -> bool {
+    !has_valid_alt(tag) || (has_empty_alt(tag) && !is_decorative_img(tag))
 }
 
 /// Returns the index one past the closing `>` of the tag at `tag_start`.
@@ -173,6 +188,24 @@ mod tests {
         assert!(is_decorative_img("<img role=presentation>"));
         assert!(is_decorative_img("<img role=none>"));
         assert!(!is_decorative_img("<img role=\"img\">"));
+    }
+
+    #[test]
+    fn is_decorative_img_accepts_aria_hidden_true() {
+        // aria-hidden="true" removes the image from the accessibility
+        // tree, so alt="" on it marks a decorative image.
+        assert!(is_decorative_img("<img aria-hidden=\"true\">"));
+        assert!(is_decorative_img("<img aria-hidden='true'>"));
+        assert!(is_decorative_img("<img aria-hidden=true>"));
+        assert!(!is_decorative_img("<img aria-hidden=\"false\">"));
+        assert!(!is_decorative_img("<img src=\"a.png\">"));
+    }
+
+    #[test]
+    fn has_empty_alt_accepts_unquoted_value() {
+        // Minifiers drop the quotes around a one-word alt.
+        assert!(!has_empty_alt("<img alt=photo src=x>"));
+        assert!(!has_empty_alt("<img src=x alt=photo>"));
     }
 
     #[test]

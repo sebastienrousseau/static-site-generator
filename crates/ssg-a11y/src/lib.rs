@@ -61,6 +61,12 @@ mod html;
 /// host crate had grown three separate copies of it (ssg#711). Additive —
 /// nothing existing changes shape.
 pub use html::find_tag_end;
+/// Whether an `<img>` tag lacks a text alternative (WCAG 1.1.1).
+///
+/// Exported so the host crate's other alt-text checks agree with
+/// [`check_page`] on what counts as missing, rather than keeping their
+/// own copy of the rule. Additive.
+pub use html::img_missing_alt;
 mod report;
 mod rules;
 mod types;
@@ -451,6 +457,41 @@ mod tests {
         assert!(
             !issues.iter().any(|i| i.criterion == "1.1.1"),
             "decorative empty-alt image must not flag 1.1.1: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn empty_alt_with_aria_hidden_passes() {
+        // The masthead logo that produced the false positive: one tag
+        // across two lines, alt="" and aria-hidden="true".
+        let html = "<html lang=\"en\"><body><main>\
+            <img class=\"brand-mark\" src=\"/assets/logo.svg\"\n     \
+            width=\"28\" height=\"28\" alt=\"\" aria-hidden=\"true\" />\
+            </main></body></html>";
+        let issues = check_page(html);
+        assert!(
+            !issues.iter().any(|i| i.criterion == "1.1.1"),
+            "alt=\"\" aria-hidden=\"true\" must not flag 1.1.1: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn aria_hidden_without_alt_is_still_flagged() {
+        let html = r#"<html lang="en"><body><main><img src="x.png" aria-hidden="true"></main></body></html>"#;
+        let issues = check_page(html);
+        assert!(
+            issues.iter().any(|i| i.criterion == "1.1.1"),
+            "an <img> with no alt attribute must flag 1.1.1: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn unquoted_alt_passes() {
+        let html = r#"<html lang="en"><body><main><img src=x.png alt=photo></main></body></html>"#;
+        let issues = check_page(html);
+        assert!(
+            !issues.iter().any(|i| i.criterion == "1.1.1"),
+            "unquoted alt=photo is alt text: {issues:?}"
         );
     }
 

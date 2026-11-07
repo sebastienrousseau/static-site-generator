@@ -7,6 +7,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Decorative images no longer reported as missing alt text.** An
+  image marked `alt="" aria-hidden="true"` is decorative, but the
+  accessibility check accepted only `role="presentation"` or
+  `role="none"` as decorative, so it reported `[1.1.1] <img> missing
+  alt text`. The `[ai]` plugin counted every empty `alt` as missing,
+  and the `[llm]` plugin replaced an empty `alt` on a decorative image
+  with generated text. All three now use one rule,
+  `ssg_a11y::img_missing_alt`: no `alt` attribute is still an error;
+  an empty `alt` is accepted on an image marked decorative by
+  `aria-hidden="true"` or `role="presentation"`/`"none"`, in any
+  quoting style. An unquoted `alt=photo`, as minifiers write it, is no
+  longer read as empty, and a `>` inside a quoted `src` no longer cuts
+  the `[ai]` plugin's tag scan short.
+
 ## [0.0.74] - 2026-11-07
 
 ### Changed
