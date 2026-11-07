@@ -1851,9 +1851,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.34"
+version = "0.4.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
+checksum = "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
 
 [[package]]
 name = "lol_html"
@@ -3455,7 +3455,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.72"
+version = "0.0.73"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -3467,6 +3467,7 @@ dependencies = [
  "image",
  "log",
  "lol_html",
+ "mdx-gen",
  "minijinja",
  "notify",
  "noyalib 0.0.58",
@@ -3502,7 +3503,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-a11y"
-version = "0.0.72"
+version = "0.0.73"
 dependencies = [
  "serde",
  "serde_json",
@@ -3510,7 +3511,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.0.72"
+version = "0.0.73"
 dependencies = [
  "log",
  "noyalib 0.0.58",
@@ -3524,7 +3525,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-heap-probe"
-version = "0.0.72"
+version = "0.0.73"
 dependencies = [
  "ssg",
  "tempfile",
@@ -3532,14 +3533,14 @@ dependencies = [
 
 [[package]]
 name = "ssg-i18n"
-version = "0.0.72"
+version = "0.0.73"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "ssg-mcp"
-version = "0.0.72"
+version = "0.0.73"
 dependencies = [
  "schemars",
  "serde",
@@ -3549,7 +3550,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc"
-version = "0.0.72"
+version = "0.0.73"
 dependencies = [
  "criterion",
  "inventory",
@@ -3562,7 +3563,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc-macro"
-version = "0.0.72"
+version = "0.0.73"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3571,7 +3572,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-search"
-version = "0.0.72"
+version = "0.0.73"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",
@@ -3585,7 +3586,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-wasm"
-version = "0.0.72"
+version = "0.0.73"
 dependencies = [
  "js-sys",
  "serde-wasm-bindgen",

@@ -583,40 +583,36 @@ pub fn minify_css(css: &str) -> String {
         }
 
         if ch == ' ' {
-            let prev = if i > 0 { Some(chars[i - 1]) } else { None };
+            // A run of whitespace is judged as one gap: its neighbours are
+            // the last character *emitted* and the next *non-space*
+            // character. Judged space by space, `body   {` kept two of its
+            // three, and in a declaration neither space of
+            // `1.125rem  + 0.55vw` saw a word on both sides, so the one
+            // before `+` was dropped and the clamp() became invalid. The
+            // same flaw turned `margin: 0  -1px` into `0-1px` and
+            // `@media (a)  and (b)` into `(a)and (b)`.
+            let mut j = i;
+            while j < chars.len() && chars[j] == ' ' {
+                j += 1;
+            }
+            let prev = clean.chars().next_back();
+            let next = chars.get(j).copied();
+            i = j;
             if !in_block {
                 // Selector or at-rule prelude. Keep one space unless it
                 // sits against punctuation that already separates the
                 // tokens: a combinator, a comma, or a brace. Keeping it
                 // around `>` would be valid too, but those few bytes are
                 // worth reclaiming where the meaning cannot change.
-                //
-                // Neighbours are the last character *emitted* and the
-                // next *non-space* character, so a run of whitespace
-                // collapses to one rather than being judged space by
-                // space — `body   {` kept two of its three otherwise.
-                let mut j = i;
-                while j < chars.len() && chars[j] == ' ' {
-                    j += 1;
-                }
-                let next_sel = chars.get(j).copied();
-                let last = clean.chars().next_back();
                 let separator = |c: Option<char>| {
                     matches!(c, Some('{' | '}' | ',' | '>' | '~' | '+' | ';'))
                         || c.is_none()
                 };
-                if !separator(last) && !separator(next_sel) && last != Some(' ')
-                {
+                if !separator(prev) && !separator(next) && prev != Some(' ') {
                     clean.push(' ');
                 }
-                i = j;
                 continue;
             }
-            let next = if i + 1 < chars.len() {
-                Some(chars[i + 1])
-            } else {
-                None
-            };
 
             // `+` counts as a word character here for one reason: CSS math
             // functions require whitespace around `+` and `-`, and dropping it
@@ -666,42 +662,26 @@ pub fn minify_css(css: &str) -> String {
 
             let is_needed = joins_prelude_tokens
                 || math_operator_boundary
-                || match (prev, next) {
-                    (Some(p), Some(n)) => {
-                        let is_p_word = p.is_alphanumeric()
-                            || p == '-'
-                            || p == '+'
-                            || p == '_'
-                            || p == '#'
-                            || p == '.'
-                            || p == '@'
-                            || p == '%'
-                            || p == '*'
-                            || p == '$';
-                        let is_n_word = n.is_alphanumeric()
-                            || n == '-'
-                            || n == '+'
-                            || n == '_'
-                            || n == '#'
-                            || n == '.'
-                            || n == '@'
-                            || n == '%'
-                            || n == '*'
-                            || n == '$';
-                        is_p_word && is_n_word
-                    }
-                    _ => false,
-                };
+                || (prev.is_some_and(is_css_word_char)
+                    && next.is_some_and(is_css_word_char));
             if is_needed {
                 clean.push(' ');
             }
-        } else {
-            clean.push(ch);
+            continue;
         }
+        clean.push(ch);
         i += 1;
     }
 
     clean.trim().to_string()
+}
+
+/// Whether `c` belongs to a token that a following or preceding token
+/// would merge with if the space between them were dropped. See the
+/// `minify_css` value branch for why `+`, `-` and `*` are included.
+fn is_css_word_char(c: char) -> bool {
+    c.is_alphanumeric()
+        || matches!(c, '-' | '+' | '_' | '#' | '.' | '@' | '%' | '*' | '$')
 }
 
 /// Asset extensions we content-fingerprint. Matches the
@@ -1640,10 +1620,61 @@ mod tests {
     }
 
     #[test]
+    fn minify_css_keeps_math_whitespace_after_a_run_of_spaces() {
+        // Aligned columns put two spaces before the operator. Judged space
+        // by space, neither saw a word on both sides and the one before `+`
+        // was dropped: `1.125rem+ 0.5556vw`, which voids the clamp().
+        let css = "h1 { font-size: clamp(1.25rem,   1.125rem  + 0.5556vw, 1.625rem); }";
+        let out = minify_css(css);
+        assert!(out.contains("1.125rem + 0.5556vw"), "got: {out}");
+        assert!(!out.contains("rem+"), "space before `+` dropped: {out}");
+        let css = "a { width: calc(100%   -   2rem); }";
+        assert!(minify_css(css).contains("100% - 2rem"));
+    }
+
+    #[test]
+    fn minify_css_keeps_list_separator_after_a_run_of_spaces() {
+        let out = minify_css("p { margin: 0   -1px; }");
+        assert!(out.contains("0 -1px"), "got: {out}");
+        let out = minify_css(
+            "@media (min-width: 1px)   and   (max-width: 2px) { a { b: c } }",
+        );
+        assert!(out.contains(") and ("), "got: {out}");
+    }
+
+    #[test]
     fn minify_css_keeps_whitespace_around_minus_in_math() {
         let css = "a { width: calc(100% - 2rem); }";
         let out = minify_css(css);
         assert!(out.contains("100% - 2rem"), "got: {out}");
+    }
+
+    mod math_whitespace_properties {
+        use super::minify_css;
+        use proptest::prelude::*;
+
+        proptest! {
+            #![proptest_config(ProptestConfig::with_cases(1000))]
+
+            /// Whatever run of spaces surrounds a math operator, the
+            /// minified clamp() keeps exactly one space either side of it,
+            /// and minifying the output again changes nothing.
+            #[test]
+            fn clamp_operator_spacing_survives_whitespace_runs(
+                a in 0u16..100, b in 0u16..100, c in 0u16..100, d in 0u16..100,
+                op in prop::sample::select(vec!['+', '-']),
+                w1 in " {1,4}", w2 in " {1,4}", w3 in " {1,4}",
+            ) {
+                let css = format!(
+                    "h1 {{ font-size: clamp({a}rem,{w1}{b}rem{w2}{op}{w3}{c}vw, {d}rem); }}"
+                );
+                let out = minify_css(&css);
+                let expected = format!("{b}rem {op} {c}vw");
+                prop_assert!(out.contains(&expected), "got: {}", out);
+                prop_assert!(out.contains(&format!("rem {op} ")), "got: {}", out);
+                prop_assert_eq!(minify_css(&out), out);
+            }
+        }
     }
 
     #[test]

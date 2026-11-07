@@ -7,6 +7,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.73] - 2026-11-06
+
+### Fixed
+
+- **Directory walks on symlink loops.** The content walker and the
+  collecting walkers in `core/walk.rs` followed symlinked directories
+  without remembering where they had been, so a link back to an ancestor
+  returned every file again at each level, and two such links made the
+  walk branch without end. One walker now records each directory's
+  canonical path and enters it once; symlinked directories elsewhere are
+  still followed (#826).
+- **Token colours in `highlight.css`.** The stylesheet styled only the
+  `<pre>` box, so the class-based spans mdx-gen emits rendered in one
+  colour. It now carries syntect's token rules scoped under
+  `pre.highlight`: the configured theme when it is a syntect built-in,
+  otherwise `InspiredGitHub` in light mode and `base16-ocean.dark` in
+  dark mode (#822).
+- **CSS math spacing after whitespace runs.** `minify_css` judged each
+  space in a declaration by its raw neighbours, so in a run of spaces the
+  one before an operator was dropped: `clamp(1.25rem,   1.125rem  + 0.5556vw, 1.625rem)`
+  shipped as `1.125rem+ 0.5556vw`, which browsers reject. A run is now
+  judged as one gap, as the selector branch already did, which also keeps
+  `margin: 0  -1px` and `@media (a)  and (b)` intact. Covered by unit tests
+  and a property test.
+- **Accessibility checks inside `@layer`.** `ssg-a11y` dropped every
+  at-rule block before the 2.5.8 target-size and 2.4.13 focus-appearance
+  checks, including unconditional `@layer` blocks. Layers are now
+  unwrapped, recursively, so conditional blocks such as `@media print`
+  inside a layer are still skipped.
+- **Highlighting after an untagged `<pre>`.** The highlight pass stopped at
+  the first `<pre>` not followed by `<code class="language-…">`, leaving
+  later code blocks on the page unmarked and without `highlight.css`
+  (#823).
+
+### Changed
+
+- **Dependencies.** `lol_html` 3.0.1 to 3.0.3, `notify` 8.2.0 to 8.2.1
+  (the macOS watcher now uses `objc2-core-services` instead of
+  `fsevent-sys`), `uuid` 1.28.0 to 1.29.0 (#824) and `log` 0.4.34 to
+  0.4.35 (#827). `mdx-gen` is now a direct dependency; it was already in
+  the graph.
+- **CI.** `DavidAnson/markdownlint-cli2-action` 24.2.0 to 25.0.0 (#825),
+  `crate-ci/typos` 1.51.1 to 1.52.0 and `github/codeql-action` 4.39.1 to
+  4.39.2 (#828).
+
 ## [0.0.72] - 2026-11-01
 
 ### Changed
