@@ -129,6 +129,13 @@ jobs:
             -A clippy::unwrap_used \
             -A clippy::expect_used
 
+      - name: cargo clippy (workspace, every target)
+        # The steps above lint only the ssg crate. `make lint` lints every
+        # workspace member and target (benches, integration tests, the
+        # crates/ members); 26 errors had built up there unseen. Running
+        # the Makefile target keeps CI and the local gate on one command.
+        run: make lint
+
       - name: no shellout regression (#558)
         # Refuses Command::new("<shell-binary>") in src/ or crates/.
         # Regression guard for v0.0.44 LlmPlugin port from curl to ureq (#520).

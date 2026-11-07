@@ -791,7 +791,12 @@ fn generate_missing_alt_text(
         let tag_end_abs = abs_start + tag_end + 1;
         let tag = &html[abs_start..tag_end_abs];
 
-        if !tag.contains("alt=") || tag.contains("alt=\"\"") {
+        // The replacement below can only fill `alt=""` or add a new
+        // attribute, so those are the shapes it acts on; the shared rule
+        // then leaves decorative images (`aria-hidden="true"`,
+        // `role="presentation"`) alone.
+        let fillable = !tag.contains("alt=") || tag.contains("alt=\"\"");
+        if fillable && ssg_a11y::img_missing_alt(&tag.to_ascii_lowercase()) {
             // Extract src for context
             let src = extract_attr(tag, "src").unwrap_or_default();
             let prompt = format!(
@@ -3388,6 +3393,32 @@ mod tests {
             !html.contains("alt=\"\""),
             "empty alt attribute must be gone"
         );
+    }
+
+    #[test]
+    fn generate_missing_alt_text_leaves_decorative_images_alone() {
+        // alt="" with aria-hidden="true" (or role="presentation") marks
+        // a decorative image. Giving it generated text would make it
+        // announce noise, so it is not a missing alt.
+        let bytes: &'static [u8] =
+            Box::leak(mock_ollama_ok("A friendly cat.").into_boxed_slice());
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+        let original = "<html><body>\
+            <img class=\"brand-mark\" src=\"/assets/logo.svg\"\n     \
+            width=\"28\" height=\"28\" alt=\"\" aria-hidden=\"true\" />\
+            <img src=\"rule.png\" alt=\"\" role=\"presentation\">\
+            </body></html>";
+        let mut html = original.to_string();
+        let count = generate_missing_alt_text(
+            &mut html,
+            "llama3",
+            &url,
+            false,
+            Path::new("test.html"),
+            Path::new("."),
+        );
+        assert_eq!(count, 0, "decorative images were given alt: {html}");
+        assert_eq!(html, original);
     }
 
     #[cfg(unix)]

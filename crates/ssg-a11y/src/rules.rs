@@ -11,8 +11,7 @@ use crate::css::{
     preprocess_css, selector_targets_interactive,
 };
 use crate::html::{
-    extract_attr_value, find_tag_end, has_empty_alt, has_valid_alt,
-    is_decorative_img, strip_tags_simple,
+    extract_attr_value, find_tag_end, img_missing_alt, strip_tags_simple,
 };
 use crate::types::AccessibilityIssue;
 
@@ -31,9 +30,7 @@ pub(crate) fn check_img_alt(html: &str, issues: &mut Vec<AccessibilityIssue>) {
         let tag_end = find_tag_end(&lower, abs);
         let tag = &lower[abs..tag_end];
 
-        if !has_valid_alt(tag)
-            || (has_empty_alt(tag) && !is_decorative_img(tag))
-        {
+        if img_missing_alt(tag) {
             let src = extract_attr_value(&html[abs..tag_end], "src")
                 .unwrap_or_default();
             issues.push(AccessibilityIssue {
