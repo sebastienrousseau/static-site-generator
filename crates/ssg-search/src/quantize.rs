@@ -135,8 +135,8 @@ mod tests {
     fn empty_round_trip() {
         let q = quantize_int8(&[]);
         assert_eq!(q.scale, 0.0);
-        assert!(q.data.is_empty());
-        assert!(dequantize_int8(&q).is_empty());
+        assert_eq!(q.data, Vec::<i8>::new());
+        assert_eq!(dequantize_int8(&q), Vec::<f32>::new());
     }
 
     #[test]
@@ -168,7 +168,8 @@ mod tests {
         let input = vec![1.0_f32, -1.0, 0.5, -0.5];
         let q = quantize_int8(&input);
         for v in &q.data {
-            assert!(*v >= -127 && *v <= 127);
+            // i8 tops out at 127, so only the -128 end can be missed.
+            assert_ne!(*v, i8::MIN);
         }
     }
 
@@ -261,7 +262,7 @@ mod tests {
             scale: 0.5,
             data: vec![],
         };
-        assert!(dequantize_int8(&q).is_empty());
+        assert_eq!(dequantize_int8(&q), Vec::<f32>::new());
     }
 
     #[test]
@@ -278,8 +279,8 @@ mod tests {
         let input = vec![f32::MIN_POSITIVE, -1e30, 1e30];
         let q = quantize_int8(&input);
         for &v in &q.data {
-            assert!(v >= -127);
-            assert!(v <= 127);
+            // i8 tops out at 127, so only the -128 end can be missed.
+            assert_ne!(v, i8::MIN);
         }
     }
 

@@ -86,7 +86,7 @@ fn main() {
             let elapsed_us = t0.elapsed().as_secs_f64() * 1e6;
             samples.push(elapsed_us);
             // Anti-DCE: read first element so the compiler can't elide.
-            assert!(!r.is_empty());
+            assert_ne!(r, Vec::<f32>::new());
         }
     }
 

@@ -639,7 +639,7 @@ mod tests {
     fn empty_builder_produces_empty_artifacts() {
         let arts = ArtifactsBuilder::default().build();
         assert_eq!(arts.count(), 0);
-        assert!(arts.embeddings.is_empty());
+        assert_eq!(arts.embeddings, Vec::<u8>::new());
         // Manifest is still produced — just with no entries.
         let m: Manifest = serde_json::from_slice(&arts.manifest_json).unwrap();
         assert_eq!(m.count, 0);

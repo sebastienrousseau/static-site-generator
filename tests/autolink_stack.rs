@@ -37,16 +37,19 @@ fn emails() -> String {
     })
 }
 
+/// An error from building the test site; `Send` so the compile thread
+/// can return it.
+type BoxError = Box<dyn std::error::Error + Send + Sync>;
+
 /// Compiles one page whose body is `body` with [`ssg::compile_site`]
 /// and returns the HTML it wrote for that page.
-fn compile_page(body: &str) -> String {
-    let tmp = tempfile::tempdir().expect("tempdir");
+fn compile_page(body: &str) -> Result<String, BoxError> {
+    let tmp = tempfile::tempdir()?;
     let [content, build, site, templates] =
-        ["content", "build", "site", "templates"].map(|d| {
-            let path = tmp.path().join(d);
-            fs::create_dir_all(&path).expect("create a site directory");
-            path
-        });
+        ["content", "build", "site", "templates"].map(|d| tmp.path().join(d));
+    for dir in [&content, &build, &site, &templates] {
+        fs::create_dir_all(dir)?;
+    }
     fs::write(
         content.join("page.md"),
         format!(
@@ -54,33 +57,30 @@ fn compile_page(body: &str) -> String {
              description: Bare addresses\n\
              permalink: https://example.com/page\n---\n{body}\n"
         ),
-    )
-    .expect("write the page");
+    )?;
     fs::write(
         templates.join("page.html"),
         "<html><body>{{content}}</body></html>",
-    )
-    .expect("write the layout");
+    )?;
 
-    ssg::compile_site(&build, &content, &site, &templates)
-        .expect("the page compiles");
-    fs::read_to_string(page_html(&site)).expect("read the page")
+    ssg::compile_site(&build, &content, &site, &templates)?;
+    Ok(fs::read_to_string(page_html(&site)?)?)
 }
 
 /// The `index.html` the page compiled to, searched for under `dir`.
-fn page_html(dir: &Path) -> PathBuf {
+fn page_html(dir: &Path) -> Result<PathBuf, BoxError> {
     let mut pending = vec![dir.to_path_buf()];
     while let Some(dir) = pending.pop() {
-        for entry in fs::read_dir(&dir).expect("read a site directory") {
-            let path = entry.expect("read a directory entry").path();
+        for entry in fs::read_dir(&dir)? {
+            let path = entry?.path();
             if path.is_dir() {
                 pending.push(path);
             } else if path.ends_with("page/index.html") {
-                return path;
+                return Ok(path);
             }
         }
     }
-    panic!("no page/index.html under {}", dir.display())
+    Err(format!("no page/index.html under {}", dir.display()).into())
 }
 
 /// Every bare address in a page is rendered as a link, on a thread
@@ -93,6 +93,7 @@ fn bare_email_autolinks_compile_on_a_small_stack() {
         .spawn(|| compile_page(&emails()))
         .expect("spawn the compile thread")
         .join()
-        .expect("the compile thread panicked");
+        .expect("the compile thread panicked")
+        .expect("the page compiles");
     assert_eq!(html.matches("mailto:user").count(), EMAILS);
 }

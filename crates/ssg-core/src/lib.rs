@@ -527,7 +527,7 @@ mod tests {
             slug.len()
         );
         // Still a usable slug, not an empty string.
-        assert!(!slug.is_empty());
+        assert_ne!(slug, "");
         assert!(!slug.ends_with('-'), "cut left a dangling separator");
     }
 
@@ -567,8 +567,8 @@ mod tests {
     #[test]
     fn split_terms_trims_and_drops_empties() {
         assert_eq!(split_terms("  a  ,,  b  ,"), vec!["a", "b"]);
-        assert!(split_terms(" , , ").is_empty());
-        assert!(split_terms("").is_empty());
+        assert_eq!(split_terms(" , , "), Vec::<String>::new());
+        assert_eq!(split_terms(""), Vec::<String>::new());
     }
 
     #[test]
@@ -581,7 +581,7 @@ mod tests {
         assert_eq!(slugs.len(), 3);
         for s in &slugs {
             assert!(s.len() <= MAX_SLUG_BYTES);
-            assert!(!s.is_empty());
+            assert_ne!(s, "");
         }
     }
 
@@ -715,7 +715,7 @@ mod tests {
         let e: Box<dyn std::error::Error> = Box::new(Error::InvalidSlug {
             input: "x".to_string(),
         });
-        assert!(!e.to_string().is_empty());
+        assert_ne!(e.to_string(), "");
         // No source by default.
         assert!(std::error::Error::source(&*e).is_none());
     }
@@ -733,7 +733,7 @@ mod tests {
         };
         for e in [&e1, &e2, &e3] {
             let s = format!("{e:?}");
-            assert!(!s.is_empty());
+            assert_ne!(s, "");
         }
     }
 
