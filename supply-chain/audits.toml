@@ -233,6 +233,12 @@ criteria = "safe-to-deploy"
 delta = "0.2.1 -> 0.3.0"
 notes = "Delta 0.2.1 -> 0.3.0 (6 files, +163/-135): edition 2024 and rust-version 1.88; clap optional behind a new cli feature so the library no longer pulls it; model state shared through an Arc; as_chunks replaces chunks_exact for tensor decoding; layout probing folded into one candidate table. No unsafe, no build script, no new dependency; ssg-search's local-only feature keeps it off the network."
 
+[[audits.model2vec-rs]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.0 -> 0.4.0"
+notes = "Delta 0.3.0 -> 0.4.0 (20 files, +3910/-196, most of it benches and Python comparison scripts): in-crate fast paths for WordPiece and Unigram tokenization (fast_wordpiece.rs, fast_unigram.rs, a double-array trie.rs), checked against the tokenizers crate in tests; ndarray dropped; unicode-normalization and unicode_categories added (both already vetted here). No unsafe anywhere in src, no build script, no process or env access. Remote downloads stay behind hf-hub and are refused under the local-only feature ssg-search enables; the one new library expect() on tokenization was already present in 0.3.0."
+
 [[audits.notify]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
