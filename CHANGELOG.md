@@ -7,6 +7,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.76] - 2026-11-11
+
+### Fixed
+
+- **Default code highlighting meets WCAG AAA.** The default `github`
+  theme took syntect's InspiredGitHub token colours, drawn for another
+  background: on the `<pre>` box comments measured 2.73:1 and tags
+  2.85:1, and in dark mode light rules the dark theme did not repeat
+  were left behind (`.code` at 1.34:1). The default palette is now
+  ssg's own, every token colour at least 7.3:1 on its box in both
+  modes, with an explicit text colour on the box. A syntect theme a
+  site names is still used as-is.
+
+### Changed
+
+- `model2vec-rs` 0.4 for the opt-in `model2vec` search feature;
+  `@playwright/test` 1.65.0 for the visual tests; `docker/login-action`
+  4.8.0.
+
 ## [0.0.75] - 2026-11-07
 
 ### Fixed
