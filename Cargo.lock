@@ -555,6 +555,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "comrak"
+version = "0.59.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3adf553d37681e21753316065ad5a763d9513f81c910e250576c572114a8eb06"
+dependencies = [
+ "caseless",
+ "entities",
+ "finl_unicode",
+ "memchr-n",
+ "phf 0.14.0",
+ "phf_codegen 0.14.0",
+ "rustc-hash",
+ "smallvec",
+ "typed-arena",
+]
+
+[[package]]
 name = "console"
 version = "0.15.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1380,7 +1397,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4327ec2e74af6f30b84751699bc6a3a7a554237fea962ef8c95cb97e820b9997"
 dependencies = [
  "ammonia",
- "comrak",
+ "comrak 0.56.0",
  "getrandom 0.3.4",
  "indexmap",
  "log",
@@ -1959,7 +1976,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "780920585d9fbabf6f378bf7677e6f6919715923edcb5bfc4b93fe3d724abda5"
 dependencies = [
  "ammonia",
- "comrak",
+ "comrak 0.56.0",
  "html-escape",
  "log",
  "regex",
@@ -3581,12 +3598,13 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.30"
+version = "0.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f0791569361f6d01a80604f903abb6ac66fc07e54b29821aff43a8bb548c86b"
+checksum = "d11f0ce6232712579f88be49d1a74af336faac206f374b6e334ec2b4237d1a9a"
 dependencies = [
  "anyhow",
- "comrak",
+ "comrak 0.59.0",
+ "euxis-commons 0.0.9",
  "html-generator",
  "idna",
  "langweave",
