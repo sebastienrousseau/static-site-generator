@@ -2211,8 +2211,22 @@ checksum = "3fad8f1a552070f6ba5f60f25e880f7b6daeda8fe138f589345141d31a21a3bb"
 dependencies = [
  "hashbrown 0.17.1",
  "indexmap",
- "itoa",
  "libm",
+ "memchr",
+ "rustc-hash",
+ "serde_core",
+ "smallvec",
+]
+
+[[package]]
+name = "noyalib"
+version = "0.0.60"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4f58e0d7f94aac1ff656e07a05512093b0a0f866f5778f94e84909f50fc3157"
+dependencies = [
+ "hashbrown 0.17.1",
+ "indexmap",
+ "itoa",
  "memchr",
  "rustc-hash",
  "ryu",
@@ -3440,7 +3454,7 @@ dependencies = [
  "mdx-gen",
  "minijinja",
  "notify",
- "noyalib 0.0.58",
+ "noyalib 0.0.60",
  "oxml",
  "proptest",
  "pulldown-cmark",
@@ -3484,7 +3498,7 @@ name = "ssg-core"
 version = "0.0.76"
 dependencies = [
  "log",
- "noyalib 0.0.58",
+ "noyalib 0.0.60",
  "pulldown-cmark",
  "serde",
  "serde_json",
