@@ -319,7 +319,7 @@ jobs:
         # passed locally and failed here, which is the exact
         # local/CI divergence DEVELOPMENT.md exists to prevent. When
         # bumping, bump the version in DEVELOPMENT.md too.
-        uses: crate-ci/typos@4c8b7f51ca60df14e3c5ca82770dfbbe6c3dae85 # v1.52.0
+        uses: crate-ci/typos@276087d9a4f06398b3e04825487805e2d7375888 # v1.52.2
       - name: Markdown lint
         # Globs and every rule exclusion live in
         # .markdownlint-cli2.jsonc, each with a stated reason.
