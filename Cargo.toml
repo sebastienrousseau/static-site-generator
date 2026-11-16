@@ -180,7 +180,7 @@ ssg-core = { path = "crates/ssg-core", version = "0.0.76" }
 ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.76" }
 ssg-search = { path = "crates/ssg-search", version = "0.0.76" }
 thiserror = "2"
-staticdatagen = "0.0.30"
+staticdatagen = "0.0.32"
 # Token colours for highlight.css (#822). Already in the graph through
 # staticdatagen -> html-generator, which emits the class-based spans this
 # stylesheet targets; naming it here adds no crate.
