@@ -1084,15 +1084,6 @@ dependencies = [
 
 [[package]]
 name = "euxis-commons"
-version = "0.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42141f7a7bc6d35b09a0e035116d46be0d08a69c9a8851e955a36d136f38422c"
-dependencies = [
- "thiserror",
-]
-
-[[package]]
-name = "euxis-commons"
 version = "0.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5fc280f4abcbbb3b453818482c3689639cab5e2a29e827ad8d2d712cf133f3ee"
@@ -1429,13 +1420,13 @@ dependencies = [
 
 [[package]]
 name = "http-handle"
-version = "0.0.10"
+version = "0.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a68fabd4d53431f3a061625abf9863a0b0179fee872661eb08354df7500f45d7"
+checksum = "ee6c2e72019d2b5a0ddf9657a6a2de3a72cec99c961f185caf3949e14f43d04f"
 dependencies = [
  "crossbeam-channel",
  "ctrlc",
- "euxis-commons 0.0.6",
+ "euxis-commons 0.0.9",
  "log",
  "memchr",
  "regex",
