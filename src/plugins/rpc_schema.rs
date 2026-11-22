@@ -129,7 +129,7 @@ mod tests {
 
     #[ssg_rpc]
     #[doc = "Coverage probe: only exists so the inventory is non-empty."]
-    fn _ssg_rpc_schema_coverage_probe(
+    fn ssg_rpc_schema_coverage_probe(
         input: CovInput,
     ) -> Result<CovOutput, RpcError> {
         Ok(CovOutput { out: input.v + 1 })
@@ -167,12 +167,12 @@ mod tests {
 
     #[test]
     fn coverage_probe_dispatches_and_increments() {
-        // Drives the `_ssg_rpc_schema_coverage_probe` body via the
+        // Drives the `ssg_rpc_schema_coverage_probe` body via the
         // dispatcher so its 5 lines (signature + return expression)
         // are covered. Without this, the probe is registered into
         // the inventory but never executed.
         let out = ssg_rpc::dispatch::dispatch(
-            "_ssg_rpc_schema_coverage_probe",
+            "ssg_rpc_schema_coverage_probe",
             r#"{"v":41}"#,
         )
         .expect("dispatch");
@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn writes_typescript_when_inventory_nonempty() {
-        // The `_ssg_rpc_schema_coverage_probe` above registers a
+        // The `ssg_rpc_schema_coverage_probe` above registers a
         // single descriptor, so iter_descriptors().next() returns
         // Some(_) and the emit path executes end-to-end.
         let dir = tempdir().unwrap();
