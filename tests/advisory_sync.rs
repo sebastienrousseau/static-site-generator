@@ -53,6 +53,23 @@ fn deny_ignores() -> BTreeSet<String> {
         .collect()
 }
 
+/// Advisory IDs in `.cargo/audit.toml`'s active `ignore = [...]` array.
+fn audit_ignores() -> BTreeSet<String> {
+    let text = read(".cargo/audit.toml");
+    let Some((_, rest)) = text.split_once("ignore = [") else {
+        panic!(".cargo/audit.toml has no `ignore = [` array");
+    };
+    let Some((body, _)) = rest.split_once(']') else {
+        panic!(".cargo/audit.toml's ignore array is unterminated");
+    };
+    body.lines()
+        .map(str::trim)
+        .filter(|l| l.starts_with('"'))
+        .filter_map(|l| l.split('"').nth(1))
+        .map(str::to_owned)
+        .collect()
+}
+
 /// Advisory IDs in `osv-scanner.toml`'s `[[IgnoredVulns]]` entries.
 fn osv_ignores() -> BTreeSet<String> {
     read("osv-scanner.toml")
@@ -84,6 +101,35 @@ fn every_deny_ignore_is_also_ignored_by_osv() {
          osv-scanner.toml, so Scorecard will report them as \
          vulnerabilities the project has already reasoned about: \
          {missing:?}"
+    );
+}
+
+/// `cargo audit` reads `.cargo/audit.toml`, a third hand-kept list. It
+/// scans the lockfiles like `OSV` does, so `osv-scanner.toml` (kept to
+/// what the lockfiles still hold) bounds it: an id ignored here and not
+/// there is an ignore nobody pruned when its crate left the graph. Four
+/// such entries sat here after `osv-scanner.toml` dropped them (#844),
+/// pre-silencing advisories that no longer matched anything.
+#[test]
+fn every_audit_ignore_is_also_ignored_by_osv() {
+    let audit = audit_ignores();
+    let osv = osv_ignores();
+
+    assert!(
+        !audit.is_empty() && !osv.is_empty(),
+        "parsed {} audit and {} osv entries — a parser returning nothing \
+         would make this gate pass without comparing anything",
+        audit.len(),
+        osv.len()
+    );
+
+    let stale: Vec<&String> = audit.difference(&osv).collect();
+    assert!(
+        stale.is_empty(),
+        "these advisories are ignored in .cargo/audit.toml but not in \
+         osv-scanner.toml; remove them if no lockfile holds an affected \
+         version, or add them to osv-scanner.toml with a reason: \
+         {stale:?}"
     );
 }
 

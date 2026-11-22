@@ -6,16 +6,8 @@
 # tracked here so `cargo audit --deny warnings` stays green until the
 # upstreams cut a release that drops these dependencies.
 #
-# - RUSTSEC-2025-0068  serde_yml (unsound + unmaintained)
-#     Pulled by staticdatagen (via metadata-gen) and frontmatter-gen.
-#     Replaced in-tree via [patch.crates-io] with crates/serde_yml,
-#     a safe-only reimplementation that `forbid(unsafe_code)`.
-#
 # - RUSTSEC-2025-0141  bincode (unmaintained)
 #     Transitive via syntect -> mdx-gen -> html-generator -> staticdatagen.
-#
-# - RUSTSEC-2025-0057  fxhash (unmaintained)
-#     Transitive via tera / scraper.
 #
 # - RUSTSEC-2025-0119  number_prefix (unmaintained)
 #     Transitive via indicatif (direct dep, awaiting upstream bump).
@@ -23,24 +15,15 @@
 # - RUSTSEC-2024-0436  paste (unmaintained)
 #     Transitive via several proc-macro consumers.
 #
-# - RUSTSEC-2024-0320  yaml-rust (unmaintained)
-#     Transitive via syntect -> mdx-gen -> html-generator -> staticdatagen.
-#
-# - RUSTSEC-2026-0097  rand 0.8.5 (unsound with custom logger + rand::rng())
-#     Transitive via phf_generator -> selectors -> scraper -> staticdatagen.
-#     SSG never calls rand::rng() directly; the only caller path is
-#     phf_codegen at build time. No patched 0.8.x release available yet
-#     (advisory filed 2026-04-09).
-#
-# TODO: re-audit once staticdatagen, frontmatter-gen, mdx-gen, syntect,
-# tera, scraper, and indicatif have all updated their dependency
-# closures upstream. Remove RUSTSEC-2026-0097 when rand >= 0.8.6 ships.
+# Removed in v0.0.77 (#844), because no lockfile holds an affected
+# version any more: RUSTSEC-2025-0068 (serde_yml), RUSTSEC-2024-0320
+# (yaml-rust) and RUSTSEC-2025-0057 (fxhash) left the graph, and
+# RUSTSEC-2026-0097 (rand) is patched in every rand the lockfiles hold.
+# A dead ignore pre-silences the advisory if it ever comes back;
+# `tests/advisory_sync.rs` now fails on any id here that
+# `osv-scanner.toml` no longer carries.
 ignore = [
-    "RUSTSEC-2024-0320",
     "RUSTSEC-2024-0436",
-    "RUSTSEC-2025-0057",
-    "RUSTSEC-2025-0068",
     "RUSTSEC-2025-0119",
     "RUSTSEC-2025-0141",
-    "RUSTSEC-2026-0097",
 ]
