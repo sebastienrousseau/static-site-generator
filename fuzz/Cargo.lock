@@ -43,9 +43,9 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
 name = "ammonia"
-version = "4.2.4"
+version = "4.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f45dfa685e1ec33b1bf1a3b93b8047cbdbef41b6040deebbe6bea7720a45574"
+checksum = "b34ca49e407c06daac53f0c4debe8ff5df9cc2a4e9369d164a5d86ef8c219319"
 dependencies = [
  "cssparser 0.38.0",
  "html5ever 0.40.1",
@@ -407,6 +407,23 @@ name = "comrak"
 version = "0.56.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2544c4d6b6da7d54e95ac2833b464bf3dffa0666237868f2bf4ec5e11c9ba8cc"
+dependencies = [
+ "caseless",
+ "entities",
+ "finl_unicode",
+ "memchr-n",
+ "phf 0.14.0",
+ "phf_codegen 0.14.0",
+ "rustc-hash",
+ "smallvec",
+ "typed-arena",
+]
+
+[[package]]
+name = "comrak"
+version = "0.59.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3adf553d37681e21753316065ad5a763d9513f81c910e250576c572114a8eb06"
 dependencies = [
  "caseless",
  "entities",
@@ -811,15 +828,6 @@ dependencies = [
 
 [[package]]
 name = "euxis-commons"
-version = "0.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42141f7a7bc6d35b09a0e035116d46be0d08a69c9a8851e955a36d136f38422c"
-dependencies = [
- "thiserror",
-]
-
-[[package]]
-name = "euxis-commons"
 version = "0.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5fc280f4abcbbb3b453818482c3689639cab5e2a29e827ad8d2d712cf133f3ee"
@@ -916,9 +924,9 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
 name = "form_urlencoded"
-version = "1.2.2"
+version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
+checksum = "afa489199eaffb1211795df1c6236ce1ad0d41a6fa45250add73e3b02420f06e"
 dependencies = [
  "percent-encoding",
 ]
@@ -1082,7 +1090,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4327ec2e74af6f30b84751699bc6a3a7a554237fea962ef8c95cb97e820b9997"
 dependencies = [
  "ammonia",
- "comrak",
+ "comrak 0.56.0",
  "getrandom 0.3.4",
  "indexmap",
  "log",
@@ -1131,13 +1139,13 @@ dependencies = [
 
 [[package]]
 name = "http-handle"
-version = "0.0.10"
+version = "0.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a68fabd4d53431f3a061625abf9863a0b0179fee872661eb08354df7500f45d7"
+checksum = "ee6c2e72019d2b5a0ddf9657a6a2de3a72cec99c961f185caf3949e14f43d04f"
 dependencies = [
  "crossbeam-channel",
  "ctrlc",
- "euxis-commons 0.0.6",
+ "euxis-commons 0.0.9",
  "log",
  "memchr",
  "regex",
@@ -1597,7 +1605,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "780920585d9fbabf6f378bf7677e6f6919715923edcb5bfc4b93fe3d724abda5"
 dependencies = [
  "ammonia",
- "comrak",
+ "comrak 0.56.0",
  "html-escape",
  "log",
  "regex",
@@ -1794,8 +1802,22 @@ checksum = "3fad8f1a552070f6ba5f60f25e880f7b6daeda8fe138f589345141d31a21a3bb"
 dependencies = [
  "hashbrown 0.17.1",
  "indexmap",
- "itoa",
  "libm",
+ "memchr",
+ "rustc-hash",
+ "serde_core",
+ "smallvec",
+]
+
+[[package]]
+name = "noyalib"
+version = "0.0.60"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4f58e0d7f94aac1ff656e07a05512093b0a0f866f5778f94e84909f50fc3157"
+dependencies = [
+ "hashbrown 0.17.1",
+ "indexmap",
+ "itoa",
  "memchr",
  "rustc-hash",
  "ryu",
@@ -2751,7 +2773,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.76"
+version = "0.0.77"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -2765,7 +2787,7 @@ dependencies = [
  "mdx-gen",
  "minijinja",
  "notify",
- "noyalib 0.0.58",
+ "noyalib 0.0.60",
  "oxml",
  "pulldown-cmark",
  "ravif",
@@ -2789,7 +2811,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-a11y"
-version = "0.0.76"
+version = "0.0.77"
 dependencies = [
  "serde",
  "serde_json",
@@ -2797,10 +2819,10 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.0.76"
+version = "0.0.77"
 dependencies = [
  "log",
- "noyalib 0.0.58",
+ "noyalib 0.0.60",
  "pulldown-cmark",
  "serde",
  "serde_json",
@@ -2820,14 +2842,14 @@ dependencies = [
 
 [[package]]
 name = "ssg-i18n"
-version = "0.0.76"
+version = "0.0.77"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "ssg-rpc"
-version = "0.0.76"
+version = "0.0.77"
 dependencies = [
  "inventory",
  "schemars",
@@ -2839,7 +2861,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc-macro"
-version = "0.0.76"
+version = "0.0.77"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2848,7 +2870,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-search"
-version = "0.0.76"
+version = "0.0.77"
 dependencies = [
  "serde",
  "serde_json",
@@ -2862,12 +2884,13 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.30"
+version = "0.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f0791569361f6d01a80604f903abb6ac66fc07e54b29821aff43a8bb548c86b"
+checksum = "d11f0ce6232712579f88be49d1a74af336faac206f374b6e334ec2b4237d1a9a"
 dependencies = [
  "anyhow",
- "comrak",
+ "comrak 0.59.0",
+ "euxis-commons 0.0.9",
  "html-generator",
  "idna",
  "langweave",
@@ -3273,9 +3296,9 @@ dependencies = [
 
 [[package]]
 name = "url"
-version = "2.5.8"
+version = "2.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff67a8a4397373c3ef660812acab3268222035010ab8680ec4215f38ba3d0eed"
+checksum = "f00cd2407bb42c0ef17be88d4cf020f5cceffd121665bac9b8b9493a369b3b1a"
 dependencies = [
  "form_urlencoded",
  "idna",
