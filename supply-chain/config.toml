@@ -389,17 +389,9 @@ criteria = "safe-to-deploy"
 version = "1.1.9"
 criteria = "safe-to-deploy"
 
-[[exemptions.fsevent-sys]]
-version = "4.1.0"
-criteria = "safe-to-deploy"
-
 [[exemptions.futures-core]]
 version = "0.3.34"
 criteria = "safe-to-deploy"
-
-[[exemptions.futures-executor]]
-version = "0.3.34"
-criteria = "safe-to-run"
 
 [[exemptions.futures-task]]
 version = "0.3.34"
@@ -545,10 +537,6 @@ criteria = "safe-to-run"
 version = "1.0.18"
 criteria = "safe-to-deploy"
 
-[[exemptions.jetscii]]
-version = "0.5.3"
-criteria = "safe-to-deploy"
-
 [[exemptions.jiff]]
 version = "0.2.35"
 criteria = "safe-to-deploy"
@@ -625,10 +613,6 @@ criteria = "safe-to-deploy"
 version = "0.39.0"
 criteria = "safe-to-deploy"
 
-[[exemptions.matrixmultiply]]
-version = "0.3.11"
-criteria = "safe-to-deploy"
-
 [[exemptions.maybe-rayon]]
 version = "0.1.1"
 criteria = "safe-to-deploy"
@@ -681,10 +665,6 @@ criteria = "safe-to-deploy"
 version = "0.8.1"
 criteria = "safe-to-deploy"
 
-[[exemptions.ndarray]]
-version = "0.15.6"
-criteria = "safe-to-deploy"
-
 [[exemptions.new_debug_unreachable]]
 version = "1.0.6"
 criteria = "safe-to-deploy"
@@ -715,10 +695,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.num-bigint]]
 version = "0.4.8"
-criteria = "safe-to-deploy"
-
-[[exemptions.num-complex]]
-version = "0.4.6"
 criteria = "safe-to-deploy"
 
 [[exemptions.num-conv]]
@@ -861,14 +837,6 @@ criteria = "safe-to-deploy"
 version = "2.0.1"
 criteria = "safe-to-deploy"
 
-[[exemptions.quick-xml]]
-version = "0.40.1"
-criteria = "safe-to-deploy"
-
-[[exemptions.quick-xml]]
-version = "0.42.0"
-criteria = "safe-to-deploy"
-
 [[exemptions.quote]]
 version = "1.0.47"
 criteria = "safe-to-deploy"
@@ -915,10 +883,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.ravif]]
 version = "0.13.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.rawpointer]]
-version = "0.2.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.rayon]]
@@ -1366,10 +1330,6 @@ version = "0.59.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.windows-sys]]
-version = "0.60.2"
-criteria = "safe-to-deploy"
-
-[[exemptions.windows-sys]]
 version = "0.61.2"
 criteria = "safe-to-deploy"
 
@@ -1377,72 +1337,36 @@ criteria = "safe-to-deploy"
 version = "0.52.6"
 criteria = "safe-to-deploy"
 
-[[exemptions.windows-targets]]
-version = "0.53.5"
-criteria = "safe-to-deploy"
-
 [[exemptions.windows_aarch64_gnullvm]]
 version = "0.52.6"
-criteria = "safe-to-deploy"
-
-[[exemptions.windows_aarch64_gnullvm]]
-version = "0.53.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.windows_aarch64_msvc]]
 version = "0.52.6"
 criteria = "safe-to-deploy"
 
-[[exemptions.windows_aarch64_msvc]]
-version = "0.53.1"
-criteria = "safe-to-deploy"
-
 [[exemptions.windows_i686_gnu]]
 version = "0.52.6"
-criteria = "safe-to-deploy"
-
-[[exemptions.windows_i686_gnu]]
-version = "0.53.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.windows_i686_gnullvm]]
 version = "0.52.6"
 criteria = "safe-to-deploy"
 
-[[exemptions.windows_i686_gnullvm]]
-version = "0.53.1"
-criteria = "safe-to-deploy"
-
 [[exemptions.windows_i686_msvc]]
 version = "0.52.6"
-criteria = "safe-to-deploy"
-
-[[exemptions.windows_i686_msvc]]
-version = "0.53.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.windows_x86_64_gnu]]
 version = "0.52.6"
 criteria = "safe-to-deploy"
 
-[[exemptions.windows_x86_64_gnu]]
-version = "0.53.1"
-criteria = "safe-to-deploy"
-
 [[exemptions.windows_x86_64_gnullvm]]
 version = "0.52.6"
 criteria = "safe-to-deploy"
 
-[[exemptions.windows_x86_64_gnullvm]]
-version = "0.53.1"
-criteria = "safe-to-deploy"
-
 [[exemptions.windows_x86_64_msvc]]
 version = "0.52.6"
-criteria = "safe-to-deploy"
-
-[[exemptions.windows_x86_64_msvc]]
-version = "0.53.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.winnow]]
@@ -1451,14 +1375,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.writeable]]
 version = "0.6.3"
-criteria = "safe-to-deploy"
-
-[[exemptions.xml]]
-version = "1.4.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.xml-rs]]
-version = "1.0.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.y4m]]
