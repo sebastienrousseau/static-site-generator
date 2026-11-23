@@ -23,8 +23,8 @@ user-login = "fitzgen"
 user-name = "Nick Fitzgerald"
 
 [[publisher.clap]]
-version = "4.6.7"
-when = "2026-09-14"
+version = "4.6.9"
+when = "2026-11-20"
 user-id = 6743
 user-login = "epage"
 user-name = "Ed Page"
@@ -37,8 +37,8 @@ user-login = "epage"
 user-name = "Ed Page"
 
 [[publisher.clap_derive]]
-version = "4.6.7"
-when = "2026-09-14"
+version = "4.6.9"
+when = "2026-11-20"
 user-id = 6743
 user-login = "epage"
 user-name = "Ed Page"
