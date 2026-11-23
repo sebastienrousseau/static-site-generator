@@ -21,8 +21,19 @@ trust set we recognise, or (3) explicitly exempted with rationale.
 We trust the following organisations' published audit decisions:
 
 - **Mozilla Firefox** — `https://raw.githubusercontent.com/mozilla-firefox/firefox/main/supply-chain/audits.toml`
+- **Mozilla (shared supply-chain set)** — `https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml`
+  (both Mozilla URLs sit under the one `mozilla` import)
 - **Bytecode Alliance (Wasmtime)** — `https://raw.githubusercontent.com/bytecodealliance/wasmtime/main/supply-chain/audits.toml`
 - **Google** — `https://raw.githubusercontent.com/google/supply-chain/main/audits.toml`
+- **ISRG (divviup/libprio-rs)** — `https://raw.githubusercontent.com/divviup/libprio-rs/main/supply-chain/audits.toml`
+- **Zcash** — `https://raw.githubusercontent.com/zcash/rust-ecosystem/main/supply-chain/audits.toml`
+- **Ariel OS** — `https://raw.githubusercontent.com/ariel-os/ariel-os/main/supply-chain/audits.toml`
+- **Embark Studios** — `https://raw.githubusercontent.com/EmbarkStudios/rust-ecosystem/main/audits.toml`
+- **Fermyon (Spin)** — `https://raw.githubusercontent.com/fermyon/spin/main/supply-chain/audits.toml`
+
+The last five were added at v0.0.77 from the cargo-vet registry
+(`cargo vet import <name>`), because `cargo vet suggest` named them
+as covering crates this workspace had exempted.
 
 Rationale: these organisations audit Rust crates as part of shipping
 production code (Firefox, Wasmtime, ChromeOS) — their certificates
@@ -41,6 +52,7 @@ crate not covered by an imported trust set is auto-exempted at
 *starting line*, not the finish line.
 
 Reduction path:
+
 1. **Quarterly trust-set refresh.** Run `cargo vet` and review the
    delta — Mozilla/Google/Bytecodealliance add new audits monthly,
    so passive refresh drops our count steadily.
