@@ -329,7 +329,7 @@ jobs:
       # An allow-list is a set of suppressions, and suppressions rot.
       - name: No dead entries in the typos allow-list
         run: |
-          cargo install typos-cli --locked --version 1.50.1
+          cargo install typos-cli --locked --version 1.52.2
           ./scripts/check-typos-allowlist.sh
       # REUSE checks that every file's licensing is machine-readable.
       # This repository carries SPDX headers rather than a .reuse/dep5,
