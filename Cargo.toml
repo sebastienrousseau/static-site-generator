@@ -255,7 +255,7 @@ frontmatter-gen = "0.0.12"
 # `ssg-core`'s frontmatter parser) — zero unsafe, no C deps, and
 # deliberately carries no dependency on the unmaintained `serde_yaml`
 # lineage `serde_yaml_ng` forked from.
-noyalib = "0.0.60"
+noyalib = "0.0.63"
 oxml = { version = "0.0.13", default-features = false, features = ["std"] }
 
 # Optional observability stack (issue #422). Both crates are
