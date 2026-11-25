@@ -478,6 +478,13 @@ criteria = "safe-to-deploy"
 delta = "1.0.9 -> 1.0.10"
 notes = "RUSTSEC-2026-0381 fix: removes the emSign ECC Root CA - G3 trust anchor and adds none; rust-version 1.70 -> 1.71. Data-only change."
 
+[[trusted.ammonia]]
+criteria = "safe-to-deploy"
+user-id = 2286 # Michael Howell (notriddle)
+start = "2019-04-27"
+end = "2027-11-25"
+notes = "Maintainer's trust decision (2026-11-25): publisher notriddle."
+
 [[trusted.anyhow]]
 criteria = "safe-to-deploy"
 user-id = 3618 # David Tolnay (dtolnay)
@@ -505,6 +512,13 @@ start = "2021-12-08"
 end = "2027-09-30"
 notes = "Ed Page maintains clap; Mozilla and the Bytecode Alliance trust him."
 
+[[trusted.comrak]]
+criteria = "safe-to-deploy"
+user-id = 6356 # Asherah Connor (kivikakk)
+start = "2019-02-24"
+end = "2027-11-25"
+notes = "Maintainer's trust decision (2026-11-25): publisher kivikakk."
+
 [[trusted.dtt]]
 criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
@@ -524,6 +538,13 @@ trusted-publisher = "github:sebastienrousseau/commons"
 start = "2026-08-26"
 end = "2027-11-07"
 notes = "Same-author crate, published by its release workflow."
+
+[[trusted.form_urlencoded]]
+criteria = "safe-to-deploy"
+user-id = 1139 # Manish Goregaokar (Manishearth)
+start = "2021-02-19"
+end = "2027-11-25"
+notes = "Maintainer's trust decision (2026-11-25): publisher Manishearth."
 
 [[trusted.frontmatter-gen]]
 criteria = "safe-to-deploy"
@@ -555,6 +576,13 @@ criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
 start = "2024-10-05"
 end = "2027-07-26"
+
+[[trusted.notify]]
+criteria = "safe-to-deploy"
+user-id = 51017 # Yuki Okushi (JohnTitor)
+start = "2020-01-07"
+end = "2027-11-25"
+notes = "Maintainer's trust decision (2026-11-25): publisher JohnTitor."
 
 [[trusted.noyalib]]
 criteria = "safe-to-deploy"
@@ -595,6 +623,13 @@ trusted-publisher = "github:sebastienrousseau/rssgen"
 start = "2026-10-01"
 end = "2027-10-31"
 notes = "The maintainer's own crate, published by GitHub trusted publishing from sebastienrousseau/rssgen."
+
+[[trusted.rustix]]
+criteria = "safe-to-deploy"
+user-id = 6825 # Dan Gohman (sunfishcode)
+start = "2021-10-29"
+end = "2027-11-25"
+notes = "Maintainer's trust decision (2026-11-25): publisher sunfishcode."
 
 [[trusted.serde_spanned]]
 criteria = "safe-to-deploy"
@@ -692,3 +727,17 @@ criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
 start = "2025-07-08"
 end = "2027-10-15"
+
+[[trusted.url]]
+criteria = "safe-to-deploy"
+user-id = 1139 # Manish Goregaokar (Manishearth)
+start = "2021-02-18"
+end = "2027-11-25"
+notes = "Maintainer's trust decision (2026-11-25): publisher Manishearth."
+
+[[trusted.uuid]]
+criteria = "safe-to-deploy"
+user-id = 3204 # Ashley Mannix (KodrAus)
+start = "2019-10-18"
+end = "2027-11-25"
+notes = "Maintainer's trust decision (2026-11-25): publisher KodrAus."

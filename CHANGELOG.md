@@ -7,6 +7,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.77] - 2026-11-22
+
+### Security
+
+- `ammonia` 4.2.5 (RUSTSEC-2026-0533, mutation XSS through embedded
+  SVG and MathML), `url` 2.5.9 (RUSTSEC-2026-0592, stack overflow in
+  `Url::origin()` on nested `blob:` URLs) and `rustix` 1.1.6
+  (RUSTSEC-2026-0486, xattr functions on a zero-length buffer), in
+  both `Cargo.lock` and `fuzz/Cargo.lock`. All three are transitive.
+
+### Fixed
+
+- **Stale advisory ignores removed from `.cargo/audit.toml`** (#844).
+  RUSTSEC-2025-0068 (serde_yml), RUSTSEC-2024-0320 (yaml-rust) and
+  RUSTSEC-2025-0057 (fxhash) no longer match any crate in either
+  lockfile, and RUSTSEC-2026-0097 (rand) is patched in every `rand`
+  they hold, so the entries only pre-silenced the advisories should
+  they return. `tests/advisory_sync.rs` now fails when
+  `.cargo/audit.toml` ignores an id that `osv-scanner.toml` does not.
+- **Clippy 1.100 `used_underscore_items`.** The RPC schema test's
+  coverage probe was named `_ssg_rpc_schema_coverage_probe` and is
+  called through the dispatcher, which the new lint rejects under
+  `-D warnings`. It is now `ssg_rpc_schema_coverage_probe`.
+
+### Changed
+
+- `staticdatagen` 0.0.32, `noyalib` 0.0.60, `http-handle` 0.0.11;
+  `clap` 4.6.9, `toml` 1.2.1, `notify` 8.2.2, `uuid` 1.29.3 and `syn`
+  3.0.10 patch updates; `crate-ci/typos` action 1.52.2,
+  `ossf/scorecard-action` 2.6.0; `@playwright/test` 1.65.1 in
+  `tests/visual`.
+- cargo-vet: 21 exemptions for crates no longer in the graph pruned,
+  baseline 370 to 349.
+
 ## [0.0.76] - 2026-11-11
 
 ### Fixed

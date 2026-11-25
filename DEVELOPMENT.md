@@ -87,7 +87,7 @@ asserts that, so this table cannot quietly drift from the workflow.
 | library and binaries on the MSRV `1.89` (Linux, under `RUSTUP_TOOLCHAIN`) | `cargo build --locked --lib --bins` |
 | example outputs | `cargo build --examples --quiet` then `cargo test --test example_outputs -- --test-threads=1` |
 | coverage gate | `make coverage` |
-| docs lint (text) | `typos` (v1.50.1 — CI pins the matching action), `npx markdownlint-cli2`, `./scripts/check-docs-tracked.sh`, `./scripts/check-typos-allowlist.sh`, `reuse lint` |
+| docs lint (text) | `typos` (v1.52.2 — CI pins the matching action), `npx markdownlint-cli2`, `./scripts/check-docs-tracked.sh`, `./scripts/check-typos-allowlist.sh`, `reuse lint` |
 | docs lint | `cargo test --test doc_links`, `cargo test --test readme_sync`, `cargo test --test docs_accuracy`, `cargo test --test development_docs`, `cargo test --test man_page`, `cargo test --test completions` |
 | user manual | `./scripts/build-manual.sh` |
 | rustdoc | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps -p ssg` |

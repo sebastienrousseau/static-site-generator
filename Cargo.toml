@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.76"                      # The version of the library
+version = "0.0.77"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.89.0"                 # Minimum supported Rust version (ADR-0010; dependencies alone need 1.88)
@@ -163,7 +163,7 @@ tracing-test = "0.2"
 # Required dependencies for building and running the project.
 anyhow = "1.0.102"
 clap = { version = "4.6.1", features = ["derive", "cargo", "env"] }
-http-handle = "0.0.10"
+http-handle = "0.0.11"
 # Shared path-containment rule (safe_join / is_within). The `path`
 # feature has no dependencies of its own.
 euxis-commons = { version = "0.0.9", default-features = false, features = ["path"] }
@@ -174,13 +174,13 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.76" }
-ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.76", optional = true }
-ssg-core = { path = "crates/ssg-core", version = "0.0.76" }
-ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.76" }
-ssg-search = { path = "crates/ssg-search", version = "0.0.76" }
+ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.77" }
+ssg-i18n = { path = "crates/ssg-i18n", version = "0.0.77", optional = true }
+ssg-core = { path = "crates/ssg-core", version = "0.0.77" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.77" }
+ssg-search = { path = "crates/ssg-search", version = "0.0.77" }
 thiserror = "2"
-staticdatagen = "0.0.30"
+staticdatagen = "0.0.32"
 # Token colours for highlight.css (#822). Already in the graph through
 # staticdatagen -> html-generator, which emits the class-based spans this
 # stylesheet targets; naming it here adds no crate.
@@ -255,7 +255,7 @@ frontmatter-gen = "0.0.12"
 # `ssg-core`'s frontmatter parser) — zero unsafe, no C deps, and
 # deliberately carries no dependency on the unmaintained `serde_yaml`
 # lineage `serde_yaml_ng` forked from.
-noyalib = "0.0.58"
+noyalib = "0.0.60"
 oxml = { version = "0.0.13", default-features = false, features = ["std"] }
 
 # Optional observability stack (issue #422). Both crates are
